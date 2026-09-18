@@ -1,0 +1,25 @@
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Java
+target/
+*.class
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+
+# Logs
+*.log
