@@ -1,0 +1,853 @@
+// Horse Transport System - Approved MVP ERD
+// Sources: approved FR-001 through FR-020 and Confirmed Business Workflow.
+// DBML represents ordinary keys, references, checks, and indexes. Invariants
+// involving multiple rows, aggregate values, actor roles, state transitions,
+// immutable phases, or external-provider idempotency must also be enforced by
+// transactional application logic as identified below.
+
+// =====================================================
+// ENUMS
+// =====================================================
+
+Enum user_role {
+  CUSTOMER
+  LOGISTICS_MANAGER
+  TRANSPORT_SPECIALIST
+  FLEET_ROUTE_COORDINATOR
+  DRIVER
+  ESCORT
+}
+
+Enum user_status {
+  ACTIVE
+  INACTIVE
+}
+
+Enum transport_mode {
+  ROAD
+  AIR
+  COMBINED
+}
+
+Enum order_status {
+  DRAFT
+  SUBMITTED
+  QUOTATION_SENT
+  APPROVED
+  READY_TO_SHIP
+  IN_PROGRESS
+  DELIVERED
+  REJECTED
+  CANCELLED
+}
+
+// Derived from the current mandatory-document versions for one Order Horse.
+// Every change is an audited business status transition.
+Enum order_horse_document_status {
+  INCOMPLETE
+  UNDER_REVIEW
+  NEEDS_REVISION
+  ELIGIBLE_FOR_EXPORT
+}
+
+Enum order_staff_role {
+  TRANSPORT_SPECIALIST
+  FLEET_ROUTE_COORDINATOR
+}
+
+Enum quotation_status {
+  DRAFT
+  SENT
+}
+
+Enum payment_type {
+  DEPOSIT
+  REMAINING_BALANCE
+}
+
+Enum payment_status {
+  PENDING
+  PAID
+  REFUNDED
+}
+
+Enum document_type {
+  HORSE_PASSPORT_OR_IDENTIFICATION
+  VACCINATION_CERTIFICATE
+  VETERINARY_HEALTH_CERTIFICATE
+  OWNERSHIP_CERTIFICATE
+  EXPORT_IMPORT_PERMIT
+}
+
+Enum document_version_status {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+Enum vehicle_status {
+  AVAILABLE
+  ASSIGNED
+  MAINTENANCE
+  INACTIVE
+}
+
+Enum route_plan_status {
+  DRAFT
+  PENDING_LM_REVIEW
+  RETURNED
+  APPROVED
+}
+
+Enum route_plan_review_decision {
+  PENDING
+  CONFIRMED
+  RETURNED
+}
+
+Enum route_leg_type {
+  ROAD
+  AIR
+}
+
+Enum route_leg_status {
+  PLANNED
+  READY
+  IN_PROGRESS
+  COMPLETED
+}
+
+Enum execution_status {
+  NOT_STARTED
+  IN_PROGRESS
+  DESTINATION
+  COMPLETED
+}
+
+// Checkpoints are intermediate points on ROAD legs only.
+Enum checkpoint_type {
+  REST_STOP
+  BORDER
+  QUARANTINE
+  OTHER
+}
+
+Enum welfare_event_type {
+  CHECKPOINT
+  FINAL_DESTINATION
+}
+
+Enum notification_type {
+  TRIP_STARTED
+  CHECKPOINT_REACHED
+  WELFARE_UPDATED
+  ROUTE_LEG_COMPLETED
+  FINAL_DESTINATION_REACHED
+  ORDER_DELIVERED
+  PAYMENT_RESULT
+  REFUND_RESULT
+}
+
+Enum audit_actor_kind {
+  USER
+  SYSTEM
+}
+
+// FR-020 / BR-19 MVP scope contains exactly these five entity types.
+Enum audit_entity_type {
+  TRANSPORT_ORDER
+  TRANSPORT_ORDER_HORSE
+  HORSE_DOCUMENT_VERSION
+  ROUTE_LEG
+  QUOTATION
+}
+
+// =====================================================
+// 1. USERS
+// =====================================================
+
+Table users {
+  id uuid [pk]
+  full_name varchar(120) [not null]
+  email varchar(150) [not null, unique]
+  phone varchar(30)
+  password_hash varchar(255) [not null]
+  role user_role [not null]
+  status user_status [not null, default: 'ACTIVE']
+  created_at timestamp [not null]
+  updated_at timestamp
+}
+
+// =====================================================
+// 2. HORSES - FR-001
+// =====================================================
+
+Table horses {
+  id uuid [pk]
+  customer_id uuid [not null, ref: > users.id]
+  name varchar(120) [not null]
+  passport_number varchar(100)
+  microchip_id varchar(50) [not null, unique]
+  breed varchar(100)
+  sex varchar(20)
+  date_of_birth date
+  notes text
+  created_at timestamp [not null]
+  updated_at timestamp
+
+  indexes {
+    customer_id
+    passport_number
+  }
+}
+
+// =====================================================
+// 3. TRANSPORT ORDERS - FR-002..005, 008..009, 015, 018
+// =====================================================
+
+Table transport_orders {
+  id uuid [pk]
+  order_code varchar(30) [not null, unique]
+  customer_id uuid [not null, ref: > users.id]
+
+  // These fields may be incomplete while DRAFT and are mandatory at Submit.
+  origin_address varchar(255)
+  origin_country varchar(100)
+  destination_address varchar(255)
+  destination_country varchar(100)
+  requested_departure_at timestamp
+  transport_mode transport_mode
+  special_requirements text
+
+  // Recipient is not a system user. Name and phone are mandatory at Submit.
+  recipient_name varchar(150)
+  recipient_phone varchar(30)
+  recipient_email varchar(150)
+
+  // One deadline and one permanently lockable Document Phase per Order.
+  document_completion_deadline_at timestamp
+  document_deadline_set_by uuid [ref: > users.id]
+  document_deadline_set_at timestamp
+  documents_final_confirmed_by uuid [ref: > users.id]
+  documents_final_confirmed_at timestamp
+  documents_locked_at timestamp
+
+  status order_status [not null, default: 'DRAFT']
+  rejection_reason text
+  cancellation_reason text
+  cancelled_at timestamp
+
+  // APPROVED is reached only by successful Deposit payment.
+  approved_at timestamp
+  ready_to_ship_at timestamp
+  journey_started_at timestamp
+  delivered_at timestamp
+  created_at timestamp [not null]
+  updated_at timestamp
+
+  indexes {
+    customer_id
+    status
+    requested_departure_at
+    document_completion_deadline_at
+  }
+}
+
+// Transactional invariants:
+// - Customer editing is allowed only in DRAFT; origin, destination, departure,
+//   transport mode, selected Horses, and recipient name/phone are checked at
+//   Submit. LM rejection is only from SUBMITTED and requires a reason.
+// - Customer cancellation is only from DRAFT, SUBMITTED, or QUOTATION_SENT.
+//   DELIVERED, REJECTED, and CANCELLED are terminal.
+// - Deposit PAID atomically approves the Order and generates its checklist once.
+//   Remaining Balance PAID unlocks Route Planning.
+// - Deadline cancellation/refund and every audited status transition are atomic.
+
+// =====================================================
+// 4. TRANSPORT ORDER HORSES
+// =====================================================
+
+Table transport_order_horses {
+  id uuid [pk]
+  transport_order_id uuid [not null, ref: > transport_orders.id]
+  horse_id uuid [not null, ref: > horses.id]
+  document_status order_horse_document_status [not null, default: 'INCOMPLETE']
+  travel_notes text
+  created_at timestamp [not null]
+  updated_at timestamp
+
+  indexes {
+    (transport_order_id, horse_id) [unique]
+    transport_order_id
+    horse_id
+    document_status
+  }
+}
+
+// document_status is derived transactionally from all five current checklist
+// versions. Its transition and StatusAuditLog are written atomically.
+
+// =====================================================
+// 5. ORDER-LEVEL STAFF - exactly one TS and one FRC
+// =====================================================
+
+Table order_staff_assignments {
+  id uuid [pk]
+  transport_order_id uuid [not null, ref: > transport_orders.id]
+  assignment_role order_staff_role [not null]
+  user_id uuid [not null, ref: > users.id]
+  assigned_by uuid [not null, ref: > users.id]
+  assigned_at timestamp [not null]
+
+  indexes {
+    (transport_order_id, assignment_role) [unique]
+    user_id
+  }
+}
+
+// Application logic validates the assigned user's role and assignment presence.
+
+// =====================================================
+// 6. QUOTATIONS AND LINE ITEMS - FR-004
+// =====================================================
+
+Table quotations {
+  id uuid [pk]
+  transport_order_id uuid [not null, unique, ref: > transport_orders.id]
+  // Arithmetic fields may be incomplete while DRAFT and are mandatory at Send.
+  total_amount decimal(12,2)
+  deposit_amount decimal(12,2)
+  remaining_amount decimal(12,2)
+  currency varchar(10) [not null, default: 'USD']
+  notes text
+  status quotation_status [not null, default: 'DRAFT']
+  created_by uuid [not null, ref: > users.id]
+  sent_at timestamp
+  created_at timestamp [not null]
+  updated_at timestamp
+
+  indexes {
+    status
+  }
+
+  checks {
+    `total_amount > 0` [name: 'quotation_total_positive']
+    `deposit_amount > 0 AND deposit_amount < total_amount` [name: 'quotation_deposit_valid']
+    `remaining_amount = total_amount - deposit_amount` [name: 'quotation_remaining_matches']
+  }
+}
+
+Table quotation_line_items {
+  id uuid [pk]
+  quotation_id uuid [not null, ref: > quotations.id]
+  sequence_no int [not null]
+  description varchar(255) [not null]
+  amount decimal(12,2) [not null]
+  created_at timestamp [not null]
+  updated_at timestamp
+
+  indexes {
+    (quotation_id, sequence_no) [unique]
+    quotation_id
+  }
+
+  checks {
+    `sequence_no > 0` [name: 'quotation_item_sequence_positive']
+  }
+}
+
+// At Send, logic validates total_amount = SUM(line items), marks the quotation
+// SENT, moves the Order to QUOTATION_SENT, and writes both audit rows atomically.
+// A SENT quotation and its line items are immutable.
+
+// =====================================================
+// 7. PAYMENTS AND STRIPE RECONCILIATION - FR-005, 008, 009
+// =====================================================
+
+Table payments {
+  id uuid [pk]
+  transport_order_id uuid [not null, ref: > transport_orders.id]
+  payment_type payment_type [not null]
+  amount decimal(12,2) [not null]
+  currency varchar(10) [not null]
+  status payment_status [not null, default: 'PENDING']
+  paid_at timestamp
+  refunded_at timestamp
+  created_at timestamp [not null]
+  updated_at timestamp
+
+  indexes {
+    (transport_order_id, payment_type) [unique]
+    (transport_order_id, status)
+  }
+
+  checks {
+    `amount > 0` [name: 'payment_amount_positive']
+  }
+}
+
+Table payment_attempts {
+  id uuid [pk]
+  payment_id uuid [not null, ref: > payments.id]
+  attempt_no int [not null]
+  provider_name varchar(30) [not null, default: 'STRIPE']
+  provider_payment_intent_id varchar(255) [unique]
+  provider_checkout_session_id varchar(255) [unique]
+  idempotency_key varchar(255) [not null, unique]
+  provider_status varchar(80)
+  initiated_at timestamp [not null]
+  succeeded_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (payment_id, attempt_no) [unique]
+    payment_id
+  }
+
+  checks {
+    `attempt_no > 0` [name: 'payment_attempt_number_positive']
+  }
+}
+
+Table payment_provider_events {
+  id uuid [pk]
+  payment_id uuid [not null, ref: > payments.id]
+  payment_attempt_id uuid [ref: > payment_attempts.id]
+  provider_event_id varchar(255) [not null, unique]
+  provider_event_type varchar(120) [not null]
+  received_at timestamp [not null]
+  processed_at timestamp
+  processing_error text
+
+  indexes {
+    payment_id
+    payment_attempt_id
+    processed_at
+  }
+}
+
+Table deposit_refunds {
+  id uuid [pk]
+  payment_id uuid [not null, unique, ref: > payments.id]
+  provider_refund_id varchar(255) [unique]
+  idempotency_key varchar(255) [not null, unique]
+  provider_status varchar(80)
+  requested_at timestamp [not null]
+  completed_at timestamp
+  processing_error text
+}
+
+// Payment amounts/currency equal the locked quotation obligations. Only Deposit
+// may have a full refund. Provider events/idempotency keys are consumed once;
+// replay must not repeat transitions, checklist generation, audit, or notices.
+
+// =====================================================
+// 8. FIXED HORSE DOCUMENT CHECKLIST - FR-006..009
+// =====================================================
+
+Table horse_documents {
+  id uuid [pk]
+  transport_order_horse_id uuid [not null, ref: > transport_order_horses.id]
+  document_type document_type [not null]
+  created_at timestamp [not null]
+  updated_at timestamp
+
+  indexes {
+    (transport_order_horse_id, document_type) [unique]
+    transport_order_horse_id
+  }
+}
+
+Table horse_document_versions {
+  id uuid [pk]
+  horse_document_id uuid [not null, ref: > horse_documents.id]
+  version_no int [not null]
+  file_url varchar(500) [not null]
+  expiry_date date
+  status document_version_status [not null, default: 'DRAFT']
+  is_current boolean [not null, default: true]
+  uploaded_by uuid [not null, ref: > users.id]
+  uploaded_at timestamp [not null]
+  submitted_at timestamp
+  reviewed_by uuid [ref: > users.id]
+  reviewed_at timestamp
+  rejection_reason text
+  created_at timestamp [not null]
+  updated_at timestamp
+
+  indexes {
+    (horse_document_id, version_no) [unique]
+    horse_document_id
+    status
+    is_current
+  }
+
+  checks {
+    `version_no > 0` [name: 'document_version_number_positive']
+    `(status <> 'REJECTED') OR (rejection_reason IS NOT NULL AND length(trim(rejection_reason)) > 0)` [name: 'document_rejection_reason_required']
+    `(status NOT IN ('APPROVED', 'REJECTED')) OR (reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)` [name: 'document_review_metadata_required']
+  }
+}
+
+// Physical migration: partial unique index on horse_document_versions
+// (horse_document_id) WHERE is_current=true. Transactional logic enforces:
+// exactly five checklist rows; Customer-only upload/submit; assigned-TS review;
+// DRAFT edit/delete; submitted-version immutability/no hard delete; atomic version
+// replacement; manual expiry/overall-validity decision; all-approved Final
+// Confirm and permanent lock; and the approved deadline decision branches.
+
+// =====================================================
+// 9. VEHICLES
+// =====================================================
+
+Table vehicles {
+  id uuid [pk]
+  plate_number varchar(50) [not null, unique]
+  vehicle_name varchar(120)
+  vehicle_type varchar(100)
+  horse_capacity int [not null]
+  status vehicle_status [not null, default: 'AVAILABLE']
+  notes text
+  created_at timestamp [not null]
+  updated_at timestamp
+
+  checks {
+    `horse_capacity > 0` [name: 'vehicle_capacity_positive']
+  }
+}
+
+// =====================================================
+// 10. ROUTE PLAN AND LM REVIEW - FR-010, 013
+// =====================================================
+
+Table route_plans {
+  id uuid [pk]
+  transport_order_id uuid [not null, unique, ref: > transport_orders.id]
+  status route_plan_status [not null, default: 'DRAFT']
+  created_by uuid [not null, ref: > users.id]
+  created_at timestamp [not null]
+  updated_at timestamp
+  locked_at timestamp
+  approved_at timestamp
+}
+
+Table route_plan_reviews {
+  id uuid [pk]
+  route_plan_id uuid [not null, ref: > route_plans.id]
+  submission_no int [not null]
+  decision route_plan_review_decision [not null, default: 'PENDING']
+  submitted_by uuid [not null, ref: > users.id]
+  submitted_at timestamp [not null]
+  decided_by uuid [ref: > users.id]
+  decided_at timestamp
+  return_reason text
+
+  indexes {
+    (route_plan_id, submission_no) [unique]
+    (route_plan_id, decision)
+  }
+
+  checks {
+    `submission_no > 0` [name: 'route_review_submission_positive']
+    `(decision <> 'RETURNED') OR (return_reason IS NOT NULL AND length(trim(return_reason)) > 0)` [name: 'route_return_reason_required']
+    `(decision = 'PENDING') OR (decided_by IS NOT NULL AND decided_at IS NOT NULL)` [name: 'route_review_decision_metadata_required']
+  }
+}
+
+// FRC edits only DRAFT/RETURNED; PENDING_LM_REVIEW is locked; APPROVED locks
+// all route data permanently. LM Confirm/Return is recorded; LM never edits.
+
+// =====================================================
+// 11. ORDERED ROUTE LEGS - FR-010, 012, 015, 017
+// =====================================================
+
+Table route_legs {
+  id uuid [pk]
+  route_plan_id uuid [not null, ref: > route_plans.id]
+  sequence_no int [not null]
+  leg_type route_leg_type [not null]
+  origin varchar(255) [not null]
+  destination varchar(255) [not null]
+  planned_departure_at timestamp [not null]
+  planned_arrival_at timestamp [not null]
+
+  // Required only for AIR; null for ROAD.
+  air_provider_name varchar(150)
+  air_reference varchar(100)
+  air_capacity_horses int
+  equipment_details text
+  status route_leg_status [not null, default: 'PLANNED']
+  notes text
+  started_at timestamp
+  completed_at timestamp
+  created_at timestamp [not null]
+  updated_at timestamp
+
+  indexes {
+    (route_plan_id, sequence_no) [unique]
+    route_plan_id
+    status
+  }
+
+  checks {
+    `sequence_no > 0` [name: 'route_leg_sequence_positive']
+    `planned_departure_at < planned_arrival_at` [name: 'route_leg_time_order']
+    `(leg_type = 'AIR' AND air_provider_name IS NOT NULL AND air_reference IS NOT NULL AND air_capacity_horses > 0) OR (leg_type = 'ROAD' AND air_provider_name IS NULL AND air_reference IS NULL AND air_capacity_horses IS NULL)` [name: 'route_leg_type_fields']
+  }
+}
+
+// Confirm Route Ready validates: leg existence/continuity, adjacent times and
+// locations, Order boundaries, AIR capacity, ROAD resources/allocations, and
+// Vehicle overlap. Leg N+1 starts only after N completes. First-leg start moves
+// the Order to IN_PROGRESS once. RouteLeg transition and audit are atomic.
+
+// =====================================================
+// 12. ROAD VEHICLES AND HORSE ALLOCATION - FR-011
+// =====================================================
+
+Table road_leg_vehicles {
+  id uuid [pk]
+  route_leg_id uuid [not null, ref: > route_legs.id]
+  vehicle_id uuid [not null, ref: > vehicles.id]
+  assigned_at timestamp [not null]
+
+  indexes {
+    (route_leg_id, vehicle_id) [unique]
+    (id, route_leg_id) [unique]
+    route_leg_id
+    vehicle_id
+  }
+}
+
+Table road_leg_vehicle_horses {
+  id uuid [pk]
+  route_leg_id uuid [not null]
+  road_leg_vehicle_id uuid [not null]
+  transport_order_horse_id uuid [not null, ref: > transport_order_horses.id]
+  assigned_at timestamp [not null]
+
+  indexes {
+    (road_leg_vehicle_id, transport_order_horse_id) [unique]
+    (route_leg_id, transport_order_horse_id) [unique]
+    road_leg_vehicle_id
+    transport_order_horse_id
+  }
+}
+
+Ref: road_leg_vehicle_horses.(road_leg_vehicle_id, route_leg_id) > road_leg_vehicles.(id, route_leg_id)
+
+// Logic permits rows only for ROAD legs and validates same-Order membership,
+// exactly one Vehicle per Horse per ROAD leg, per-Vehicle capacity, no omissions,
+// and no overlapping planned interval for the same Vehicle.
+
+// =====================================================
+// 13. EXECUTION STAFF AND PROGRESSION - FR-014..017
+// =====================================================
+
+Table road_vehicle_executions {
+  id uuid [pk]
+  road_leg_vehicle_id uuid [not null, unique, ref: > road_leg_vehicles.id]
+  driver_id uuid [not null, ref: > users.id]
+  escort_id uuid [not null, ref: > users.id]
+  status execution_status [not null, default: 'NOT_STARTED']
+  assigned_at timestamp [not null]
+  started_at timestamp
+  destination_arrived_at timestamp
+  completed_at timestamp
+
+  indexes {
+    driver_id
+    escort_id
+    status
+  }
+}
+
+Table air_leg_executions {
+  id uuid [pk]
+  route_leg_id uuid [not null, unique, ref: > route_legs.id]
+  escort_id uuid [not null, ref: > users.id]
+  status execution_status [not null, default: 'NOT_STARTED']
+  assigned_at timestamp [not null]
+  started_at timestamp
+  destination_arrived_at timestamp
+  completed_at timestamp
+
+  indexes {
+    escort_id
+    status
+  }
+}
+
+// Logic validates roles and scope: each ROAD Vehicle has one Driver+Escort;
+// each AIR leg has one Escort and no Driver. READY_TO_SHIP requires all staff.
+// Assigned actors alone perform actions; ROAD Vehicles progress independently.
+
+// =====================================================
+// 14. SHARED ROAD CHECKPOINT PLAN AND ARRIVALS - FR-016
+// =====================================================
+
+Table checkpoints {
+  id uuid [pk]
+  route_leg_id uuid [not null, ref: > route_legs.id]
+  sequence_no int [not null]
+  name varchar(150) [not null]
+  checkpoint_type checkpoint_type [not null]
+  country_code varchar(10)
+  minimum_required_stop_minutes int
+  planned_stop_duration_minutes int
+  notes text
+  created_at timestamp [not null]
+  updated_at timestamp
+
+  indexes {
+    (route_leg_id, sequence_no) [unique]
+    route_leg_id
+  }
+
+  checks {
+    `sequence_no > 0` [name: 'checkpoint_sequence_positive']
+    `(checkpoint_type <> 'REST_STOP') OR (minimum_required_stop_minutes IS NOT NULL AND minimum_required_stop_minutes >= 0 AND planned_stop_duration_minutes IS NOT NULL AND planned_stop_duration_minutes >= minimum_required_stop_minutes)` [name: 'rest_stop_duration_valid']
+  }
+}
+
+Table vehicle_checkpoint_arrivals {
+  id uuid [pk]
+  road_vehicle_execution_id uuid [not null, ref: > road_vehicle_executions.id]
+  checkpoint_id uuid [not null, ref: > checkpoints.id]
+  recorded_by_driver_id uuid [not null, ref: > users.id]
+  arrived_at timestamp [not null]
+
+  indexes {
+    (road_vehicle_execution_id, checkpoint_id) [unique]
+    checkpoint_id
+    arrived_at
+  }
+}
+
+// Checkpoints exist only on ROAD legs and exclude origin/destination. Arrival
+// logic validates same leg, ordered Vehicle progress, and assigned Driver.
+// There is no Complete Checkpoint action.
+
+// =====================================================
+// 15. WELFARE EVIDENCE - FR-016, 017
+// =====================================================
+
+Table welfare_evidence {
+  id uuid [pk]
+  road_vehicle_execution_id uuid [ref: > road_vehicle_executions.id]
+  air_leg_execution_id uuid [ref: > air_leg_executions.id]
+  checkpoint_id uuid [ref: > checkpoints.id]
+  event_type welfare_event_type [not null]
+  photo_url varchar(500) [not null]
+  note text [not null]
+  recorded_by_escort_id uuid [not null, ref: > users.id]
+  recorded_at timestamp [not null]
+
+  indexes {
+    road_vehicle_execution_id
+    air_leg_execution_id
+    checkpoint_id
+    recorded_at
+  }
+
+  checks {
+    `(road_vehicle_execution_id IS NOT NULL AND air_leg_execution_id IS NULL) OR (road_vehicle_execution_id IS NULL AND air_leg_execution_id IS NOT NULL)` [name: 'welfare_exactly_one_scope']
+    `(event_type = 'CHECKPOINT' AND road_vehicle_execution_id IS NOT NULL AND checkpoint_id IS NOT NULL) OR (event_type = 'FINAL_DESTINATION' AND checkpoint_id IS NULL)` [name: 'welfare_event_scope_valid']
+    `length(trim(note)) > 0` [name: 'welfare_note_required']
+  }
+}
+
+// Physical migration adds partial unique indexes for one checkpoint welfare row
+// per Vehicle/checkpoint and one final row per ROAD/AIR execution. Logic checks
+// assigned Escort, same-leg checkpoint, prior arrival, and final evidence.
+
+// =====================================================
+// 16. PROOF OF DELIVERY - FR-018
+// =====================================================
+
+Table proofs_of_delivery {
+  id uuid [pk]
+  road_vehicle_execution_id uuid [ref: > road_vehicle_executions.id]
+  air_leg_execution_id uuid [ref: > air_leg_executions.id]
+  recipient_name varchar(150) [not null]
+  proof_photo_url varchar(500) [not null]
+  handover_note text
+  confirmed_by_escort_id uuid [not null, ref: > users.id]
+  delivered_at timestamp [not null]
+  created_at timestamp [not null]
+
+  indexes {
+    road_vehicle_execution_id
+    air_leg_execution_id
+    delivered_at
+  }
+
+  checks {
+    `(road_vehicle_execution_id IS NOT NULL AND air_leg_execution_id IS NULL) OR (road_vehicle_execution_id IS NULL AND air_leg_execution_id IS NOT NULL)` [name: 'pod_exactly_one_scope']
+    `length(trim(recipient_name)) > 0` [name: 'pod_recipient_required']
+  }
+}
+
+// Physical migration adds a partial unique index for each non-null PoD scope.
+// Logic allows PoD only on the final leg, checks assigned Escort/final welfare,
+// keeps proof and welfare photos distinct, aggregates every final ROAD Vehicle
+// or the final AIR leg, and only then transitions the Order to DELIVERED.
+
+// =====================================================
+// 17. IN-APP NOTIFICATIONS - FR-019
+// =====================================================
+
+Table notifications {
+  id uuid [pk]
+  recipient_user_id uuid [not null, ref: > users.id]
+  transport_order_id uuid [not null, ref: > transport_orders.id]
+  notification_type notification_type [not null]
+  source_event_key varchar(255) [not null]
+  title varchar(200) [not null]
+  message text [not null]
+  created_at timestamp [not null]
+  read_at timestamp
+
+  indexes {
+    (recipient_user_id, source_event_key) [unique]
+    (recipient_user_id, read_at)
+    transport_order_id
+    created_at
+  }
+}
+
+// Notices are generated automatically from approved journey/payment/refund
+// events. source_event_key prevents duplicates. No SMS/email/push is modeled.
+
+// =====================================================
+// 18. TRANSACTIONAL STATUS AUDIT - FR-020 / revised BR-19
+// =====================================================
+
+Table status_audit_logs {
+  id uuid [pk]
+  entity_type audit_entity_type [not null]
+  entity_id uuid [not null]
+  old_status varchar(80) [not null]
+  new_status varchar(80) [not null]
+  actor_kind audit_actor_kind [not null]
+  actor_user_id uuid [ref: > users.id]
+  reason text
+  occurred_at timestamp [not null]
+
+  indexes {
+    (entity_type, entity_id, occurred_at)
+    actor_user_id
+    occurred_at
+  }
+
+  checks {
+    `old_status <> new_status` [name: 'audit_status_changed']
+    `(actor_kind = 'USER' AND actor_user_id IS NOT NULL) OR (actor_kind = 'SYSTEM' AND actor_user_id IS NULL)` [name: 'audit_actor_valid']
+  }
+}
+
+// Generic entity_id cannot carry five simultaneous foreign keys. Transactional
+// logic validates the referenced entity/transition, requires reason for LM Order
+// rejection, LM route return, and TS document rejection, and writes each status
+// change plus its audit row in the same transaction.
