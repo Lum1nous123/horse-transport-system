@@ -11,8 +11,8 @@ This file is a portable handoff and resume guide for a new Codex conversation or
 - Architecture planning and requirement-to-data-model reconciliation have been performed.
 - The revised MVP ERD has been implemented in `docs/erd/erd.dbml`.
 - ERD hardening/review has minor non-blocking follow-ups remaining.
-- GitHub backlog publishing has not started.
-- Sprint planning has not started.
+- GitHub backlog publishing is complete and verified.
+- Scrum planning / Sprint planning is the next workflow phase.
 - Application implementation has not started.
 
 ## Authoritative Sources
@@ -94,10 +94,13 @@ These follow-ups do not change approved requirements and must not be used to inf
 - Project: `Horse Transport System (#4)`
 - Workflow: `Backlog → Ready → In Progress → In Review → Done`
 - Custom planning fields configured: `Priority`, `Complexity`
-- Approved FRs have not been published as GitHub Issues.
-- The GitHub Project currently has no backlog items.
+- FR-001 through FR-020 are Approved and Confirmed, with no unresolved business Open Questions.
+- All 20 approved FRs are published as GitHub Issues #1 through #20.
+- All 20 Issues are added to Project #4 and verified as Project items.
+- Every Project item has Status `Backlog`; Priority and Complexity are assigned and verified.
 - Sprint/Iteration has not been assigned.
 - The Senior BA must not assign Sprint.
+- Senior BA publication work is complete unless requirements change or clarification is requested.
 
 ## Agent Responsibilities
 
@@ -114,6 +117,7 @@ These follow-ups do not change approved requirements and must not be used to inf
 - Requirement clarification
 - FR-001 through FR-020 Human Review
 - Revised MVP ERD implementation
+- GitHub publication of FR-001 through FR-020, verified with 20/20 Issues and 20/20 Project items
 
 ### DEFERRED / NON-BLOCKING
 
@@ -121,12 +125,10 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ### NEXT
 
-1. Preserve the current project state in Git.
-2. Prepare and publish the approved FR backlog through the Senior BA workflow after an explicit publishing request and all required safety checks.
+1. Scrum planning / Sprint planning.
 
 ### NOT STARTED
 
-- GitHub Issue publishing
 - Sprint planning
 - Backend implementation
 - Frontend implementation
