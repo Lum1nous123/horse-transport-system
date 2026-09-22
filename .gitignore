@@ -23,3 +23,6 @@ out/
 
 # Logs
 *.log
+
+# Local Spring Boot secrets
+backend/src/main/resources/application-local.yaml
