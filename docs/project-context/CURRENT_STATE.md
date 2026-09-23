@@ -13,8 +13,8 @@ This file is a portable handoff and resume guide for a new Codex conversation or
 - ERD hardening/review has minor non-blocking follow-ups remaining.
 - GitHub backlog publishing is complete and verified.
 - Scrum planning / Sprint planning is complete and Human Review approved.
-- GitHub Project #4 has six one-week Development Sprint iterations for course Weeks 3–8, and FR-001 through FR-020 are assigned according to the approved Sprint Plan.
-- Course Weeks 9–10 are protected Integration/QA and Acceptance/Release buffers, not feature-development iterations.
+- GitHub Project #4 has three two-week Development Sprint iterations for course Weeks 4–9, and FR-001 through FR-020 are assigned according to the instructor-required, Human-Approved reforecast.
+- Course Week 10 is reserved for presentation, final demo, final bug fixing, and release stabilization; it is not a feature-development iteration.
 - Application implementation has not started.
 
 ## Authoritative Sources
@@ -101,14 +101,11 @@ These follow-ups do not change approved requirements and must not be used to inf
 - All 20 approved FRs are published as GitHub Issues #1 through #20.
 - All 20 Issues are added to Project #4 and verified as Project items.
 - Every Project item has Status `Backlog`; Priority and Complexity are assigned and verified.
-- Sprint assignments are configured and verified:
-  - Development Sprint 1 / Week 3 (`2026-09-21` through `2026-09-27`): FR-001 through FR-004
-  - Development Sprint 2 / Week 4 (`2026-09-28` through `2026-10-04`): FR-005 through FR-007
-  - Development Sprint 3 / Week 5 (`2026-10-05` through `2026-10-11`): FR-008 through FR-010
-  - Development Sprint 4 / Week 6 (`2026-10-12` through `2026-10-18`): FR-011 through FR-014
-  - Development Sprint 5 / Week 7 (`2026-10-19` through `2026-10-25`): FR-015 through FR-017
-  - Development Sprint 6 / Week 8 (`2026-10-26` through `2026-11-01`): FR-018 through FR-020
-- Week 9 is reserved for Integration/QA/regression/bug fixing; Week 10 is reserved for acceptance verification, release stabilization, final demo, and handoff. Neither buffer is configured as a Development Sprint.
+- Reforecast Sprint assignments are configured and verified:
+  - Sprint 1 / Weeks 4–5 (`2026-09-28` through `2026-10-11`): FR-001 through FR-007
+  - Sprint 2 / Weeks 6–7 (`2026-10-12` through `2026-10-25`): FR-008 through FR-014
+  - Sprint 3 / Weeks 8–9 (`2026-10-26` through `2026-11-08`): FR-015 through FR-020
+- Week 10 (`2026-11-09` through `2026-11-15`) is reserved for presentation, final demo, final bug fixing, and release stabilization. It is not configured as a Development Sprint.
 - The Senior BA must not assign Sprint.
 - Senior BA publication work is complete unless requirements change or clarification is requested.
 
@@ -129,7 +126,8 @@ These follow-ups do not change approved requirements and must not be used to inf
 - Revised MVP ERD implementation
 - GitHub publication of FR-001 through FR-020, verified with 20/20 Issues and 20/20 Project items
 - Sprint Planning Human Review and approval
-- GitHub Sprint field configuration and verified assignment of FR-001 through FR-020 across six Development Sprints
+- Initial GitHub Sprint field configuration and assignment of FR-001 through FR-020 across six one-week Development Sprints
+- Human-Approved reforecast to three two-week Development Sprints, with 20/20 Project item assignments verified
 
 ### DEFERRED / NON-BLOCKING
 
