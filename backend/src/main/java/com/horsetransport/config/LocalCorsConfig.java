@@ -16,7 +16,8 @@ public class LocalCorsConfig implements WebMvcConfigurer {
 		registry.addMapping("/**")
 				.allowedOrigins(LOCAL_FRONTEND_ORIGIN)
 				.allowedMethods("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-				.allowedHeaders("Accept", "Authorization", "Content-Type", "Origin", "X-Requested-With")
+				.allowedHeaders("Accept", "Authorization", "Content-Type", "Origin", "X-Current-User-Id",
+						"X-Requested-With")
 				.maxAge(3600);
 	}
 
