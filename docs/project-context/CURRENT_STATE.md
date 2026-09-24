@@ -105,6 +105,11 @@ These follow-ups do not change approved requirements and must not be used to inf
   - Sprint 1 / Weeks 4–5 (`2026-09-28` through `2026-10-11`): FR-001 through FR-007
   - Sprint 2 / Weeks 6–7 (`2026-10-12` through `2026-10-25`): FR-008 through FR-014
   - Sprint 3 / Weeks 8–9 (`2026-10-26` through `2026-11-08`): FR-015 through FR-020
+- Sprint 1 execution structure is published and verified with 22 implementation sub-issues, each linked directly to its parent FR, added to Project #4, assigned to `Sprint 1 (Weeks 4-5)`, and set to `Backlog`:
+  - Backend: Issues #21–#29, assigned to `Lum1nous123`
+  - Frontend: Issues #30–#34, assigned to `ntnphat20`
+  - QA/Test: Issues #35–#39, assigned to `DuongTran007`
+  - Leader/Review: Issues #40–#42, assigned to `baoanh-code`
 - Week 10 (`2026-11-09` through `2026-11-15`) is reserved for presentation, final demo, final bug fixing, and release stabilization. It is not configured as a Development Sprint.
 - The Senior BA must not assign Sprint.
 - Senior BA publication work is complete unless requirements change or clarification is requested.
@@ -128,6 +133,7 @@ These follow-ups do not change approved requirements and must not be used to inf
 - Sprint Planning Human Review and approval
 - Initial GitHub Sprint field configuration and assignment of FR-001 through FR-020 across six one-week Development Sprints
 - Human-Approved reforecast to three two-week Development Sprints, with 20/20 Project item assignments verified
+- GitHub publication and verification of 22 Sprint 1 implementation sub-issues (#21–#42), including direct parent linkage, role-based assignees, Project #4 membership, Sprint assignment, and `Backlog` status
 
 ### DEFERRED / NON-BLOCKING
 
@@ -135,8 +141,8 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ### NEXT
 
-1. Break down approved Sprint 1 FRs into traceable implementation tasks as needed.
-2. Begin Development Sprint 1 implementation only when explicitly requested.
+1. Begin Sprint 1 with LR-01 and BE-01.
+2. Start FE-01 and QA-01 as parallel work against the LR-01 contract and BE-01/BE-02 implementation path.
 
 ### NOT STARTED
 
