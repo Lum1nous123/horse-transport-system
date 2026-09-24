@@ -2,8 +2,10 @@ package com.horsetransport.common.api;
 
 import java.time.Instant;
 
-import com.horsetransport.horse.CurrentUserUnavailableException;
+import com.horsetransport.auth.DuplicateEmailException;
+import com.horsetransport.auth.InvalidCredentialsException;
 import com.horsetransport.horse.DuplicateMicrochipException;
+import com.horsetransport.security.CurrentUserUnavailableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -17,6 +19,16 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(DuplicateMicrochipException.class)
 	public ResponseEntity<ApiError> handleDuplicateMicrochip(DuplicateMicrochipException exception) {
 		return error(HttpStatus.CONFLICT, "DUPLICATE_MICROCHIP", exception.getMessage());
+	}
+
+	@ExceptionHandler(DuplicateEmailException.class)
+	public ResponseEntity<ApiError> handleDuplicateEmail(DuplicateEmailException exception) {
+		return error(HttpStatus.CONFLICT, "DUPLICATE_EMAIL", exception.getMessage());
+	}
+
+	@ExceptionHandler(InvalidCredentialsException.class)
+	public ResponseEntity<ApiError> handleInvalidCredentials(InvalidCredentialsException exception) {
+		return error(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", exception.getMessage());
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)

@@ -3,6 +3,7 @@ package com.horsetransport.horse;
 import java.util.List;
 import java.util.UUID;
 
+import com.horsetransport.security.CurrentUserProvider;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
