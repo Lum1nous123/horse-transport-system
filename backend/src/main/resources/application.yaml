@@ -1,6 +1,4 @@
 spring:
-  profiles:
-    active: local
   application:
     name: horse-transport-system
 
@@ -23,3 +21,10 @@ spring:
 
 server:
   port: 8080
+
+app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
+      issuer: horse-transport-system
+      expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}

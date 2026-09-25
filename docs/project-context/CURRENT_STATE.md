@@ -122,6 +122,12 @@ These follow-ups do not change approved requirements and must not be used to inf
 - **Implementation agents:** implement only approved requirements and architecture, then verify the applicable Acceptance Criteria.
 
 ## Current Work
+PR #43 đang chứa BE-01 + JWT auth foundation
+latest commits: 25f99de BE-01, 5b448e8 auth
+auth hiện có register/login/JWT/current-user/role
+30 backend tests pass
+branch hiện tại: feature/be-01-horse-identity
+next step: review PR #43 rồi merge
 
 ### COMPLETED
 
@@ -173,3 +179,4 @@ Update this file after major milestones such as requirements approval, architect
 - Do not duplicate the complete requirements.
 - Do not introduce new business rules.
 - Re-verify claims against authoritative sources and current repository/external state before updating them.
+
