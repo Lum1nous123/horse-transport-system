@@ -37,6 +37,7 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
 						.requestMatchers("/api/v1/horses/**").hasRole("CUSTOMER")
+						.requestMatchers("/api/v1/orders/**").hasRole("CUSTOMER")
 						.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 						.anyRequest().denyAll())
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

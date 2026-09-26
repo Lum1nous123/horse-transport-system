@@ -5,6 +5,10 @@ import java.time.Instant;
 import com.horsetransport.auth.DuplicateEmailException;
 import com.horsetransport.auth.InvalidCredentialsException;
 import com.horsetransport.horse.DuplicateMicrochipException;
+import com.horsetransport.order.InvalidOrderHorsesException;
+import com.horsetransport.order.OrderNotEditableException;
+import com.horsetransport.order.OrderNotFoundException;
+import com.horsetransport.order.OrderSubmissionValidationException;
 import com.horsetransport.security.CurrentUserUnavailableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +19,21 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+	@ExceptionHandler(OrderNotFoundException.class)
+	public ResponseEntity<ApiError> handleOrderNotFound(OrderNotFoundException exception) {
+		return error(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", exception.getMessage());
+	}
+
+	@ExceptionHandler(OrderNotEditableException.class)
+	public ResponseEntity<ApiError> handleOrderNotEditable(OrderNotEditableException exception) {
+		return error(HttpStatus.CONFLICT, "ORDER_NOT_EDITABLE", exception.getMessage());
+	}
+
+	@ExceptionHandler({InvalidOrderHorsesException.class, OrderSubmissionValidationException.class})
+	public ResponseEntity<ApiError> handleOrderBusinessValidation(RuntimeException exception) {
+		return error(HttpStatus.BAD_REQUEST, "ORDER_VALIDATION_ERROR", exception.getMessage());
+	}
 
 	@ExceptionHandler(DuplicateMicrochipException.class)
 	public ResponseEntity<ApiError> handleDuplicateMicrochip(DuplicateMicrochipException exception) {

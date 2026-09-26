@@ -1,6 +1,8 @@
 package com.horsetransport;
 
 import com.horsetransport.horse.HorseRepository;
+import com.horsetransport.audit.StatusAuditLogRepository;
+import com.horsetransport.order.TransportOrderRepository;
 import com.horsetransport.user.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,6 +20,12 @@ class BackendApplicationTests {
 
 	@MockitoBean
 	private HorseRepository horseRepository;
+
+	@MockitoBean
+	private TransportOrderRepository transportOrderRepository;
+
+	@MockitoBean
+	private StatusAuditLogRepository statusAuditLogRepository;
 
 	@MockitoBean
 	private UserRepository userRepository;
