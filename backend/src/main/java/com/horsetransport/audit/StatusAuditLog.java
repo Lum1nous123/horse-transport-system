@@ -52,6 +52,11 @@ public class StatusAuditLog {
 	}
 
 	public static StatusAuditLog userTransition(UUID entityId, String oldStatus, String newStatus, UUID actorUserId) {
+		return userTransition(entityId, oldStatus, newStatus, actorUserId, null);
+	}
+
+	public static StatusAuditLog userTransition(UUID entityId, String oldStatus, String newStatus,
+			UUID actorUserId, String reason) {
 		StatusAuditLog log = new StatusAuditLog();
 		log.id = UUID.randomUUID();
 		log.entityType = AuditEntityType.TRANSPORT_ORDER;
@@ -60,6 +65,7 @@ public class StatusAuditLog {
 		log.newStatus = newStatus;
 		log.actorKind = AuditActorKind.USER;
 		log.actorUserId = actorUserId;
+		log.reason = reason;
 		log.occurredAt = LocalDateTime.now();
 		return log;
 	}
@@ -76,4 +82,5 @@ public class StatusAuditLog {
 	public String getNewStatus() { return newStatus; }
 	public AuditActorKind getActorKind() { return actorKind; }
 	public UUID getActorUserId() { return actorUserId; }
+	public String getReason() { return reason; }
 }

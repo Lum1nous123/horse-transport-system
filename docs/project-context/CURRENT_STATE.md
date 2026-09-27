@@ -15,7 +15,7 @@ This file is a portable handoff and resume guide for a new Codex conversation or
 - Scrum planning / Sprint planning is complete and Human Review approved.
 - GitHub Project #4 has three two-week Development Sprint iterations for course Weeks 4–9, and FR-001 through FR-020 are assigned according to the instructor-required, Human-Approved reforecast.
 - Course Week 10 is reserved for presentation, final demo, final bug fixing, and release stabilization; it is not a feature-development iteration.
-- Backend implementation has started: BE-01 is merged and BE-02 is implemented pending Human Review.
+- Backend implementation has started: BE-01 and BE-02 are merged; BE-03 is implemented pending Human Review.
 
 ## Authoritative Sources
 
@@ -122,13 +122,14 @@ These follow-ups do not change approved requirements and must not be used to inf
 - **Implementation agents:** implement only approved requirements and architecture, then verify the applicable Acceptance Criteria.
 
 ## Current Work
-PR #43 containing BE-01 + JWT auth foundation has been merged into `main`.
-BE-02 draft/edit/submit Transport Order backend is implemented on
-`feature/be-02-order-draft-submit` and is pending Human Review.
+PR #43 (BE-01 + JWT auth foundation) and PR #44 (BE-02 draft/edit/submit
+Transport Order) have been merged into `main`.
+BE-03 Customer cancellation and LM rejection is implemented on
+`feature/be-03-order-cancel-reject` and is pending Human Review.
 Auth includes register/login/JWT/current-user/role.
-The full backend suite has 47 passing tests after BE-02 implementation.
-No ERD or migration change was needed for BE-02; the implementation reuses V1.
-Next step: Human Review of BE-02 before commit/push or backlog status changes.
+The full backend suite has 67 passing tests after BE-03 implementation.
+No ERD or migration change was needed for BE-03; the implementation reuses V1.
+Next step: Human Review of BE-03 before commit/push or backlog status changes.
 
 ### COMPLETED
 
