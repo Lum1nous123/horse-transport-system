@@ -24,12 +24,15 @@ import com.horsetransport.security.CurrentUserProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class TransportOrderServiceTest {
@@ -184,6 +187,116 @@ class TransportOrderServiceTest {
 				.isInstanceOf(OrderNotFoundException.class);
 	}
 
+	@ParameterizedTest
+	@EnumSource(value = OrderStatus.class, names = {"DRAFT", "SUBMITTED", "QUOTATION_SENT"})
+	void customerCancelsAllowedPreApprovalStatuses(OrderStatus oldStatus) {
+		TransportOrder order = order(oldStatus);
+		when(orderRepository.findByIdAndCustomerId(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+
+		OrderResponse response = service.cancel(order.getId());
+
+		assertThat(response.status()).isEqualTo(OrderStatus.CANCELLED);
+		assertThat(response.cancellationReason()).isNull();
+		assertThat(response.cancelledAt()).isNotNull();
+		ArgumentCaptor<StatusAuditLog> captor = ArgumentCaptor.forClass(StatusAuditLog.class);
+		verify(auditLogRepository).saveAndFlush(captor.capture());
+		assertThat(captor.getValue().getOldStatus()).isEqualTo(oldStatus.name());
+		assertThat(captor.getValue().getNewStatus()).isEqualTo("CANCELLED");
+		assertThat(captor.getValue().getActorUserId()).isEqualTo(CUSTOMER_ID);
+		assertThat(captor.getValue().getReason()).isNull();
+	}
+
+	@Test
+	void rejectsCustomerCancellationFromApproved() {
+		TransportOrder order = order(OrderStatus.APPROVED);
+		when(orderRepository.findByIdAndCustomerId(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+
+		assertThatThrownBy(() -> service.cancel(order.getId()))
+				.isInstanceOf(InvalidOrderTransitionException.class);
+		verify(auditLogRepository, never()).saveAndFlush(any());
+	}
+
+	@Test
+	void returnsNotFoundWhenCustomerCancelsAnotherCustomersOrder() {
+		when(orderRepository.findByIdAndCustomerId(ORDER_ID, CUSTOMER_ID)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.cancel(ORDER_ID)).isInstanceOf(OrderNotFoundException.class);
+		verify(auditLogRepository, never()).saveAndFlush(any());
+	}
+
+	@Test
+	void cancelledOrderIsTerminal() {
+		TransportOrder order = order(OrderStatus.CANCELLED);
+		when(orderRepository.findByIdAndCustomerId(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+
+		assertThatThrownBy(() -> service.cancel(order.getId()))
+				.isInstanceOf(InvalidOrderTransitionException.class);
+	}
+
+	@Test
+	void logisticsManagerRejectsSubmittedOrderWithReasonAndAudit() {
+		TransportOrder order = order(OrderStatus.SUBMITTED);
+		when(orderRepository.findById(order.getId())).thenReturn(Optional.of(order));
+
+		OrderResponse response = service.reject(order.getId(), new RejectOrderRequest("  Invalid request  "));
+
+		assertThat(response.status()).isEqualTo(OrderStatus.REJECTED);
+		assertThat(response.rejectionReason()).isEqualTo("Invalid request");
+		ArgumentCaptor<StatusAuditLog> captor = ArgumentCaptor.forClass(StatusAuditLog.class);
+		verify(auditLogRepository).saveAndFlush(captor.capture());
+		assertThat(captor.getValue().getOldStatus()).isEqualTo("SUBMITTED");
+		assertThat(captor.getValue().getNewStatus()).isEqualTo("REJECTED");
+		assertThat(captor.getValue().getActorKind()).isEqualTo(AuditActorKind.USER);
+		assertThat(captor.getValue().getActorUserId()).isEqualTo(CUSTOMER_ID);
+		assertThat(captor.getValue().getReason()).isEqualTo("Invalid request");
+	}
+
+	@Test
+	void logisticsManagerCannotRejectWithoutReason() {
+		assertThatThrownBy(() -> service.reject(ORDER_ID, new RejectOrderRequest("   ")))
+				.isInstanceOf(InvalidRejectionReasonException.class);
+		verify(orderRepository, never()).findById(any());
+		verify(auditLogRepository, never()).saveAndFlush(any());
+	}
+
+	@ParameterizedTest
+	@EnumSource(value = OrderStatus.class, names = {"DRAFT", "QUOTATION_SENT", "REJECTED"})
+	void logisticsManagerCannotRejectInvalidOrTerminalStatuses(OrderStatus status) {
+		TransportOrder order = order(status);
+		when(orderRepository.findById(order.getId())).thenReturn(Optional.of(order));
+
+		assertThatThrownBy(() -> service.reject(order.getId(), new RejectOrderRequest("Reason")))
+				.isInstanceOf(InvalidOrderTransitionException.class);
+		verify(auditLogRepository, never()).saveAndFlush(any());
+	}
+
+	@Test
+	void cancelAuditFailureRollsBackStatusAndMetadata() {
+		TransportOrder order = order(OrderStatus.SUBMITTED);
+		when(orderRepository.findByIdAndCustomerId(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+		when(auditLogRepository.saveAndFlush(any(StatusAuditLog.class)))
+				.thenThrow(new DataIntegrityViolationException("audit insert failed"));
+
+		assertThatThrownBy(() -> service.cancel(order.getId()))
+				.isInstanceOf(DataIntegrityViolationException.class);
+		assertThat(order.getStatus()).isEqualTo(OrderStatus.SUBMITTED);
+		assertThat(order.getCancellationReason()).isNull();
+		assertThat(order.getCancelledAt()).isNull();
+	}
+
+	@Test
+	void rejectAuditFailureRollsBackStatusAndReason() {
+		TransportOrder order = order(OrderStatus.SUBMITTED);
+		when(orderRepository.findById(order.getId())).thenReturn(Optional.of(order));
+		when(auditLogRepository.saveAndFlush(any(StatusAuditLog.class)))
+				.thenThrow(new DataIntegrityViolationException("audit insert failed"));
+
+		assertThatThrownBy(() -> service.reject(order.getId(), new RejectOrderRequest("Reason")))
+				.isInstanceOf(DataIntegrityViolationException.class);
+		assertThat(order.getStatus()).isEqualTo(OrderStatus.SUBMITTED);
+		assertThat(order.getRejectionReason()).isNull();
+	}
+
 	private TransportOrder validOrder() {
 		TransportOrder order = order();
 		order.update(request(List.of(HORSE_ID)), List.of(HORSE_ID));
@@ -192,6 +305,12 @@ class TransportOrderServiceTest {
 
 	private TransportOrder order() {
 		return new TransportOrder(CUSTOMER_ID, "ORD-test");
+	}
+
+	private TransportOrder order(OrderStatus status) {
+		TransportOrder order = order();
+		ReflectionTestUtils.setField(order, "status", status);
+		return order;
 	}
 
 	private UpdateOrderRequest emptyRequest() {

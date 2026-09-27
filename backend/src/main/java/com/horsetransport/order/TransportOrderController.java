@@ -50,4 +50,14 @@ public class TransportOrderController {
 	public OrderResponse submit(@PathVariable UUID orderId) {
 		return orderService.submit(orderId);
 	}
+
+	@PostMapping("/{orderId}/cancel")
+	public OrderResponse cancel(@PathVariable UUID orderId) {
+		return orderService.cancel(orderId);
+	}
+
+	@PostMapping("/{orderId}/reject")
+	public OrderResponse reject(@PathVariable UUID orderId, @Valid @RequestBody RejectOrderRequest request) {
+		return orderService.reject(orderId, request);
+	}
 }
