@@ -154,6 +154,19 @@ public class TransportOrder {
 		rejectionReason = reason.trim();
 	}
 
+	public void markQuotationSent() {
+		if (status != OrderStatus.SUBMITTED) {
+			throw new InvalidOrderTransitionException(status, "quoted");
+		}
+		status = OrderStatus.QUOTATION_SENT;
+	}
+
+	public void restoreSubmittedAfterQuotationSendFailure() {
+		if (status == OrderStatus.QUOTATION_SENT) {
+			status = OrderStatus.SUBMITTED;
+		}
+	}
+
 	void restoreDraft() {
 		status = OrderStatus.DRAFT;
 	}
