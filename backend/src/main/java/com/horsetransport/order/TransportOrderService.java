@@ -1,8 +1,10 @@
 package com.horsetransport.order;
 
 import java.nio.ByteBuffer;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -17,6 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TransportOrderService {
+
+	private static final Set<OrderStatus> CUSTOMER_CANCELLABLE_STATUSES =
+			EnumSet.of(OrderStatus.DRAFT, OrderStatus.SUBMITTED, OrderStatus.QUOTATION_SENT);
 
 	private final TransportOrderRepository orderRepository;
 	private final HorseRepository horseRepository;
@@ -84,6 +89,58 @@ public class TransportOrderService {
 			// The transaction rollback protects the database; restoring also avoids leaking
 			// a misleading managed/in-memory state after a flush failure.
 			order.restoreDraft();
+			throw exception;
+		}
+		return OrderResponse.from(order);
+	}
+
+	@Transactional
+	public OrderResponse cancel(UUID orderId) {
+		UUID actorUserId = currentUserProvider.getCurrentUserId();
+		TransportOrder order = findOwnedOrder(orderId, actorUserId);
+		OrderStatus oldStatus = order.getStatus();
+		if (!CUSTOMER_CANCELLABLE_STATUSES.contains(oldStatus)) {
+			throw new InvalidOrderTransitionException(oldStatus, "cancelled");
+		}
+
+		String oldRejectionReason = order.getRejectionReason();
+		String oldCancellationReason = order.getCancellationReason();
+		LocalDateTime oldCancelledAt = order.getCancelledAt();
+		order.cancel();
+		orderRepository.save(order);
+		try {
+			auditLogRepository.saveAndFlush(StatusAuditLog.userTransition(
+					order.getId(), oldStatus.name(), OrderStatus.CANCELLED.name(), actorUserId, null));
+		} catch (RuntimeException exception) {
+			order.restoreTransition(oldStatus, oldRejectionReason, oldCancellationReason, oldCancelledAt);
+			throw exception;
+		}
+		return OrderResponse.from(order);
+	}
+
+	@Transactional
+	public OrderResponse reject(UUID orderId, RejectOrderRequest request) {
+		if (request == null || request.rejectionReason() == null || request.rejectionReason().isBlank()) {
+			throw new InvalidRejectionReasonException();
+		}
+		UUID actorUserId = currentUserProvider.getCurrentUserId();
+		TransportOrder order = orderRepository.findById(orderId).orElseThrow(OrderNotFoundException::new);
+		OrderStatus oldStatus = order.getStatus();
+		if (oldStatus != OrderStatus.SUBMITTED) {
+			throw new InvalidOrderTransitionException(oldStatus, "rejected");
+		}
+
+		String oldRejectionReason = order.getRejectionReason();
+		String oldCancellationReason = order.getCancellationReason();
+		LocalDateTime oldCancelledAt = order.getCancelledAt();
+		order.reject(request.rejectionReason());
+		orderRepository.save(order);
+		try {
+			auditLogRepository.saveAndFlush(StatusAuditLog.userTransition(
+					order.getId(), oldStatus.name(), OrderStatus.REJECTED.name(), actorUserId,
+					order.getRejectionReason()));
+		} catch (RuntimeException exception) {
+			order.restoreTransition(oldStatus, oldRejectionReason, oldCancellationReason, oldCancelledAt);
 			throw exception;
 		}
 		return OrderResponse.from(order);

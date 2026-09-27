@@ -67,6 +67,15 @@ public class TransportOrder {
 	@Column(name = "recipient_email", length = 150)
 	private String recipientEmail;
 
+	@Column(name = "rejection_reason", columnDefinition = "text")
+	private String rejectionReason;
+
+	@Column(name = "cancellation_reason", columnDefinition = "text")
+	private String cancellationReason;
+
+	@Column(name = "cancelled_at")
+	private LocalDateTime cancelledAt;
+
 	@Enumerated(EnumType.STRING)
 	@JdbcTypeCode(SqlTypes.NAMED_ENUM)
 	@Column(nullable = false, columnDefinition = "order_status")
@@ -134,8 +143,27 @@ public class TransportOrder {
 		status = OrderStatus.SUBMITTED;
 	}
 
+	void cancel() {
+		status = OrderStatus.CANCELLED;
+		cancellationReason = null;
+		cancelledAt = LocalDateTime.now();
+	}
+
+	void reject(String reason) {
+		status = OrderStatus.REJECTED;
+		rejectionReason = reason.trim();
+	}
+
 	void restoreDraft() {
 		status = OrderStatus.DRAFT;
+	}
+
+	void restoreTransition(OrderStatus previousStatus, String previousRejectionReason,
+			String previousCancellationReason, LocalDateTime previousCancelledAt) {
+		status = previousStatus;
+		rejectionReason = previousRejectionReason;
+		cancellationReason = previousCancellationReason;
+		cancelledAt = previousCancelledAt;
 	}
 
 	private String normalize(String value) {
@@ -155,6 +183,9 @@ public class TransportOrder {
 	public String getRecipientName() { return recipientName; }
 	public String getRecipientPhone() { return recipientPhone; }
 	public String getRecipientEmail() { return recipientEmail; }
+	public String getRejectionReason() { return rejectionReason; }
+	public String getCancellationReason() { return cancellationReason; }
+	public LocalDateTime getCancelledAt() { return cancelledAt; }
 	public OrderStatus getStatus() { return status; }
 	public LocalDateTime getCreatedAt() { return createdAt; }
 	public LocalDateTime getUpdatedAt() { return updatedAt; }

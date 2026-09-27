@@ -6,6 +6,8 @@ import com.horsetransport.auth.DuplicateEmailException;
 import com.horsetransport.auth.InvalidCredentialsException;
 import com.horsetransport.horse.DuplicateMicrochipException;
 import com.horsetransport.order.InvalidOrderHorsesException;
+import com.horsetransport.order.InvalidOrderTransitionException;
+import com.horsetransport.order.InvalidRejectionReasonException;
 import com.horsetransport.order.OrderNotEditableException;
 import com.horsetransport.order.OrderNotFoundException;
 import com.horsetransport.order.OrderSubmissionValidationException;
@@ -20,6 +22,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+	@ExceptionHandler(InvalidOrderTransitionException.class)
+	public ResponseEntity<ApiError> handleInvalidOrderTransition(InvalidOrderTransitionException exception) {
+		return error(HttpStatus.CONFLICT, "INVALID_ORDER_TRANSITION", exception.getMessage());
+	}
+
 	@ExceptionHandler(OrderNotFoundException.class)
 	public ResponseEntity<ApiError> handleOrderNotFound(OrderNotFoundException exception) {
 		return error(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", exception.getMessage());
@@ -30,7 +37,8 @@ public class GlobalExceptionHandler {
 		return error(HttpStatus.CONFLICT, "ORDER_NOT_EDITABLE", exception.getMessage());
 	}
 
-	@ExceptionHandler({InvalidOrderHorsesException.class, OrderSubmissionValidationException.class})
+	@ExceptionHandler({InvalidOrderHorsesException.class, InvalidRejectionReasonException.class,
+			OrderSubmissionValidationException.class})
 	public ResponseEntity<ApiError> handleOrderBusinessValidation(RuntimeException exception) {
 		return error(HttpStatus.BAD_REQUEST, "ORDER_VALIDATION_ERROR", exception.getMessage());
 	}

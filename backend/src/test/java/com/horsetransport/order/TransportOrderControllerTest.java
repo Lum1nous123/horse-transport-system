@@ -52,6 +52,44 @@ class TransportOrderControllerTest {
 	}
 
 	@Test
+	void exposesCancelAndRejectEndpoints() throws Exception {
+		when(service.cancel(ORDER_ID)).thenReturn(response(OrderStatus.CANCELLED));
+		when(service.reject(any(), any())).thenReturn(response(OrderStatus.REJECTED));
+
+		mockMvc.perform(post("/api/v1/orders/{id}/cancel", ORDER_ID))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("CANCELLED"));
+		mockMvc.perform(post("/api/v1/orders/{id}/reject", ORDER_ID)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"rejectionReason":"Insufficient information"}
+						"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("REJECTED"));
+	}
+
+	@Test
+	void rejectsBlankRejectionReason() throws Exception {
+		mockMvc.perform(post("/api/v1/orders/{id}/reject", ORDER_ID)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"rejectionReason":"   "}
+						"""))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+	}
+
+	@Test
+	void returnsConflictForInvalidTransition() throws Exception {
+		when(service.cancel(ORDER_ID))
+				.thenThrow(new InvalidOrderTransitionException(OrderStatus.APPROVED, "cancelled"));
+
+		mockMvc.perform(post("/api/v1/orders/{id}/cancel", ORDER_ID))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("INVALID_ORDER_TRANSITION"));
+	}
+
+	@Test
 	void returnsNotFoundForUnownedOrder() throws Exception {
 		when(service.findCurrentCustomerOrder(ORDER_ID)).thenThrow(new OrderNotFoundException());
 		mockMvc.perform(get("/api/v1/orders/{id}", ORDER_ID))
@@ -67,6 +105,6 @@ class TransportOrderControllerTest {
 
 	private OrderResponse response(OrderStatus status) {
 		return new OrderResponse(ORDER_ID, "ORD-test", null, null, null, null, null, null,
-				null, null, null, null, List.of(), status, LocalDateTime.now(), null);
+				null, null, null, null, List.of(), null, null, null, status, LocalDateTime.now(), null);
 	}
 }
