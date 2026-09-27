@@ -15,7 +15,7 @@ This file is a portable handoff and resume guide for a new Codex conversation or
 - Scrum planning / Sprint planning is complete and Human Review approved.
 - GitHub Project #4 has three two-week Development Sprint iterations for course Weeks 4–9, and FR-001 through FR-020 are assigned according to the instructor-required, Human-Approved reforecast.
 - Course Week 10 is reserved for presentation, final demo, final bug fixing, and release stabilization; it is not a feature-development iteration.
-- Backend implementation has started: BE-01 and BE-02 are merged; BE-03 is implemented pending Human Review.
+- Backend implementation is active. BE-01, JWT Authentication foundation, BE-02, BE-03, and BE-04 are complete and merged into `main`.
 
 ## Authoritative Sources
 
@@ -122,14 +122,28 @@ These follow-ups do not change approved requirements and must not be used to inf
 - **Implementation agents:** implement only approved requirements and architecture, then verify the applicable Acceptance Criteria.
 
 ## Current Work
-PR #43 (BE-01 + JWT auth foundation) and PR #44 (BE-02 draft/edit/submit
-Transport Order) have been merged into `main`.
-BE-03 Customer cancellation and LM rejection is implemented on
-`feature/be-03-order-cancel-reject` and is pending Human Review.
-Auth includes register/login/JWT/current-user/role.
-The full backend suite has 67 passing tests after BE-03 implementation.
-No ERD or migration change was needed for BE-03; the implementation reuses V1.
-Next step: Human Review of BE-03 before commit/push or backlog status changes.
+
+PR #43 (BE-01 + JWT Authentication foundation), PR #44 (BE-02 Order
+Draft-to-Submit), PR #45 (BE-03 Cancel / Reject Pre-Approval), and PR #46
+(BE-04 Quotation Draft-to-Sent) are merged into `main`. The latest merge is
+commit `7d46c9b`.
+
+BE-04 implements Quotation create DRAFT, edit DRAFT, LM get, and atomic send
+from DRAFT to SENT. Send also moves the Order from `SUBMITTED` to
+`QUOTATION_SENT` and writes `QUOTATION` plus `TRANSPORT_ORDER` status audits in
+the same transaction. LM can create/edit/get/send; a Customer can only view a
+SENT quotation belonging to their own Order. SENT quotations are immutable.
+
+The backend calculates `totalAmount` and `remainingAmount`, uses fixed currency
+`USD`, and stores `depositAmount` on the quotation. Deposit payment is not yet
+implemented. There is no Customer Accept Quotation action and no LM manual
+approval; successful Deposit payment will move `QUOTATION_SENT` to `APPROVED`
+in BE-05.
+
+The full backend suite has 90 passing tests after BE-04. BE-04 reused V1 and did
+not change the ERD, migration, or frontend.
+
+Next backend task: BE-05 Pay Deposit and Approve Order.
 
 ### COMPLETED
 
@@ -142,6 +156,11 @@ Next step: Human Review of BE-03 before commit/push or backlog status changes.
 - Initial GitHub Sprint field configuration and assignment of FR-001 through FR-020 across six one-week Development Sprints
 - Human-Approved reforecast to three two-week Development Sprints, with 20/20 Project item assignments verified
 - GitHub publication and verification of 22 Sprint 1 implementation sub-issues (#21–#42), including direct parent linkage, role-based assignees, Project #4 membership, Sprint assignment, and `Backlog` status
+- BE-01 Horse Identity
+- JWT Authentication foundation
+- BE-02 Order Draft-to-Submit
+- BE-03 Cancel / Reject Pre-Approval
+- BE-04 Quotation Draft-to-Sent / FR-004 implementation, merged through PR #46
 
 ### DEFERRED / NON-BLOCKING
 
@@ -149,12 +168,13 @@ Next step: Human Review of BE-03 before commit/push or backlog status changes.
 
 ### NEXT
 
-1. Begin Sprint 1 with LR-01 and BE-01.
-2. Start FE-01 and QA-01 as parallel work against the LR-01 contract and BE-01/BE-02 implementation path.
+1. Implement BE-05 Pay Deposit and Approve Order.
+2. Keep Stripe payment and automatic `QUOTATION_SENT → APPROVED` transition within BE-05 scope.
 
 ### NOT STARTED
 
-- Backend implementation
+- BE-05 and later backend vertical slices
+- Stripe Deposit payment and `QUOTATION_SENT → APPROVED`
 - Frontend implementation
 - QA execution
 
