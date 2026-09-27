@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.List;
 import java.util.UUID;
 
+import com.horsetransport.user.UserRole;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -28,6 +29,7 @@ class SecurityContextCurrentUserProviderTest {
 				userId.toString(), null, List.of(new SimpleGrantedAuthority("ROLE_CUSTOMER"))));
 
 		assertThat(provider.getCurrentUserId()).isEqualTo(userId);
+		assertThat(provider.getCurrentUserRole()).isEqualTo(UserRole.CUSTOMER);
 	}
 
 	@Test
