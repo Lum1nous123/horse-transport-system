@@ -18,6 +18,9 @@ public record OrderResponse(
 		String recipientPhone,
 		String recipientEmail,
 		List<UUID> horseIds,
+		String rejectionReason,
+		String cancellationReason,
+		LocalDateTime cancelledAt,
 		OrderStatus status,
 		LocalDateTime createdAt,
 		LocalDateTime updatedAt) {
@@ -29,6 +32,7 @@ public record OrderResponse(
 				order.getTransportMode(), order.getSpecialRequirements(), order.getRecipientName(),
 				order.getRecipientPhone(), order.getRecipientEmail(),
 				order.getHorses().stream().map(TransportOrderHorse::getHorseId).toList(),
+				order.getRejectionReason(), order.getCancellationReason(), order.getCancelledAt(),
 				order.getStatus(), order.getCreatedAt(), order.getUpdatedAt());
 	}
 }

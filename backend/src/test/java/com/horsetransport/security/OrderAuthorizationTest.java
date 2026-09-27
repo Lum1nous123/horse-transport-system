@@ -3,6 +3,7 @@ package com.horsetransport.security;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
@@ -22,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -60,6 +62,64 @@ class OrderAuthorizationTest {
 		mockMvc.perform(get("/api/v1/orders")
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + jwtService.createToken(manager)))
 				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void allowsCustomerToCancelButNotReject() throws Exception {
+		UserAccount customer = user(UserRole.CUSTOMER);
+		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(customer));
+		String token = jwtService.createToken(customer);
+
+		mockMvc.perform(post("/api/v1/orders/{id}/cancel", USER_ID)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+				.andExpect(status().isOk());
+		mockMvc.perform(post("/api/v1/orders/{id}/reject", USER_ID)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"rejectionReason\":\"Reason\"}"))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void allowsLogisticsManagerToRejectButNotCancel() throws Exception {
+		UserAccount manager = user(UserRole.LOGISTICS_MANAGER);
+		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(manager));
+		String token = jwtService.createToken(manager);
+
+		mockMvc.perform(post("/api/v1/orders/{id}/reject", USER_ID)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"rejectionReason\":\"Reason\"}"))
+				.andExpect(status().isOk());
+		mockMvc.perform(post("/api/v1/orders/{id}/cancel", USER_ID)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void rejectsOtherRolesFromCancelAndReject() throws Exception {
+		UserAccount specialist = user(UserRole.TRANSPORT_SPECIALIST);
+		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(specialist));
+		String token = jwtService.createToken(specialist);
+
+		mockMvc.perform(post("/api/v1/orders/{id}/cancel", USER_ID)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+				.andExpect(status().isForbidden());
+		mockMvc.perform(post("/api/v1/orders/{id}/reject", USER_ID)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"rejectionReason\":\"Reason\"}"))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void rejectsUnauthenticatedCancelAndReject() throws Exception {
+		mockMvc.perform(post("/api/v1/orders/{id}/cancel", USER_ID))
+				.andExpect(status().isUnauthorized());
+		mockMvc.perform(post("/api/v1/orders/{id}/reject", USER_ID)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"rejectionReason\":\"Reason\"}"))
+				.andExpect(status().isUnauthorized());
 	}
 
 	private UserAccount user(UserRole role) {
