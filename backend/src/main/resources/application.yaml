@@ -28,3 +28,9 @@ app:
       secret: ${JWT_SECRET}
       issuer: horse-transport-system
       expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}
+  payments:
+    stripe:
+      secret-key: ${STRIPE_SECRET_KEY:}
+      webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+      success-url: ${STRIPE_CHECKOUT_SUCCESS_URL:http://localhost:5173/payment/success}
+      cancel-url: ${STRIPE_CHECKOUT_CANCEL_URL:http://localhost:5173/payment/cancelled}

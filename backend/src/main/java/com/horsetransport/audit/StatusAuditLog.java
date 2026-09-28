@@ -75,6 +75,21 @@ public class StatusAuditLog {
 		return log;
 	}
 
+	public static StatusAuditLog systemTransition(AuditEntityType entityType, UUID entityId, String oldStatus,
+			String newStatus) {
+		StatusAuditLog log = new StatusAuditLog();
+		log.id = UUID.randomUUID();
+		log.entityType = entityType;
+		log.entityId = entityId;
+		log.oldStatus = oldStatus;
+		log.newStatus = newStatus;
+		log.actorKind = AuditActorKind.SYSTEM;
+		log.actorUserId = null;
+		log.reason = null;
+		log.occurredAt = LocalDateTime.now();
+		return log;
+	}
+
 	@PrePersist
 	void prePersist() {
 		if (id == null) id = UUID.randomUUID();

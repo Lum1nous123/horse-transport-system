@@ -11,6 +11,10 @@ import com.horsetransport.order.InvalidRejectionReasonException;
 import com.horsetransport.order.OrderNotEditableException;
 import com.horsetransport.order.OrderNotFoundException;
 import com.horsetransport.order.OrderSubmissionValidationException;
+import com.horsetransport.payment.DepositPaymentConflictException;
+import com.horsetransport.payment.DepositPaymentNotFoundException;
+import com.horsetransport.payment.InvalidStripeWebhookException;
+import com.horsetransport.payment.StripeConfigurationException;
 import com.horsetransport.quotation.DuplicateQuotationException;
 import com.horsetransport.quotation.QuotationNotEditableException;
 import com.horsetransport.quotation.QuotationNotFoundException;
@@ -25,6 +29,26 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+	@ExceptionHandler(DepositPaymentNotFoundException.class)
+	public ResponseEntity<ApiError> handleDepositPaymentNotFound(DepositPaymentNotFoundException exception) {
+		return error(HttpStatus.NOT_FOUND, "DEPOSIT_PAYMENT_NOT_FOUND", exception.getMessage());
+	}
+
+	@ExceptionHandler(DepositPaymentConflictException.class)
+	public ResponseEntity<ApiError> handleDepositPaymentConflict(DepositPaymentConflictException exception) {
+		return error(HttpStatus.CONFLICT, "DEPOSIT_PAYMENT_CONFLICT", exception.getMessage());
+	}
+
+	@ExceptionHandler(InvalidStripeWebhookException.class)
+	public ResponseEntity<ApiError> handleInvalidStripeWebhook(InvalidStripeWebhookException exception) {
+		return error(HttpStatus.BAD_REQUEST, "INVALID_STRIPE_WEBHOOK", exception.getMessage());
+	}
+
+	@ExceptionHandler(StripeConfigurationException.class)
+	public ResponseEntity<ApiError> handleStripeConfiguration(StripeConfigurationException exception) {
+		return error(HttpStatus.SERVICE_UNAVAILABLE, "STRIPE_UNAVAILABLE", exception.getMessage());
+	}
 
 	@ExceptionHandler(QuotationNotFoundException.class)
 	public ResponseEntity<ApiError> handleQuotationNotFound(QuotationNotFoundException exception) {
