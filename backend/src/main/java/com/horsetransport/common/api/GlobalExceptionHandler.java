@@ -11,6 +11,10 @@ import com.horsetransport.order.InvalidRejectionReasonException;
 import com.horsetransport.order.OrderNotEditableException;
 import com.horsetransport.order.OrderNotFoundException;
 import com.horsetransport.order.OrderSubmissionValidationException;
+import com.horsetransport.quotation.DuplicateQuotationException;
+import com.horsetransport.quotation.QuotationNotEditableException;
+import com.horsetransport.quotation.QuotationNotFoundException;
+import com.horsetransport.quotation.QuotationValidationException;
 import com.horsetransport.security.CurrentUserUnavailableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +25,26 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+	@ExceptionHandler(QuotationNotFoundException.class)
+	public ResponseEntity<ApiError> handleQuotationNotFound(QuotationNotFoundException exception) {
+		return error(HttpStatus.NOT_FOUND, "QUOTATION_NOT_FOUND", exception.getMessage());
+	}
+
+	@ExceptionHandler(DuplicateQuotationException.class)
+	public ResponseEntity<ApiError> handleDuplicateQuotation(DuplicateQuotationException exception) {
+		return error(HttpStatus.CONFLICT, "DUPLICATE_QUOTATION", exception.getMessage());
+	}
+
+	@ExceptionHandler(QuotationNotEditableException.class)
+	public ResponseEntity<ApiError> handleQuotationNotEditable(QuotationNotEditableException exception) {
+		return error(HttpStatus.CONFLICT, "QUOTATION_NOT_EDITABLE", exception.getMessage());
+	}
+
+	@ExceptionHandler(QuotationValidationException.class)
+	public ResponseEntity<ApiError> handleQuotationValidation(QuotationValidationException exception) {
+		return error(HttpStatus.BAD_REQUEST, "QUOTATION_VALIDATION_ERROR", exception.getMessage());
+	}
 
 	@ExceptionHandler(InvalidOrderTransitionException.class)
 	public ResponseEntity<ApiError> handleInvalidOrderTransition(InvalidOrderTransitionException exception) {
