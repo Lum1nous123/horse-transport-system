@@ -1,0 +1,8 @@
+package com.horsetransport.payment;
+
+public class StripeConfigurationException extends RuntimeException {
+
+	public StripeConfigurationException(String message) {
+		super(message);
+	}
+}
