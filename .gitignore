@@ -26,3 +26,8 @@ out/
 
 # Local Spring Boot secrets
 backend/src/main/resources/application-local.yaml
+
+frontend.zip
+
+# Local mascot source sheets
+characters/horse/*.png
