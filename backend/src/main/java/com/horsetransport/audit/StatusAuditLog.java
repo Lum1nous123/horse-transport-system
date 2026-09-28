@@ -57,9 +57,14 @@ public class StatusAuditLog {
 
 	public static StatusAuditLog userTransition(UUID entityId, String oldStatus, String newStatus,
 			UUID actorUserId, String reason) {
+		return userTransition(AuditEntityType.TRANSPORT_ORDER, entityId, oldStatus, newStatus, actorUserId, reason);
+	}
+
+	public static StatusAuditLog userTransition(AuditEntityType entityType, UUID entityId, String oldStatus,
+			String newStatus, UUID actorUserId, String reason) {
 		StatusAuditLog log = new StatusAuditLog();
 		log.id = UUID.randomUUID();
-		log.entityType = AuditEntityType.TRANSPORT_ORDER;
+		log.entityType = entityType;
 		log.entityId = entityId;
 		log.oldStatus = oldStatus;
 		log.newStatus = newStatus;
