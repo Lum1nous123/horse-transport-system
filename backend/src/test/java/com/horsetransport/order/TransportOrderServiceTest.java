@@ -191,7 +191,7 @@ class TransportOrderServiceTest {
 	@EnumSource(value = OrderStatus.class, names = {"DRAFT", "SUBMITTED", "QUOTATION_SENT"})
 	void customerCancelsAllowedPreApprovalStatuses(OrderStatus oldStatus) {
 		TransportOrder order = order(oldStatus);
-		when(orderRepository.findByIdAndCustomerId(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+		when(orderRepository.findOwnedByIdForUpdate(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
 
 		OrderResponse response = service.cancel(order.getId());
 
@@ -209,7 +209,7 @@ class TransportOrderServiceTest {
 	@Test
 	void rejectsCustomerCancellationFromApproved() {
 		TransportOrder order = order(OrderStatus.APPROVED);
-		when(orderRepository.findByIdAndCustomerId(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+		when(orderRepository.findOwnedByIdForUpdate(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
 
 		assertThatThrownBy(() -> service.cancel(order.getId()))
 				.isInstanceOf(InvalidOrderTransitionException.class);
@@ -218,7 +218,7 @@ class TransportOrderServiceTest {
 
 	@Test
 	void returnsNotFoundWhenCustomerCancelsAnotherCustomersOrder() {
-		when(orderRepository.findByIdAndCustomerId(ORDER_ID, CUSTOMER_ID)).thenReturn(Optional.empty());
+		when(orderRepository.findOwnedByIdForUpdate(ORDER_ID, CUSTOMER_ID)).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.cancel(ORDER_ID)).isInstanceOf(OrderNotFoundException.class);
 		verify(auditLogRepository, never()).saveAndFlush(any());
@@ -227,7 +227,7 @@ class TransportOrderServiceTest {
 	@Test
 	void cancelledOrderIsTerminal() {
 		TransportOrder order = order(OrderStatus.CANCELLED);
-		when(orderRepository.findByIdAndCustomerId(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+		when(orderRepository.findOwnedByIdForUpdate(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
 
 		assertThatThrownBy(() -> service.cancel(order.getId()))
 				.isInstanceOf(InvalidOrderTransitionException.class);
@@ -273,7 +273,7 @@ class TransportOrderServiceTest {
 	@Test
 	void cancelAuditFailureRollsBackStatusAndMetadata() {
 		TransportOrder order = order(OrderStatus.SUBMITTED);
-		when(orderRepository.findByIdAndCustomerId(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+		when(orderRepository.findOwnedByIdForUpdate(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
 		when(auditLogRepository.saveAndFlush(any(StatusAuditLog.class)))
 				.thenThrow(new DataIntegrityViolationException("audit insert failed"));
 

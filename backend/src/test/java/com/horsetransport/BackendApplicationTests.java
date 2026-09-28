@@ -3,6 +3,9 @@ package com.horsetransport;
 import com.horsetransport.horse.HorseRepository;
 import com.horsetransport.audit.StatusAuditLogRepository;
 import com.horsetransport.order.TransportOrderRepository;
+import com.horsetransport.payment.PaymentAttemptRepository;
+import com.horsetransport.payment.PaymentProviderEventRepository;
+import com.horsetransport.payment.PaymentRepository;
 import com.horsetransport.quotation.QuotationRepository;
 import com.horsetransport.user.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -30,6 +33,15 @@ class BackendApplicationTests {
 
 	@MockitoBean
 	private QuotationRepository quotationRepository;
+
+	@MockitoBean
+	private PaymentRepository paymentRepository;
+
+	@MockitoBean
+	private PaymentAttemptRepository paymentAttemptRepository;
+
+	@MockitoBean
+	private PaymentProviderEventRepository paymentProviderEventRepository;
 
 	@MockitoBean
 	private UserRepository userRepository;

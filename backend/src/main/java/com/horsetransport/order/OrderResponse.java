@@ -21,6 +21,7 @@ public record OrderResponse(
 		String rejectionReason,
 		String cancellationReason,
 		LocalDateTime cancelledAt,
+		LocalDateTime approvedAt,
 		OrderStatus status,
 		LocalDateTime createdAt,
 		LocalDateTime updatedAt) {
@@ -33,6 +34,6 @@ public record OrderResponse(
 				order.getRecipientPhone(), order.getRecipientEmail(),
 				order.getHorses().stream().map(TransportOrderHorse::getHorseId).toList(),
 				order.getRejectionReason(), order.getCancellationReason(), order.getCancelledAt(),
-				order.getStatus(), order.getCreatedAt(), order.getUpdatedAt());
+				order.getApprovedAt(), order.getStatus(), order.getCreatedAt(), order.getUpdatedAt());
 	}
 }
