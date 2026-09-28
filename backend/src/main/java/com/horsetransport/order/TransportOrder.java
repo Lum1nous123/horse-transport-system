@@ -76,6 +76,9 @@ public class TransportOrder {
 	@Column(name = "cancelled_at")
 	private LocalDateTime cancelledAt;
 
+	@Column(name = "approved_at")
+	private LocalDateTime approvedAt;
+
 	@Enumerated(EnumType.STRING)
 	@JdbcTypeCode(SqlTypes.NAMED_ENUM)
 	@Column(nullable = false, columnDefinition = "order_status")
@@ -167,6 +170,21 @@ public class TransportOrder {
 		}
 	}
 
+	public void approveAfterDeposit() {
+		if (status != OrderStatus.QUOTATION_SENT) {
+			throw new InvalidOrderTransitionException(status, "approved after Deposit payment");
+		}
+		status = OrderStatus.APPROVED;
+		approvedAt = LocalDateTime.now();
+	}
+
+	public void restoreQuotationSentAfterApprovalFailure() {
+		if (status == OrderStatus.APPROVED) {
+			status = OrderStatus.QUOTATION_SENT;
+			approvedAt = null;
+		}
+	}
+
 	void restoreDraft() {
 		status = OrderStatus.DRAFT;
 	}
@@ -199,6 +217,7 @@ public class TransportOrder {
 	public String getRejectionReason() { return rejectionReason; }
 	public String getCancellationReason() { return cancellationReason; }
 	public LocalDateTime getCancelledAt() { return cancelledAt; }
+	public LocalDateTime getApprovedAt() { return approvedAt; }
 	public OrderStatus getStatus() { return status; }
 	public LocalDateTime getCreatedAt() { return createdAt; }
 	public LocalDateTime getUpdatedAt() { return updatedAt; }

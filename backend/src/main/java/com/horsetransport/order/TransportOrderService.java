@@ -97,7 +97,8 @@ public class TransportOrderService {
 	@Transactional
 	public OrderResponse cancel(UUID orderId) {
 		UUID actorUserId = currentUserProvider.getCurrentUserId();
-		TransportOrder order = findOwnedOrder(orderId, actorUserId);
+		TransportOrder order = orderRepository.findOwnedByIdForUpdate(orderId, actorUserId)
+				.orElseThrow(OrderNotFoundException::new);
 		OrderStatus oldStatus = order.getStatus();
 		if (!CUSTOMER_CANCELLABLE_STATUSES.contains(oldStatus)) {
 			throw new InvalidOrderTransitionException(oldStatus, "cancelled");
