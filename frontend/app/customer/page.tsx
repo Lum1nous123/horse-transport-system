@@ -36,6 +36,18 @@ type Order = {
 };
 
 type OrderFields = Omit<Order, "id" | "orderCode" | "status" | "horseIds"> & { horseIds: string[] };
+type Quotation = {
+  id: string;
+  orderId: string;
+  totalAmount: number;
+  depositAmount: number;
+  remainingAmount: number;
+  currency: string;
+  notes?: string | null;
+  status: "SENT";
+  sentAt?: string | null;
+  lineItems: { id: string; sequenceNo: number; description: string; amount: number }[];
+};
 
 const emptyOrder: OrderFields = {
   originAddress: "", originCountry: "", destinationAddress: "", destinationCountry: "",
@@ -60,7 +72,21 @@ const previewOrders: Order[] = [
     destinationCountry: "Netherlands", transportMode: "COMBINED", recipientName: "Alex Morgan",
     recipientPhone: "+31 20 555 0142", horseIds: ["preview-horse-1", "preview-horse-2"], status: "SUBMITTED",
   },
+  {
+    id: "preview-order-3", orderCode: "ORD-DEMO-1024", originCountry: "United Kingdom",
+    destinationCountry: "Belgium", transportMode: "ROAD", recipientName: "Taylor Reed",
+    recipientPhone: "+32 2 555 0175", horseIds: ["preview-horse-2"], status: "QUOTATION_SENT",
+  },
 ];
+
+const previewQuotation: Quotation = {
+  id: "preview-quotation-1", orderId: "preview-order-3", totalAmount: 4800,
+  depositAmount: 1200, remainingAmount: 3600, currency: "USD", notes: "Estimated delivery window: 2–3 days.",
+  status: "SENT", sentAt: "2026-09-24T14:30:00", lineItems: [
+    { id: "preview-line-1", sequenceNo: 1, description: "Horse transport", amount: 3900 },
+    { id: "preview-line-2", sequenceNo: 2, description: "Documentation and handling", amount: 900 },
+  ],
+};
 
 function isLocalPreviewRequested() {
   return process.env.NODE_ENV === "development"
@@ -112,6 +138,13 @@ export default function CustomerPage() {
   const [submitWarning, setSubmitWarning] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [formError, setFormError] = useState("");
+  const [quoteOrder, setQuoteOrder] = useState<Order | null>(null);
+  const [quotation, setQuotation] = useState<Quotation | null>(null);
+  const [quotationBusy, setQuotationBusy] = useState(false);
+  const [quotationError, setQuotationError] = useState("");
+  const [cancelOrder, setCancelOrder] = useState<Order | null>(null);
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [cancelError, setCancelError] = useState("");
 
   const loadWorkspace = useCallback(async () => {
     if (preview || isLocalPreviewRequested()) {
@@ -273,6 +306,35 @@ export default function CustomerPage() {
     if (form) void saveOrder({ preventDefault() {}, currentTarget: form } as FormEvent<HTMLFormElement>, true);
   }
 
+  async function openQuotation(order: Order) {
+    setQuoteOrder(order); setQuotation(null); setQuotationError(""); setQuotationBusy(true);
+    try {
+      const quote = preview ? previewQuotation : await customerFetch(`/api/v1/orders/${order.id}/quotation`) as Quotation;
+      if (quote.status !== "SENT") throw new Error("This quotation is not available yet.");
+      setQuotation(quote);
+    } catch (error) {
+      setQuotationError(error instanceof Error ? error.message : "We couldn't load this quotation.");
+    } finally { setQuotationBusy(false); }
+  }
+
+  async function confirmCancel() {
+    if (!cancelOrder) return;
+    setCancelBusy(true); setCancelError("");
+    try {
+      if (preview) {
+        setOrders((current) => current.map((order) => order.id === cancelOrder.id ? { ...order, status: "CANCELLED" } : order));
+        setFeedback("Preview only — the sample order is shown as cancelled; nothing was sent.");
+      } else {
+        await customerFetch(`/api/v1/orders/${cancelOrder.id}/cancel`, { method: "POST" });
+        setFeedback("Order cancelled.");
+        await loadWorkspace();
+      }
+      setCancelOrder(null);
+    } catch (error) {
+      setCancelError(error instanceof Error ? error.message : "We couldn't cancel this order.");
+    } finally { setCancelBusy(false); }
+  }
+
   function signOut() { clearAccessToken(); router.replace("/login"); }
 
   return (
@@ -300,7 +362,12 @@ export default function CustomerPage() {
               {orders.map((order) => <article className="customer-order-row" key={order.id}>
                 <div className="order-route-icon" aria-hidden="true">↗</div>
                 <div className="customer-order-main"><div className="customer-order-title"><h3>{order.orderCode}</h3><span className={`order-status status-${order.status.toLowerCase()}`}>{order.status.replaceAll("_", " ")}</span></div><p>{[order.originAddress || order.originCountry || "Origin pending", order.destinationAddress || order.destinationCountry || "Destination pending"].join("  →  ")}</p><span className="customer-order-subline">{order.horseIds.length} {order.horseIds.length === 1 ? "horse" : "horses"}{order.requestedDepartureAt ? ` · ${new Date(order.requestedDepartureAt).toLocaleString()}` : " · Departure not set"}</span></div>
-                {order.status === "DRAFT" ? <button className="customer-secondary-button compact" type="button" onClick={() => startEdit(order)}>Edit draft</button> : <span className="customer-locked-label">Editing locked</span>}
+                <div className="customer-order-actions">
+                  {order.status === "DRAFT" && <button className="customer-secondary-button compact" type="button" onClick={() => startEdit(order)}>Edit draft</button>}
+                  {order.status === "QUOTATION_SENT" && <button className="customer-secondary-button compact" type="button" onClick={() => void openQuotation(order)}>View bill</button>}
+                  {["DRAFT", "SUBMITTED", "QUOTATION_SENT"].includes(order.status) && <button className="customer-text-button compact" type="button" onClick={() => { setCancelOrder(order); setCancelError(""); }}>Cancel order</button>}
+                  {order.status !== "DRAFT" && <span className="customer-locked-label">Editing locked</span>}
+                </div>
               </article>)}
             </div>}
           </section>
@@ -333,9 +400,17 @@ export default function CustomerPage() {
         </div>}
 
         {submitWarning && <div className="customer-dialog-backdrop warning-backdrop"><section className="customer-warning" role="alertdialog" aria-modal="true" aria-labelledby="submit-warning-title" aria-describedby="submit-warning-copy"><div className="warning-symbol" aria-hidden="true">!</div><h2 id="submit-warning-title">Submit this transport request?</h2><p id="submit-warning-copy">After you submit, the order moves to SUBMITTED and you will no longer be able to edit it. Check the horse, journey, and delivery contact details before continuing.</p>{formError && <p className="customer-form-error" role="alert">{formError}</p>}<div className="customer-form-actions"><button type="button" className="customer-secondary-button" disabled={orderBusy} onClick={() => setSubmitWarning(false)}>Go back and review</button><button type="button" className="customer-primary-button" disabled={orderBusy} onClick={confirmSubmit}>{orderBusy ? "Submitting…" : "Submit and lock order"}</button></div></section></div>}
+
+        {cancelOrder && <div className="customer-dialog-backdrop warning-backdrop"><section className="customer-warning" role="alertdialog" aria-modal="true" aria-labelledby="cancel-warning-title" aria-describedby="cancel-warning-copy"><div className="warning-symbol" aria-hidden="true">!</div><h2 id="cancel-warning-title">Cancel {cancelOrder.orderCode}?</h2><p id="cancel-warning-copy">This will cancel the order. A cancelled order cannot be reopened.</p>{cancelError && <p className="customer-form-error" role="alert">{cancelError}</p>}<div className="customer-form-actions"><button type="button" className="customer-secondary-button" disabled={cancelBusy} onClick={() => setCancelOrder(null)}>Keep order</button><button type="button" className="customer-primary-button danger-button" disabled={cancelBusy} onClick={() => void confirmCancel()}>{cancelBusy ? "Cancelling…" : "Cancel order"}</button></div></section></div>}
+
+        {quoteOrder && <div className="customer-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setQuoteOrder(null); }}><section className="customer-dialog quotation-dialog" role="dialog" aria-modal="true" aria-labelledby="quotation-title"><div className="customer-dialog-header"><div><p className="customer-eyebrow">ORDER {quoteOrder.orderCode}</p><h2 id="quotation-title">Transport bill</h2><p>Quotation sent by the transport team</p></div><button type="button" className="customer-dialog-close" aria-label="Close quotation" onClick={() => setQuoteOrder(null)}>×</button></div><div className="quotation-content">{quotationBusy ? <p role="status">Loading quotation…</p> : quotationError ? <p className="customer-form-error" role="alert">{quotationError}</p> : quotation && <><div className="quotation-line-list">{[...quotation.lineItems].sort((a, b) => a.sequenceNo - b.sequenceNo).map((item) => <div className="quotation-line" key={item.id}><span>{item.description}</span><strong>{formatMoney(item.amount, quotation.currency)}</strong></div>)}</div><div className="quotation-total"><span>Total</span><strong>{formatMoney(quotation.totalAmount, quotation.currency)}</strong></div><div className="quotation-payment-row"><span>Deposit due</span><strong>{formatMoney(quotation.depositAmount, quotation.currency)}</strong></div><div className="quotation-payment-row"><span>Remaining balance</span><strong>{formatMoney(quotation.remainingAmount, quotation.currency)}</strong></div>{quotation.notes && <div className="quotation-notes"><strong>Notes from the transport team</strong><p>{quotation.notes}</p></div>}{quotation.sentAt && <p className="quotation-sent-at">Sent {new Date(quotation.sentAt).toLocaleString()}</p>}</>}</div></section></div>}
       </div>
     </main>
   );
+}
+
+function formatMoney(amount: number, currency: string) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
 }
 
 function Field({ label, name, type = "text", required = false, optional = false, maxLength, value, onChange }: {
