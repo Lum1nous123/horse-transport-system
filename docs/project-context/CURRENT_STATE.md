@@ -15,8 +15,9 @@ This file is a portable handoff and resume guide for a new Codex conversation or
 - Scrum planning / Sprint planning is complete and Human Review approved.
 - GitHub Project #4 has three two-week Development Sprint iterations for course Weeks 4–9, and FR-001 through FR-020 are assigned according to the instructor-required, Human-Approved reforecast.
 - Course Week 10 is reserved for presentation, final demo, final bug fixing, and release stabilization; it is not a feature-development iteration.
-- Backend implementation is active. BE-01, JWT Authentication foundation, BE-02, BE-03, and BE-04 are complete and merged into `main`.
-- Frontend FE-02 is in progress on `feature/fe-02-quotation-workflow`, branched from FE-01.
+- Backend implementation is active. BE-01 through BE-06 and the JWT Authentication foundation are complete and merged into `main`.
+- FE-01 and FE-02 are complete and merged into `main`.
+- TS Document Inbox support is implemented and pushed on `fix/ts-document-inbox`, awaiting Human Review/PR.
 
 ## Authoritative Sources
 
@@ -124,45 +125,37 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
-PR #43 (BE-01 + JWT Authentication foundation), PR #44 (BE-02 Order
-Draft-to-Submit), PR #45 (BE-03 Cancel / Reject Pre-Approval), and PR #46
-(BE-04 Quotation Draft-to-Sent) are merged into `main`. The latest merge is
-commit `7d46c9b`.
+PR #43–#46 and PR #48–#50 cover BE-01 through BE-06, JWT Authentication, and
+the LM Order Inbox support; all are merged into `main`. PR #47 provides the
+frontend authentication/landing foundation, while PR #51 (FE-01) and PR #52
+(FE-02) are also merged. The latest `main` commit is `1bb060a` (PR #50 BE-06).
 
-BE-04 implements Quotation create DRAFT, edit DRAFT, LM get, and atomic send
-from DRAFT to SENT. Send also moves the Order from `SUBMITTED` to
-`QUOTATION_SENT` and writes `QUOTATION` plus `TRANSPORT_ORDER` status audits in
-the same transaction. LM can create/edit/get/send; a Customer can only view a
-SENT quotation belonging to their own Order. SENT quotations are immutable.
+BE-05 implements Stripe Deposit checkout/webhook handling. A successful
+Deposit atomically marks the payment `PAID`, moves the Order from
+`QUOTATION_SENT` to `APPROVED`, records the Order audit, and starts the document
+phase. There is no separate Customer quotation-accept action or LM manual
+approval.
 
-The backend calculates `totalAmount` and `remainingAmount`, uses fixed currency
-`USD`, and stores `depositAmount` on the quotation. Deposit payment is not yet
-implemented. There is no Customer Accept Quotation action and no LM manual
-approval; successful Deposit payment will move `QUOTATION_SENT` to `APPROVED`
-in BE-05.
+BE-06 replaces the deferred document-phase hook with an idempotent generator
+that creates the fixed five-document checklist for every Horse in an approved
+Order. Customer owners and Transport Specialists can read the checklist; any
+Transport Specialist can set the Order-level document deadline once. Checklist
+generation joins the BE-05 approval transaction, and generation/deadline do not
+create artificial status audits. Upload, document versions/review, deadline
+enforcement, refund, and deadline notification remain outside BE-06.
 
-The full backend suite has 90 passing tests after BE-04. BE-04 reused V1 and did
-not change the ERD, migration, or frontend.
+LM Order Inbox is available at `GET /api/v1/orders/inbox?status=SUBMITTED`, and
+LM can read Order detail through the existing detail endpoint. Customer list
+and ownership behavior remain unchanged.
 
-FE-01 Customer Horse and Order create/edit/submit UI is implemented on the
-`feature/fe-01-customer-horse-orders` branch. The Customer workspace uses the
-existing Horse and Order APIs, retains the login JWT for the current tab, and
-shows the approved pre-submit warning and locked state. Horse editing is not
-exposed because FR-001 and the current API contract only define Horse create
-and list; Order editing is limited to DRAFT. A development-only `?preview=1`
-mode displays sample data and keeps preview interactions local to the tab
-without calling the backend. Lint and TypeScript pass. Backend-connected
-browser validation and QA remain outstanding.
+Current branch `fix/ts-document-inbox` adds the Transport Specialist work queue
+at `GET /api/v1/orders/document-inbox`. It returns only `APPROVED` Orders and
+includes deadline metadata without assignment filtering. Commit `6f45284` is
+pushed to `origin/fix/ts-document-inbox`; no PR exists yet. The clean full
+backend suite on this branch has 146 passing tests. No ERD, migration, or
+frontend changes were made for this support endpoint.
 
-FE-02 Customer-side work is in progress: Customer cancellation is exposed only
-for DRAFT, SUBMITTED, and QUOTATION_SENT Orders with a confirmation dialog;
-SENT quotations can be viewed as a read-only bill. Local preview includes a
-sample sent quotation. Frontend lint and TypeScript pass for these changes.
-The LM workspace/editor is waiting on BE confirmation of an LM-accessible
-submitted-Orders list/detail endpoint and response contract; the existing
-Customer-only Orders endpoints do not support LM discovery of Orders.
-
-Next backend task: BE-05 Pay Deposit and Approve Order.
+Next backend task: BE-07 Customer Document Draft and Submission Lifecycle.
 
 ### COMPLETED
 
@@ -180,6 +173,12 @@ Next backend task: BE-05 Pay Deposit and Approve Order.
 - BE-02 Order Draft-to-Submit
 - BE-03 Cancel / Reject Pre-Approval
 - BE-04 Quotation Draft-to-Sent / FR-004 implementation, merged through PR #46
+- BE-05 Pay Deposit and Approve Order / FR-005, merged through PR #48
+- LM Order Inbox support, merged through PR #49
+- BE-06 Mandatory Document Checklist / Deadline / FR-006, merged through PR #50
+- Frontend authentication and landing foundation, merged through PR #47
+- FE-01 Customer Horse and Order flow, merged through PR #51
+- FE-02 Pre-approval and Quotation views, merged through PR #52
 
 ### DEFERRED / NON-BLOCKING
 
@@ -187,14 +186,13 @@ Next backend task: BE-05 Pay Deposit and Approve Order.
 
 ### NEXT
 
-1. Continue FE-02 when BE confirms the LM Orders API contract.
-2. Implement BE-05 Pay Deposit and Approve Order; keep Stripe payment and automatic `QUOTATION_SENT → APPROVED` transition within BE-05 scope.
+1. Human Review and open a PR for `fix/ts-document-inbox` when approved.
+2. Implement BE-07 Customer Document Draft and Submission Lifecycle.
 
 ### NOT STARTED
 
-- BE-05 and later backend vertical slices
-- Stripe Deposit payment and `QUOTATION_SENT → APPROVED`
-- FE-02 LM pre-approval workspace/rejection action and quotation editor
+- BE-07 and later backend vertical slices
+- Customer document upload/version/submission and TS review lifecycle
 - QA execution
 
 ## Resume Protocol
