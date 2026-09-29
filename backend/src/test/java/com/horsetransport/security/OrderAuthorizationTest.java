@@ -113,6 +113,29 @@ class OrderAuthorizationTest {
 	}
 
 	@Test
+	void transportSpecialistCanReadDocumentInbox() throws Exception {
+		mockMvc.perform(get("/api/v1/orders/document-inbox")
+				.header(HttpHeaders.AUTHORIZATION, token(UserRole.TRANSPORT_SPECIALIST)))
+				.andExpect(status().isOk());
+	}
+
+	@Test
+	void nonTransportSpecialistRolesCannotReadDocumentInbox() throws Exception {
+		for (UserRole role : List.of(UserRole.CUSTOMER, UserRole.LOGISTICS_MANAGER,
+				UserRole.FLEET_ROUTE_COORDINATOR, UserRole.DRIVER, UserRole.ESCORT)) {
+			mockMvc.perform(get("/api/v1/orders/document-inbox")
+					.header(HttpHeaders.AUTHORIZATION, token(role)))
+					.andExpect(status().isForbidden());
+		}
+	}
+
+	@Test
+	void unauthenticatedDocumentInboxRequestIsUnauthorized() throws Exception {
+		mockMvc.perform(get("/api/v1/orders/document-inbox"))
+				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
 	void allowsCustomerToCancelButNotReject() throws Exception {
 		UserAccount customer = user(UserRole.CUSTOMER);
 		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(customer));
