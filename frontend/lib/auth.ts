@@ -6,6 +6,36 @@ type ApiError = {
   timestamp?: string;
 };
 
+export type CurrentUser = {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string | null;
+  role: string;
+  status: string;
+};
+
+export async function getCurrentUser(): Promise<CurrentUser> {
+  const token = getAccessToken();
+  if (!token) throw new Error("SESSION_EXPIRED");
+
+  let response: Response;
+  try {
+    response = await apiFetch("/api/v1/auth/me", {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    });
+  } catch {
+    throw new Error("NETWORK_ERROR");
+  }
+
+  if (response.status === 401) {
+    clearAccessToken();
+    throw new Error("SESSION_EXPIRED");
+  }
+  if (!response.ok) throw new Error("PROFILE_UNAVAILABLE");
+  return await response.json() as CurrentUser;
+}
+
 export async function signIn(email: string, password: string): Promise<void> {
   let response: Response;
   try {
