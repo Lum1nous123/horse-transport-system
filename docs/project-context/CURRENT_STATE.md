@@ -143,6 +143,16 @@ in BE-05.
 The full backend suite has 90 passing tests after BE-04. BE-04 reused V1 and did
 not change the ERD, migration, or frontend.
 
+FE-01 Customer Horse and Order create/edit/submit UI is implemented on the
+`feature/fe-01-customer-horse-orders` branch. The Customer workspace uses the
+existing Horse and Order APIs, retains the login JWT for the current tab, and
+shows the approved pre-submit warning and locked state. Horse editing is not
+exposed because FR-001 and the current API contract only define Horse create
+and list; Order editing is limited to DRAFT. A development-only `?preview=1`
+mode displays sample data and keeps preview interactions local to the tab
+without calling the backend. Lint and TypeScript pass. Backend-connected
+browser validation and QA remain outstanding.
+
 Next backend task: BE-05 Pay Deposit and Approve Order.
 
 ### COMPLETED
@@ -175,7 +185,7 @@ Next backend task: BE-05 Pay Deposit and Approve Order.
 
 - BE-05 and later backend vertical slices
 - Stripe Deposit payment and `QUOTATION_SENT → APPROVED`
-- Frontend implementation
+- Frontend implementation beyond FE-01
 - QA execution
 
 ## Resume Protocol
@@ -201,4 +211,3 @@ Update this file after major milestones such as requirements approval, architect
 - Do not duplicate the complete requirements.
 - Do not introduce new business rules.
 - Re-verify claims against authoritative sources and current repository/external state before updating them.
-
