@@ -22,7 +22,9 @@ export async function signIn(email: string, password: string): Promise<void> {
   }
 
   if (response.ok) {
-    // The response contains a Bearer JWT. Token/session handling is not part of this task.
+    const result = (await response.json()) as { accessToken?: string };
+    if (!result.accessToken) throw new Error("SIGN_IN_FAILED");
+    sessionStorage.setItem("horse-transport-token", result.accessToken);
     return;
   }
 
@@ -42,6 +44,18 @@ export async function signIn(email: string, password: string): Promise<void> {
   }
 
   throw new Error("SIGN_IN_FAILED");
+}
+
+export function getAccessToken(): string | null {
+  return typeof window === "undefined"
+    ? null
+    : window.sessionStorage.getItem("horse-transport-token");
+}
+
+export function clearAccessToken(): void {
+  if (typeof window !== "undefined") {
+    window.sessionStorage.removeItem("horse-transport-token");
+  }
 }
 
 type RegisterCustomerRequest = {

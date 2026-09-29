@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { signIn } from "@/lib/auth";
 
 type FieldErrors = {
@@ -10,6 +11,7 @@ type FieldErrors = {
 };
 
 export default function LoginForm() {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -43,7 +45,7 @@ export default function LoginForm() {
     setIsSubmitting(true);
     try {
       await signIn(email, password);
-      // Post-login behavior is outside this task. Do not store the JWT or navigate.
+      router.push("/customer");
     } catch (error) {
       setFormError(getSignInErrorMessage(error));
     } finally {
