@@ -35,7 +35,7 @@ class TransportOrderControllerTest {
 	void exposesCreateListDetailEditAndSubmitEndpoints() throws Exception {
 		when(service.create(any())).thenReturn(response(OrderStatus.DRAFT));
 		when(service.findCurrentCustomerOrders()).thenReturn(List.of(response(OrderStatus.DRAFT)));
-		when(service.findCurrentCustomerOrder(ORDER_ID)).thenReturn(response(OrderStatus.DRAFT));
+		when(service.findOrderDetail(ORDER_ID)).thenReturn(response(OrderStatus.DRAFT));
 		when(service.update(any(), any())).thenReturn(response(OrderStatus.DRAFT));
 		when(service.submit(ORDER_ID)).thenReturn(response(OrderStatus.SUBMITTED));
 
@@ -49,6 +49,30 @@ class TransportOrderControllerTest {
 				.andExpect(status().isOk());
 		mockMvc.perform(post("/api/v1/orders/{id}/submit", ORDER_ID))
 				.andExpect(status().isOk()).andExpect(jsonPath("$.status").value("SUBMITTED"));
+	}
+
+	@Test
+	void exposesSubmittedOrderInbox() throws Exception {
+		OrderInboxResponse item = new OrderInboxResponse(ORDER_ID, "ORD-test", OrderStatus.SUBMITTED,
+				"Hanoi", null, "Da Nang", null, TransportMode.ROAD,
+				LocalDateTime.of(2026, 10, 1, 9, 0), 2, LocalDateTime.now());
+		when(service.findLogisticsManagerInbox(OrderStatus.SUBMITTED)).thenReturn(List.of(item));
+
+		mockMvc.perform(get("/api/v1/orders/inbox").queryParam("status", "SUBMITTED"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].id").value(ORDER_ID.toString()))
+				.andExpect(jsonPath("$[0].status").value("SUBMITTED"))
+				.andExpect(jsonPath("$[0].horseCount").value(2));
+	}
+
+	@Test
+	void rejectsUnsupportedInboxStatus() throws Exception {
+		when(service.findLogisticsManagerInbox(OrderStatus.DRAFT))
+				.thenThrow(new UnsupportedOrderInboxStatusException());
+
+		mockMvc.perform(get("/api/v1/orders/inbox").queryParam("status", "DRAFT"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("UNSUPPORTED_ORDER_INBOX_STATUS"));
 	}
 
 	@Test
@@ -91,7 +115,7 @@ class TransportOrderControllerTest {
 
 	@Test
 	void returnsNotFoundForUnownedOrder() throws Exception {
-		when(service.findCurrentCustomerOrder(ORDER_ID)).thenThrow(new OrderNotFoundException());
+		when(service.findOrderDetail(ORDER_ID)).thenThrow(new OrderNotFoundException());
 		mockMvc.perform(get("/api/v1/orders/{id}", ORDER_ID))
 				.andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("ORDER_NOT_FOUND"));
 	}

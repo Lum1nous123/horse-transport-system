@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -36,9 +37,14 @@ public class TransportOrderController {
 		return orderService.findCurrentCustomerOrders();
 	}
 
+	@GetMapping("/inbox")
+	public List<OrderInboxResponse> inbox(@RequestParam OrderStatus status) {
+		return orderService.findLogisticsManagerInbox(status);
+	}
+
 	@GetMapping("/{orderId}")
 	public OrderResponse detail(@PathVariable UUID orderId) {
-		return orderService.findCurrentCustomerOrder(orderId);
+		return orderService.findOrderDetail(orderId);
 	}
 
 	@PutMapping("/{orderId}")
