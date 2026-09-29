@@ -128,7 +128,8 @@ These follow-ups do not change approved requirements and must not be used to inf
 PR #43–#46 and PR #48–#50 cover BE-01 through BE-06, JWT Authentication, and
 the LM Order Inbox support; all are merged into `main`. PR #47 provides the
 frontend authentication/landing foundation, while PR #51 (FE-01) and PR #52
-(FE-02) are also merged. The latest `main` commit is `1bb060a` (PR #50 BE-06).
+(FE-02) are also merged. The latest `main` commit is `ddf0e32` and includes the
+Transport Specialist document inbox support.
 
 BE-05 implements Stripe Deposit checkout/webhook handling. A successful
 Deposit atomically marks the payment `PAID`, moves the Order from
@@ -148,14 +149,20 @@ LM Order Inbox is available at `GET /api/v1/orders/inbox?status=SUBMITTED`, and
 LM can read Order detail through the existing detail endpoint. Customer list
 and ownership behavior remain unchanged.
 
-Current branch `fix/ts-document-inbox` adds the Transport Specialist work queue
-at `GET /api/v1/orders/document-inbox`. It returns only `APPROVED` Orders and
-includes deadline metadata without assignment filtering. Commit `6f45284` is
-pushed to `origin/fix/ts-document-inbox`; no PR exists yet. The clean full
-backend suite on this branch has 146 passing tests. No ERD, migration, or
-frontend changes were made for this support endpoint.
+The Transport Specialist work queue is available at
+`GET /api/v1/orders/document-inbox`. It returns `APPROVED` Orders and includes
+deadline metadata; it does not filter by assignment. Commit `6f45284` is part of
+the current `main` history. No ERD or migration changes were needed.
 
 Next backend task: BE-07 Customer Document Draft and Submission Lifecycle.
+
+FE-03 is in progress on `feature/fe-03-deposit-documents`, based on current
+`main`. Customer Deposit checkout/retry, payment status, Stripe return pages,
+and required document checklist/deadline views are implemented. The Transport
+Specialist workspace loads the document inbox, sets an Order deadline once,
+and shows the saved deadline. Login routes Transport Specialist accounts to
+that workspace. Frontend lint and the optimized production build pass; browser
+validation and QA remain outstanding.
 
 ### COMPLETED
 
@@ -186,12 +193,13 @@ Next backend task: BE-07 Customer Document Draft and Submission Lifecycle.
 
 ### NEXT
 
-1. Human Review and open a PR for `fix/ts-document-inbox` when approved.
+1. Complete FE-03 review and browser-connected verification.
 2. Implement BE-07 Customer Document Draft and Submission Lifecycle.
 
 ### NOT STARTED
 
 - BE-07 and later backend vertical slices
+- FE-03 browser-connected validation and QA
 - Customer document upload/version/submission and TS review lifecycle
 - QA execution
 

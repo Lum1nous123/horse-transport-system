@@ -3,7 +3,8 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { signIn } from "@/lib/auth";
+import { getAccessToken, signIn } from "@/lib/auth";
+import { apiFetch } from "@/lib/api";
 
 type FieldErrors = {
   email?: string;
@@ -45,7 +46,20 @@ export default function LoginForm() {
     setIsSubmitting(true);
     try {
       await signIn(email, password);
-      router.push("/customer");
+      let destination = "/customer";
+      const token = getAccessToken();
+      if (token) {
+        try {
+          const response = await apiFetch("/api/v1/auth/me", {
+            headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+          });
+          if (response.ok) {
+            const user = await response.json() as { role?: string };
+            if (user.role === "TRANSPORT_SPECIALIST") destination = "/transport-specialist";
+          }
+        } catch { /* Keep the existing Customer destination if profile lookup is unavailable. */ }
+      }
+      router.push(destination);
     } catch (error) {
       setFormError(getSignInErrorMessage(error));
     } finally {
