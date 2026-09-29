@@ -1304,6 +1304,47 @@ input:focus-visible {
 .quotation-notes { margin-top: 18px; border-radius: 8px; padding: 14px 16px; background: var(--color-surface-soft); color: var(--color-navy); font-size: .875rem; }
 .quotation-notes p { margin: 4px 0 0; color: var(--color-body); }
 .quotation-sent-at { margin: 18px 0 0; color: var(--color-muted); font-size: .75rem; }
+.deposit-checkout-panel { margin-top: 24px; border: 1px solid var(--color-border); border-radius: 10px; padding: 18px; background: #f8fbfd; }
+.deposit-panel-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.deposit-panel-heading > div { display: grid; gap: 4px; }
+.deposit-panel-heading strong,.preview-payment strong { color: var(--color-navy); }
+.deposit-panel-heading span:not(.deposit-state),.preview-payment p { color: var(--color-body); font-size: .85rem; }
+.deposit-state { border-radius: 999px; padding: 4px 9px; background: #e7edf2; color: var(--color-navy); font-size: .72rem; font-weight: 700; }
+.deposit-state.paid { background: #e6f5ec; color: #17633c; }
+.deposit-state.refunded { background: #fff2df; color: #805707; }
+.deposit-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+.deposit-confirmation { margin: 12px 0 0; color: #17633c; font-size: .84rem; }
+.preview-payment p { margin: 6px 0 0; }
+.payment-return-page { display: grid; min-height: 100vh; place-items: center; padding: 24px; background: var(--color-surface-soft); }
+.payment-return-card { width: min(100%, 540px); border: 1px solid var(--color-border); border-radius: 14px; padding: 38px; background: #fff; box-shadow: 0 18px 48px #17324d12; }
+.payment-return-mark { display: grid; width: 48px; height: 48px; place-items: center; margin-bottom: 24px; border-radius: 50%; background: #e8f1f8; color: var(--color-primary); font-size: 1.5rem; font-weight: 700; }
+.payment-return-mark.cancelled { background: #fff2df; color: #805707; }
+.payment-return-card h1 { margin: 8px 0 12px; color: var(--color-navy); font-size: clamp(1.7rem, 5vw, 2.25rem); }
+.payment-return-card > p:not(.customer-eyebrow) { margin: 0 0 24px; color: var(--color-body); line-height: 1.65; }
+.payment-return-card .customer-primary-button { display: inline-flex; align-items: center; text-decoration: none; }
+.document-checklist-content { padding: 24px 28px 28px; }
+.document-deadline-card { display: grid; gap: 5px; margin-bottom: 20px; border-left: 3px solid var(--color-primary); border-radius: 7px; padding: 14px 16px; background: #f2f8fc; }
+.document-deadline-card span,.document-deadline-card small { color: var(--color-body); font-size: .8rem; }
+.document-deadline-card strong { color: var(--color-navy); }
+.document-horse-group { border-top: 1px solid var(--color-border); padding: 18px 0; }
+.document-horse-group h3 { display: inline; margin: 0; color: var(--color-navy); font-size: 1rem; }
+.document-horse-status { display: inline-block; margin: 0 0 0 10px; border-radius: 99px; padding: 3px 8px; background: #eef2f5; color: var(--color-body); font-size: .68rem; }
+.document-horse-group ul { display: grid; gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; }
+.document-horse-group li { display: flex; align-items: center; gap: 10px; color: var(--color-ink); font-size: .84rem; }
+.document-required-mark { display: grid; width: 20px; height: 20px; flex: 0 0 20px; place-items: center; border-radius: 50%; background: #e8f1f8; color: var(--color-primary); font-size: .72rem; font-weight: 700; }
+.document-horse-group li small { margin-left: auto; color: var(--color-muted); font-size: .7rem; }
+.specialist-heading { align-items: flex-end; }
+.specialist-order-row { align-items: center; }
+.specialist-deadline-action { display: flex; min-width: 205px; align-items: flex-end; flex-direction: column; gap: 8px; }
+.specialist-deadline-value { display: grid; gap: 3px; text-align: right; }
+.specialist-deadline-value small,.deadline-missing { color: var(--color-muted); font-size: .75rem; }
+.specialist-deadline-value strong { color: var(--color-navy); font-size: .84rem; }
+.specialist-deadline-action .customer-primary-button:disabled,.specialist-deadline-action .customer-secondary-button:disabled { opacity: .65; cursor: not-allowed; }
+.deadline-form { padding: 22px 28px 26px; }
+.deadline-confirmed { display: grid; gap: 10px; padding: 24px 28px 28px; }
+.deadline-confirmed strong { color: var(--color-navy); }
+.deadline-confirmed span { color: var(--color-body); }
+.deadline-confirmed button { justify-self: end; }
 @media (max-width: 680px) {
   .customer-topbar { min-height: 62px; padding-inline: 16px; }
   .customer-brand { gap: 8px; font-size: .82rem; }
@@ -1334,6 +1375,17 @@ input:focus-visible {
   .order-form { padding: 18px; }
   .customer-warning { width: calc(100% - 28px); margin-bottom: 14px; padding: 22px; }
   .quotation-content { padding: 18px; }
+  .deposit-actions { flex-direction: column-reverse; }
+  .deposit-actions > button { width: 100%; }
+  .payment-return-card { padding: 25px; }
+  .payment-return-card .customer-primary-button { width: 100%; justify-content: center; }
+  .document-checklist-content { padding: 18px; }
+  .specialist-heading { align-items: flex-start; }
+  .specialist-heading > button { width: 100%; }
+  .specialist-deadline-action { width: 100%; align-items: flex-start; margin-left: 52px; }
+  .specialist-deadline-value { text-align: left; }
+  .specialist-deadline-action button { width: 100%; }
+  .deadline-form { padding: 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .customer-primary-button,.customer-secondary-button { transition: none; }

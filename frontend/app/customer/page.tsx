@@ -48,6 +48,23 @@ type Quotation = {
   sentAt?: string | null;
   lineItems: { id: string; sequenceNo: number; description: string; amount: number }[];
 };
+type DepositPayment = {
+  id: string;
+  orderId: string;
+  amount: number;
+  currency: string;
+  status: "PENDING" | "PAID" | "REFUNDED";
+  paidAt?: string | null;
+  latestAttempt?: { providerStatus: "PENDING" | "OPEN" | "SUCCEEDED" | "CANCELLED" | "EXPIRED" } | null;
+};
+type DepositCheckout = { checkoutUrl: string };
+type DocumentType = "HORSE_PASSPORT_OR_IDENTIFICATION" | "VACCINATION_CERTIFICATE" | "VETERINARY_HEALTH_CERTIFICATE" | "OWNERSHIP_CERTIFICATE" | "EXPORT_IMPORT_PERMIT";
+type DocumentChecklist = {
+  orderId: string;
+  documentCompletionDeadlineAt: string | null;
+  documentDeadlineSetAt: string | null;
+  horses: { orderHorseId: string; horseId: string; documentStatus: string; documents: { id: string; documentType: DocumentType; required: boolean }[] }[];
+};
 
 const emptyOrder: OrderFields = {
   originAddress: "", originCountry: "", destinationAddress: "", destinationCountry: "",
@@ -115,6 +132,7 @@ async function customerFetch(path: string, init?: RequestInit) {
       const error = await response.json() as { message?: string; code?: string };
       if (error.code === "DUPLICATE_MICROCHIP") message = "That microchip ID is already registered.";
       else if (error.code === "ORDER_NOT_EDITABLE") message = "Only draft orders can be edited.";
+      else if (error.code === "DEPOSIT_PAYMENT_NOT_FOUND") message = "DEPOSIT_PAYMENT_NOT_FOUND";
       else if (error.message) message = error.message;
     } catch { /* Keep the useful default message. */ }
     throw new Error(message);
@@ -142,9 +160,17 @@ export default function CustomerPage() {
   const [quotation, setQuotation] = useState<Quotation | null>(null);
   const [quotationBusy, setQuotationBusy] = useState(false);
   const [quotationError, setQuotationError] = useState("");
+  const [deposit, setDeposit] = useState<DepositPayment | null>(null);
+  const [depositLoading, setDepositLoading] = useState(false);
+  const [depositBusy, setDepositBusy] = useState(false);
+  const [depositError, setDepositError] = useState("");
   const [cancelOrder, setCancelOrder] = useState<Order | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelError, setCancelError] = useState("");
+  const [documentOrder, setDocumentOrder] = useState<Order | null>(null);
+  const [documentChecklist, setDocumentChecklist] = useState<DocumentChecklist | null>(null);
+  const [documentLoading, setDocumentLoading] = useState(false);
+  const [documentError, setDocumentError] = useState("");
 
   const loadWorkspace = useCallback(async () => {
     if (preview || isLocalPreviewRequested()) {
@@ -308,6 +334,7 @@ export default function CustomerPage() {
 
   async function openQuotation(order: Order) {
     setQuoteOrder(order); setQuotation(null); setQuotationError(""); setQuotationBusy(true);
+    setDeposit(null); setDepositError(""); setDepositLoading(!preview);
     try {
       const quote = preview ? previewQuotation : await customerFetch(`/api/v1/orders/${order.id}/quotation`) as Quotation;
       if (quote.status !== "SENT") throw new Error("This quotation is not available yet.");
@@ -315,6 +342,53 @@ export default function CustomerPage() {
     } catch (error) {
       setQuotationError(error instanceof Error ? error.message : "We couldn't load this quotation.");
     } finally { setQuotationBusy(false); }
+    if (!preview) {
+      try {
+        const payment = await customerFetch(`/api/v1/orders/${order.id}/deposit`) as DepositPayment;
+        setDeposit(payment);
+      } catch (error) {
+        // No deposit record exists until the Customer starts checkout.
+        const message = error instanceof Error ? error.message : "We couldn't load payment status.";
+        if (!message.includes("DEPOSIT_PAYMENT_NOT_FOUND")) setDepositError(message);
+      } finally { setDepositLoading(false); }
+    }
+  }
+
+  async function startDepositCheckout() {
+    if (!quoteOrder || !quotation || preview) return;
+    setDepositBusy(true); setDepositError("");
+    try {
+      const checkout = await customerFetch(`/api/v1/orders/${quoteOrder.id}/deposit/checkout`, { method: "POST" }) as DepositCheckout;
+      if (!checkout.checkoutUrl) throw new Error("Checkout could not be opened. Please try again.");
+      window.location.assign(checkout.checkoutUrl);
+    } catch (error) {
+      setDepositError(error instanceof Error ? error.message : "We couldn't start deposit checkout.");
+      setDepositBusy(false);
+    }
+  }
+
+  async function refreshDepositStatus() {
+    if (!quoteOrder || preview) return;
+    setDepositLoading(true); setDepositError("");
+    try {
+      const payment = await customerFetch(`/api/v1/orders/${quoteOrder.id}/deposit`) as DepositPayment;
+      setDeposit(payment);
+      await loadWorkspace();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "We couldn't refresh payment status.";
+      if (message === "DEPOSIT_PAYMENT_NOT_FOUND") setDeposit(null);
+      else setDepositError(message);
+    } finally { setDepositLoading(false); }
+  }
+
+  async function openDocumentChecklist(order: Order) {
+    setDocumentOrder(order); setDocumentChecklist(null); setDocumentError(""); setDocumentLoading(true);
+    try {
+      const checklist = await customerFetch(`/api/v1/orders/${order.id}/documents/checklist`) as DocumentChecklist;
+      setDocumentChecklist(checklist);
+    } catch (error) {
+      setDocumentError(error instanceof Error ? error.message : "We couldn't load the document checklist.");
+    } finally { setDocumentLoading(false); }
   }
 
   async function confirmCancel() {
@@ -365,6 +439,7 @@ export default function CustomerPage() {
                 <div className="customer-order-actions">
                   {order.status === "DRAFT" && <button className="customer-secondary-button compact" type="button" onClick={() => startEdit(order)}>Edit draft</button>}
                   {order.status === "QUOTATION_SENT" && <button className="customer-secondary-button compact" type="button" onClick={() => void openQuotation(order)}>View bill</button>}
+                  {["APPROVED", "READY_TO_SHIP", "IN_PROGRESS", "DELIVERED"].includes(order.status) && <button className="customer-secondary-button compact" type="button" onClick={() => void openDocumentChecklist(order)}>View documents</button>}
                   {["DRAFT", "SUBMITTED", "QUOTATION_SENT"].includes(order.status) && <button className="customer-text-button compact" type="button" onClick={() => { setCancelOrder(order); setCancelError(""); }}>Cancel order</button>}
                   {order.status !== "DRAFT" && <span className="customer-locked-label">Editing locked</span>}
                 </div>
@@ -403,7 +478,22 @@ export default function CustomerPage() {
 
         {cancelOrder && <div className="customer-dialog-backdrop warning-backdrop"><section className="customer-warning" role="alertdialog" aria-modal="true" aria-labelledby="cancel-warning-title" aria-describedby="cancel-warning-copy"><div className="warning-symbol" aria-hidden="true">!</div><h2 id="cancel-warning-title">Cancel {cancelOrder.orderCode}?</h2><p id="cancel-warning-copy">This will cancel the order. A cancelled order cannot be reopened.</p>{cancelError && <p className="customer-form-error" role="alert">{cancelError}</p>}<div className="customer-form-actions"><button type="button" className="customer-secondary-button" disabled={cancelBusy} onClick={() => setCancelOrder(null)}>Keep order</button><button type="button" className="customer-primary-button danger-button" disabled={cancelBusy} onClick={() => void confirmCancel()}>{cancelBusy ? "Cancelling…" : "Cancel order"}</button></div></section></div>}
 
-        {quoteOrder && <div className="customer-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setQuoteOrder(null); }}><section className="customer-dialog quotation-dialog" role="dialog" aria-modal="true" aria-labelledby="quotation-title"><div className="customer-dialog-header"><div><p className="customer-eyebrow">ORDER {quoteOrder.orderCode}</p><h2 id="quotation-title">Transport bill</h2><p>Quotation sent by the transport team</p></div><button type="button" className="customer-dialog-close" aria-label="Close quotation" onClick={() => setQuoteOrder(null)}>×</button></div><div className="quotation-content">{quotationBusy ? <p role="status">Loading quotation…</p> : quotationError ? <p className="customer-form-error" role="alert">{quotationError}</p> : quotation && <><div className="quotation-line-list">{[...quotation.lineItems].sort((a, b) => a.sequenceNo - b.sequenceNo).map((item) => <div className="quotation-line" key={item.id}><span>{item.description}</span><strong>{formatMoney(item.amount, quotation.currency)}</strong></div>)}</div><div className="quotation-total"><span>Total</span><strong>{formatMoney(quotation.totalAmount, quotation.currency)}</strong></div><div className="quotation-payment-row"><span>Deposit due</span><strong>{formatMoney(quotation.depositAmount, quotation.currency)}</strong></div><div className="quotation-payment-row"><span>Remaining balance</span><strong>{formatMoney(quotation.remainingAmount, quotation.currency)}</strong></div>{quotation.notes && <div className="quotation-notes"><strong>Notes from the transport team</strong><p>{quotation.notes}</p></div>}{quotation.sentAt && <p className="quotation-sent-at">Sent {new Date(quotation.sentAt).toLocaleString()}</p>}</>}</div></section></div>}
+        {quoteOrder && <div className="customer-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setQuoteOrder(null); }}><section className="customer-dialog quotation-dialog" role="dialog" aria-modal="true" aria-labelledby="quotation-title"><div className="customer-dialog-header"><div><p className="customer-eyebrow">ORDER {quoteOrder.orderCode}</p><h2 id="quotation-title">Transport bill</h2><p>Quotation sent by the transport team</p></div><button type="button" className="customer-dialog-close" aria-label="Close quotation" onClick={() => setQuoteOrder(null)}>×</button></div><div className="quotation-content">{quotationBusy ? <p role="status">Loading quotation…</p> : quotationError ? <p className="customer-form-error" role="alert">{quotationError}</p> : quotation && <><div className="quotation-line-list">{[...quotation.lineItems].sort((a, b) => a.sequenceNo - b.sequenceNo).map((item) => <div className="quotation-line" key={item.id}><span>{item.description}</span><strong>{formatMoney(item.amount, quotation.currency)}</strong></div>)}</div><div className="quotation-total"><span>Total</span><strong>{formatMoney(quotation.totalAmount, quotation.currency)}</strong></div><div className="quotation-payment-row"><span>Deposit due</span><strong>{formatMoney(quotation.depositAmount, quotation.currency)}</strong></div><div className="quotation-payment-row"><span>Remaining balance</span><strong>{formatMoney(quotation.remainingAmount, quotation.currency)}</strong></div>{quotation.notes && <div className="quotation-notes"><strong>Notes from the transport team</strong><p>{quotation.notes}</p></div>}{quotation.sentAt && <p className="quotation-sent-at">Sent {new Date(quotation.sentAt).toLocaleString()}</p>}</>}
+            {!preview && quoteOrder.status === "QUOTATION_SENT" && <div className="deposit-checkout-panel" aria-live="polite">
+              <div className="deposit-panel-heading"><div><strong>Deposit payment</strong><span>{depositLoading ? "Checking payment status…" : deposit?.status === "PAID" ? "Payment received" : deposit?.latestAttempt?.providerStatus === "CANCELLED" || deposit?.latestAttempt?.providerStatus === "EXPIRED" ? "Checkout was not completed" : deposit?.status === "PENDING" ? "Payment is awaiting confirmation" : "Pay the deposit to confirm this quotation"}</span></div>{deposit && <span className={`deposit-state ${deposit.status.toLowerCase()}`}>{deposit.status}</span>}</div>
+              {depositError && <p className="customer-form-error" role="alert">{depositError}</p>}
+              <div className="deposit-actions">
+                {deposit && <button type="button" className="customer-secondary-button" disabled={depositLoading || depositBusy} onClick={() => void refreshDepositStatus()}>{depositLoading ? "Checking…" : "Refresh status"}</button>}
+                {deposit?.status !== "PAID" && <button type="button" className="customer-primary-button" disabled={depositBusy || depositLoading} onClick={() => void startDepositCheckout()}>{depositBusy ? "Opening checkout…" : deposit?.latestAttempt?.providerStatus === "CANCELLED" || deposit?.latestAttempt?.providerStatus === "EXPIRED" ? "Retry deposit payment" : "Pay deposit"}</button>}
+              </div>
+              {deposit?.status === "PAID" && <p className="deposit-confirmation">The payment provider has confirmed your deposit. The order will update automatically.</p>}
+            </div>}
+            {preview && <div className="deposit-checkout-panel preview-payment"><strong>Deposit checkout preview</strong><p>Preview mode does not contact the payment service or open a checkout session.</p></div>}
+          </div></section></div>}
+        {documentOrder && <div className="customer-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDocumentOrder(null); }}><section className="customer-dialog document-dialog" role="dialog" aria-modal="true" aria-labelledby="documents-title"><div className="customer-dialog-header"><div><p className="customer-eyebrow">ORDER {documentOrder.orderCode}</p><h2 id="documents-title">Horse documents</h2><p>Required documents for each horse in this order</p></div><button type="button" className="customer-dialog-close" aria-label="Close document checklist" onClick={() => setDocumentOrder(null)}>×</button></div><div className="document-checklist-content">{documentLoading ? <p role="status">Loading document checklist…</p> : documentError ? <p className="customer-form-error" role="alert">{documentError}</p> : documentChecklist && <>
+          <div className="document-deadline-card"><span>Document completion deadline</span><strong>{documentChecklist.documentCompletionDeadlineAt ? new Date(documentChecklist.documentCompletionDeadlineAt).toLocaleString() : "Not set yet"}</strong>{!documentChecklist.documentCompletionDeadlineAt && <small>The Transport Specialist has not set a deadline yet.</small>}</div>
+          {documentChecklist.horses.map((entry) => <section className="document-horse-group" key={entry.orderHorseId}><h3>{horses.find((horse) => horse.id === entry.horseId)?.name ?? "Horse"}</h3><p className="document-horse-status">{entry.documentStatus.replaceAll("_", " ")}</p><ul>{entry.documents.map((document) => <li key={document.id}><span className="document-required-mark" aria-hidden="true">✓</span><span>{documentTypeLabel(document.documentType)}</span>{document.required && <small>Required</small>}</li>)}</ul></section>)}
+        </>}</div></section></div>}
       </div>
     </main>
   );
@@ -411,6 +501,17 @@ export default function CustomerPage() {
 
 function formatMoney(amount: number, currency: string) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
+}
+
+function documentTypeLabel(type: DocumentType) {
+  const labels: Record<DocumentType, string> = {
+    HORSE_PASSPORT_OR_IDENTIFICATION: "Horse Passport / Identification Document",
+    VACCINATION_CERTIFICATE: "Vaccination Certificate",
+    VETERINARY_HEALTH_CERTIFICATE: "Veterinary Health Certificate",
+    OWNERSHIP_CERTIFICATE: "Ownership Certificate",
+    EXPORT_IMPORT_PERMIT: "Export / Import Permit",
+  };
+  return labels[type];
 }
 
 function Field({ label, name, type = "text", required = false, optional = false, maxLength, value, onChange }: {
