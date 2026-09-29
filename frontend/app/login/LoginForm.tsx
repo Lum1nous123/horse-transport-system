@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { signIn } from "@/lib/auth";
+import { clearAccessToken, getCurrentUser, signIn } from "@/lib/auth";
 
 type FieldErrors = {
   email?: string;
@@ -45,7 +45,15 @@ export default function LoginForm() {
     setIsSubmitting(true);
     try {
       await signIn(email, password);
-      router.push("/customer");
+      const currentUser = await getCurrentUser();
+      if (currentUser.role === "LOGISTICS_MANAGER") {
+        router.replace("/logistics");
+      } else if (currentUser.role === "CUSTOMER") {
+        router.replace("/customer");
+      } else {
+        clearAccessToken();
+        setFormError("This account role does not have a workspace available yet.");
+      }
     } catch (error) {
       setFormError(getSignInErrorMessage(error));
     } finally {
@@ -145,6 +153,14 @@ function getSignInErrorMessage(error: unknown): string {
 
   if (error.message === "NETWORK_ERROR") {
     return "We couldn't reach the sign-in service. Check your connection and try again.";
+  }
+
+  if (error.message === "PROFILE_UNAVAILABLE") {
+    return "We couldn't load your account. Please try signing in again.";
+  }
+
+  if (error.message === "SESSION_EXPIRED") {
+    return "Your session expired. Please sign in again.";
   }
 
   return "We couldn't sign you in. Please try again.";

@@ -15,8 +15,8 @@ This file is a portable handoff and resume guide for a new Codex conversation or
 - Scrum planning / Sprint planning is complete and Human Review approved.
 - GitHub Project #4 has three two-week Development Sprint iterations for course Weeks 4–9, and FR-001 through FR-020 are assigned according to the instructor-required, Human-Approved reforecast.
 - Course Week 10 is reserved for presentation, final demo, final bug fixing, and release stabilization; it is not a feature-development iteration.
-- Backend implementation is active. BE-01, JWT Authentication foundation, BE-02, BE-03, and BE-04 are complete and merged into `main`.
-- Frontend FE-02 is in progress on `feature/fe-02-quotation-workflow`, branched from FE-01.
+- Backend implementation is active through BE-05. BE-01, JWT Authentication foundation, BE-02, BE-03, BE-04, and BE-05 are merged into `main`.
+- FE-01 and the Customer portion of FE-02 are merged. FE-02 Logistics Manager work is in progress on `feature/fe-02-lm-workflow`.
 
 ## Authoritative Sources
 
@@ -125,9 +125,10 @@ These follow-ups do not change approved requirements and must not be used to inf
 ## Current Work
 
 PR #43 (BE-01 + JWT Authentication foundation), PR #44 (BE-02 Order
-Draft-to-Submit), PR #45 (BE-03 Cancel / Reject Pre-Approval), and PR #46
-(BE-04 Quotation Draft-to-Sent) are merged into `main`. The latest merge is
-commit `7d46c9b`.
+Draft-to-Submit), PR #45 (BE-03 Cancel / Reject Pre-Approval), PR #46
+(BE-04 Quotation Draft-to-Sent), PR #48 (BE-05 Deposit Payment), PR #49
+(LM Order Inbox), PR #51 (FE-01), and PR #52 (Customer FE-02) are merged into
+`main`. The latest merge is commit `25b0df7`.
 
 BE-04 implements Quotation create DRAFT, edit DRAFT, LM get, and atomic send
 from DRAFT to SENT. Send also moves the Order from `SUBMITTED` to
@@ -136,16 +137,15 @@ the same transaction. LM can create/edit/get/send; a Customer can only view a
 SENT quotation belonging to their own Order. SENT quotations are immutable.
 
 The backend calculates `totalAmount` and `remainingAmount`, uses fixed currency
-`USD`, and stores `depositAmount` on the quotation. Deposit payment is not yet
-implemented. There is no Customer Accept Quotation action and no LM manual
-approval; successful Deposit payment will move `QUOTATION_SENT` to `APPROVED`
-in BE-05.
+`USD`, and stores `depositAmount` on the quotation. BE-05 handles Deposit
+payment; there is no Customer Accept Quotation action and no LM manual approval.
+Successful Deposit payment moves `QUOTATION_SENT` to `APPROVED`.
 
 The full backend suite has 90 passing tests after BE-04. BE-04 reused V1 and did
 not change the ERD, migration, or frontend.
 
-FE-01 Customer Horse and Order create/edit/submit UI is implemented on the
-`feature/fe-01-customer-horse-orders` branch. The Customer workspace uses the
+FE-01 Customer Horse and Order create/edit/submit UI is merged from
+`feature/fe-01-customer-horse-orders`. The Customer workspace uses the
 existing Horse and Order APIs, retains the login JWT for the current tab, and
 shows the approved pre-submit warning and locked state. Horse editing is not
 exposed because FR-001 and the current API contract only define Horse create
@@ -154,15 +154,20 @@ mode displays sample data and keeps preview interactions local to the tab
 without calling the backend. Lint and TypeScript pass. Backend-connected
 browser validation and QA remain outstanding.
 
-FE-02 Customer-side work is in progress: Customer cancellation is exposed only
-for DRAFT, SUBMITTED, and QUOTATION_SENT Orders with a confirmation dialog;
-SENT quotations can be viewed as a read-only bill. Local preview includes a
-sample sent quotation. Frontend lint and TypeScript pass for these changes.
-The LM workspace/editor is waiting on BE confirmation of an LM-accessible
-submitted-Orders list/detail endpoint and response contract; the existing
-Customer-only Orders endpoints do not support LM discovery of Orders.
+Customer FE-02 work is merged from `feature/fe-02-quotation-workflow`:
+Customers may cancel only DRAFT, SUBMITTED, and QUOTATION_SENT Orders, and may
+view a SENT quotation as a read-only bill. Development preview includes sample
+Customer data.
 
-Next backend task: BE-05 Pay Deposit and Approve Order.
+LM inbox API is available at `GET /api/v1/orders/inbox?status=SUBMITTED`, with
+detail at `GET /api/v1/orders/{orderId}`. The FE-02 LM workspace is implemented
+locally on `feature/fe-02-lm-workflow`; it supports submitted-order review,
+required rejection reason, and quotation DRAFT create/edit/send. Login routes
+Customers to `/customer` and Logistics Managers to `/logistics`. Lint,
+TypeScript, and the Webpack production build pass. Browser interaction and
+backend-connected QA remain outstanding. The backend detail endpoint currently
+permits LM detail reads regardless of Order status; FE opens details from the
+SUBMITTED inbox and checks the returned status.
 
 ### COMPLETED
 
@@ -180,6 +185,9 @@ Next backend task: BE-05 Pay Deposit and Approve Order.
 - BE-02 Order Draft-to-Submit
 - BE-03 Cancel / Reject Pre-Approval
 - BE-04 Quotation Draft-to-Sent / FR-004 implementation, merged through PR #46
+- BE-05 Deposit Payment and automatic Order approval, merged through PR #48
+- FE-01 Customer Horse and Order workspace, merged through PR #51
+- FE-02 Customer cancellation and quotation bill, merged through PR #52
 
 ### DEFERRED / NON-BLOCKING
 
@@ -187,14 +195,12 @@ Next backend task: BE-05 Pay Deposit and Approve Order.
 
 ### NEXT
 
-1. Continue FE-02 when BE confirms the LM Orders API contract.
-2. Implement BE-05 Pay Deposit and Approve Order; keep Stripe payment and automatic `QUOTATION_SENT → APPROVED` transition within BE-05 scope.
+1. Finish and review FE-02 Logistics Manager workspace on `feature/fe-02-lm-workflow`.
+2. Continue the approved backend backlog after BE-05.
 
 ### NOT STARTED
 
-- BE-05 and later backend vertical slices
-- Stripe Deposit payment and `QUOTATION_SENT → APPROVED`
-- FE-02 LM pre-approval workspace/rejection action and quotation editor
+- Later backend vertical slices
 - QA execution
 
 ## Resume Protocol
