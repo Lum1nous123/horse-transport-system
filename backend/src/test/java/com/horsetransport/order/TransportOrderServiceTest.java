@@ -21,6 +21,7 @@ import com.horsetransport.audit.StatusAuditLogRepository;
 import com.horsetransport.horse.Horse;
 import com.horsetransport.horse.HorseRepository;
 import com.horsetransport.security.CurrentUserProvider;
+import com.horsetransport.user.UserRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,6 +51,7 @@ class TransportOrderServiceTest {
 	@BeforeEach
 	void currentCustomer() {
 		lenient().when(currentUserProvider.getCurrentUserId()).thenReturn(CUSTOMER_ID);
+		lenient().when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.CUSTOMER);
 	}
 
 	@Test
@@ -180,11 +182,59 @@ class TransportOrderServiceTest {
 	}
 
 	@Test
+	void logisticsManagerInboxContainsOnlySubmittedOrders() {
+		TransportOrder submitted = order(OrderStatus.SUBMITTED);
+		TransportOrder draft = order(OrderStatus.DRAFT);
+		TransportOrder quotationSent = order(OrderStatus.QUOTATION_SENT);
+		TransportOrder approved = order(OrderStatus.APPROVED);
+		TransportOrder cancelled = order(OrderStatus.CANCELLED);
+		TransportOrder rejected = order(OrderStatus.REJECTED);
+		when(orderRepository.findAllByStatusOrderByCreatedAtDesc(OrderStatus.SUBMITTED))
+				.thenReturn(List.of(submitted, draft, quotationSent, approved, cancelled, rejected));
+
+		List<OrderInboxResponse> result = service.findLogisticsManagerInbox(OrderStatus.SUBMITTED);
+
+		assertThat(result).hasSize(1);
+		assertThat(result.getFirst().status()).isEqualTo(OrderStatus.SUBMITTED);
+		verify(orderRepository).findAllByStatusOrderByCreatedAtDesc(OrderStatus.SUBMITTED);
+	}
+
+	@Test
+	void logisticsManagerInboxRejectsStatusesOutsideSubmitted() {
+		assertThatThrownBy(() -> service.findLogisticsManagerInbox(OrderStatus.DRAFT))
+				.isInstanceOf(UnsupportedOrderInboxStatusException.class);
+		verify(orderRepository, never()).findAllByStatusOrderByCreatedAtDesc(any());
+	}
+
+	@Test
 	void detailForAnotherCustomerReturnsNotFound() {
 		when(orderRepository.findByIdAndCustomerId(ORDER_ID, CUSTOMER_ID)).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.findCurrentCustomerOrder(ORDER_ID))
+		assertThatThrownBy(() -> service.findOrderDetail(ORDER_ID))
 				.isInstanceOf(OrderNotFoundException.class);
+	}
+
+	@Test
+	void logisticsManagerCanReadSubmittedOrderDetailWithoutCustomerOwnership() {
+		TransportOrder submitted = order(OrderStatus.SUBMITTED);
+		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.LOGISTICS_MANAGER);
+		when(orderRepository.findById(submitted.getId())).thenReturn(Optional.of(submitted));
+
+		OrderResponse response = service.findOrderDetail(submitted.getId());
+
+		assertThat(response.status()).isEqualTo(OrderStatus.SUBMITTED);
+		verify(orderRepository).findById(submitted.getId());
+		verify(orderRepository, never()).findByIdAndCustomerId(any(), any());
+	}
+
+	@Test
+	void customerOrderDetailRemainsOwnerScoped() {
+		TransportOrder owned = order(OrderStatus.SUBMITTED);
+		when(orderRepository.findByIdAndCustomerId(owned.getId(), CUSTOMER_ID)).thenReturn(Optional.of(owned));
+
+		assertThat(service.findOrderDetail(owned.getId()).id()).isEqualTo(owned.getId());
+		verify(orderRepository).findByIdAndCustomerId(owned.getId(), CUSTOMER_ID);
+		verify(orderRepository, never()).findById(owned.getId());
 	}
 
 	@ParameterizedTest

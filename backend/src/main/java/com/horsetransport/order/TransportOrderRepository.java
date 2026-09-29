@@ -20,6 +20,9 @@ public interface TransportOrderRepository extends JpaRepository<TransportOrder, 
 	@EntityGraph(attributePaths = "horses")
 	Optional<TransportOrder> findByIdAndCustomerId(UUID id, UUID customerId);
 
+	@EntityGraph(attributePaths = "horses")
+	List<TransportOrder> findAllByStatusOrderByCreatedAtDesc(OrderStatus status);
+
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select o from TransportOrder o where o.id = :id and o.customerId = :customerId")
 	Optional<TransportOrder> findOwnedByIdForUpdate(@Param("id") UUID id, @Param("customerId") UUID customerId);

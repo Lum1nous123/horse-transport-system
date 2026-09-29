@@ -11,6 +11,7 @@ import com.horsetransport.order.InvalidRejectionReasonException;
 import com.horsetransport.order.OrderNotEditableException;
 import com.horsetransport.order.OrderNotFoundException;
 import com.horsetransport.order.OrderSubmissionValidationException;
+import com.horsetransport.order.UnsupportedOrderInboxStatusException;
 import com.horsetransport.payment.DepositPaymentConflictException;
 import com.horsetransport.payment.DepositPaymentNotFoundException;
 import com.horsetransport.payment.InvalidStripeWebhookException;
@@ -29,6 +30,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+	@ExceptionHandler(UnsupportedOrderInboxStatusException.class)
+	public ResponseEntity<ApiError> handleUnsupportedOrderInboxStatus(
+			UnsupportedOrderInboxStatusException exception) {
+		return error(HttpStatus.BAD_REQUEST, "UNSUPPORTED_ORDER_INBOX_STATUS", exception.getMessage());
+	}
 
 	@ExceptionHandler(DepositPaymentNotFoundException.class)
 	public ResponseEntity<ApiError> handleDepositPaymentNotFound(DepositPaymentNotFoundException exception) {
