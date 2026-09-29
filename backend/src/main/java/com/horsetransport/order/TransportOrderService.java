@@ -14,6 +14,7 @@ import com.horsetransport.audit.StatusAuditLog;
 import com.horsetransport.audit.StatusAuditLogRepository;
 import com.horsetransport.horse.HorseRepository;
 import com.horsetransport.security.CurrentUserProvider;
+import com.horsetransport.user.UserRole;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,8 +56,27 @@ public class TransportOrderService {
 	}
 
 	@Transactional(readOnly = true)
+	public List<OrderInboxResponse> findLogisticsManagerInbox(OrderStatus status) {
+		if (status != OrderStatus.SUBMITTED) {
+			throw new UnsupportedOrderInboxStatusException();
+		}
+		return orderRepository.findAllByStatusOrderByCreatedAtDesc(OrderStatus.SUBMITTED).stream()
+				.filter(order -> order.getStatus() == OrderStatus.SUBMITTED)
+				.map(OrderInboxResponse::from)
+				.toList();
+	}
+
+	@Transactional(readOnly = true)
 	public OrderResponse findCurrentCustomerOrder(UUID orderId) {
 		return OrderResponse.from(findOwnedOrder(orderId, currentUserProvider.getCurrentUserId()));
+	}
+
+	@Transactional(readOnly = true)
+	public OrderResponse findOrderDetail(UUID orderId) {
+		if (currentUserProvider.getCurrentUserRole() == UserRole.LOGISTICS_MANAGER) {
+			return OrderResponse.from(orderRepository.findById(orderId).orElseThrow(OrderNotFoundException::new));
+		}
+		return findCurrentCustomerOrder(orderId);
 	}
 
 	@Transactional
