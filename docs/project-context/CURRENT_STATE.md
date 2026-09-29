@@ -148,7 +148,7 @@ LM Order Inbox is available at `GET /api/v1/orders/inbox?status=SUBMITTED`, and
 LM can read Order detail through the existing detail endpoint. Customer list
 and ownership behavior remain unchanged.
 
-Current branch `fix/ts-document-inbox` adds the Transport Specialist work queue
+Backend support branch `fix/ts-document-inbox` adds the Transport Specialist work queue
 at `GET /api/v1/orders/document-inbox`. It returns only `APPROVED` Orders and
 includes deadline metadata without assignment filtering. Commit `6f45284` is
 pushed to `origin/fix/ts-document-inbox`; no PR exists yet. The clean full
@@ -156,6 +156,14 @@ backend suite on this branch has 146 passing tests. No ERD, migration, or
 frontend changes were made for this support endpoint.
 
 Next backend task: BE-07 Customer Document Draft and Submission Lifecycle.
+
+FE-05 is in progress on `feature/fe-05-ts-document-review`. The branch adds a
+sample-data TS document review workspace at `/transport-specialist/review`,
+including manual approve/reject controls, required rejection reasons, version
+history, and expiry information without automatic expiry decisions. It is a UI
+preview only: document review APIs are not available on the base branch, so
+decisions and sample data are not persisted. The FE-04 Customer document UI
+work remains preserved separately and has not been folded into this branch.
 
 ### COMPLETED
 
@@ -186,13 +194,14 @@ Next backend task: BE-07 Customer Document Draft and Submission Lifecycle.
 
 ### NEXT
 
-1. Human Review and open a PR for `fix/ts-document-inbox` when approved.
-2. Implement BE-07 Customer Document Draft and Submission Lifecycle.
+1. Finish and review FE-05 UI preview on `feature/fe-05-ts-document-review`.
+2. Human Review and open a PR for `fix/ts-document-inbox` when approved.
+3. Implement BE-07 Customer Document Draft and Submission Lifecycle.
 
 ### NOT STARTED
 
 - BE-07 and later backend vertical slices
-- Customer document upload/version/submission and TS review lifecycle
+- Customer document upload/version/submission and persisted TS review lifecycle
 - QA execution
 
 ## Resume Protocol
