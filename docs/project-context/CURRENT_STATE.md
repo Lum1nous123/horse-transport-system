@@ -16,6 +16,7 @@ This file is a portable handoff and resume guide for a new Codex conversation or
 - GitHub Project #4 has three two-week Development Sprint iterations for course Weeks 4–9, and FR-001 through FR-020 are assigned according to the instructor-required, Human-Approved reforecast.
 - Course Week 10 is reserved for presentation, final demo, final bug fixing, and release stabilization; it is not a feature-development iteration.
 - Backend implementation is active. BE-01, JWT Authentication foundation, BE-02, BE-03, and BE-04 are complete and merged into `main`.
+- Frontend FE-02 is in progress on `feature/fe-02-quotation-workflow`, branched from FE-01.
 
 ## Authoritative Sources
 
@@ -153,6 +154,14 @@ mode displays sample data and keeps preview interactions local to the tab
 without calling the backend. Lint and TypeScript pass. Backend-connected
 browser validation and QA remain outstanding.
 
+FE-02 Customer-side work is in progress: Customer cancellation is exposed only
+for DRAFT, SUBMITTED, and QUOTATION_SENT Orders with a confirmation dialog;
+SENT quotations can be viewed as a read-only bill. Local preview includes a
+sample sent quotation. Frontend lint and TypeScript pass for these changes.
+The LM workspace/editor is waiting on BE confirmation of an LM-accessible
+submitted-Orders list/detail endpoint and response contract; the existing
+Customer-only Orders endpoints do not support LM discovery of Orders.
+
 Next backend task: BE-05 Pay Deposit and Approve Order.
 
 ### COMPLETED
@@ -178,14 +187,14 @@ Next backend task: BE-05 Pay Deposit and Approve Order.
 
 ### NEXT
 
-1. Implement BE-05 Pay Deposit and Approve Order.
-2. Keep Stripe payment and automatic `QUOTATION_SENT → APPROVED` transition within BE-05 scope.
+1. Continue FE-02 when BE confirms the LM Orders API contract.
+2. Implement BE-05 Pay Deposit and Approve Order; keep Stripe payment and automatic `QUOTATION_SENT → APPROVED` transition within BE-05 scope.
 
 ### NOT STARTED
 
 - BE-05 and later backend vertical slices
 - Stripe Deposit payment and `QUOTATION_SENT → APPROVED`
-- Frontend implementation beyond FE-01
+- FE-02 LM pre-approval workspace/rejection action and quotation editor
 - QA execution
 
 ## Resume Protocol
