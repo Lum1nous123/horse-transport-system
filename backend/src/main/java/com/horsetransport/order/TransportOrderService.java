@@ -20,8 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TransportOrderService {
 
-	private static final Set<OrderStatus> CUSTOMER_CANCELLABLE_STATUSES =
-			EnumSet.of(OrderStatus.DRAFT, OrderStatus.SUBMITTED, OrderStatus.QUOTATION_SENT);
+	private static final Set<OrderStatus> CUSTOMER_CANCELLABLE_STATUSES = EnumSet.of(OrderStatus.DRAFT,
+			OrderStatus.SUBMITTED, OrderStatus.QUOTATION_SENT);
 
 	private final TransportOrderRepository orderRepository;
 	private final HorseRepository horseRepository;
