@@ -65,6 +65,54 @@ class OrderAuthorizationTest {
 	}
 
 	@Test
+	void logisticsManagerCanReadInboxAndOrderDetailButNotCustomerList() throws Exception {
+		String token = token(UserRole.LOGISTICS_MANAGER);
+
+		mockMvc.perform(get("/api/v1/orders/inbox").queryParam("status", "SUBMITTED")
+				.header(HttpHeaders.AUTHORIZATION, token))
+				.andExpect(status().isOk());
+		mockMvc.perform(get("/api/v1/orders/{id}", USER_ID)
+				.header(HttpHeaders.AUTHORIZATION, token))
+				.andExpect(status().isOk());
+		mockMvc.perform(get("/api/v1/orders").header(HttpHeaders.AUTHORIZATION, token))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void customerCannotReadLogisticsManagerInboxButCanReadDetail() throws Exception {
+		String token = token(UserRole.CUSTOMER);
+
+		mockMvc.perform(get("/api/v1/orders/inbox").queryParam("status", "SUBMITTED")
+				.header(HttpHeaders.AUTHORIZATION, token))
+				.andExpect(status().isForbidden());
+		mockMvc.perform(get("/api/v1/orders/{id}", USER_ID)
+				.header(HttpHeaders.AUTHORIZATION, token))
+				.andExpect(status().isOk());
+	}
+
+	@Test
+	void otherRolesCannotReadInboxOrOrderDetail() throws Exception {
+		for (UserRole role : List.of(UserRole.TRANSPORT_SPECIALIST, UserRole.FLEET_ROUTE_COORDINATOR,
+				UserRole.DRIVER, UserRole.ESCORT)) {
+			String token = token(role);
+			mockMvc.perform(get("/api/v1/orders/inbox").queryParam("status", "SUBMITTED")
+					.header(HttpHeaders.AUTHORIZATION, token))
+					.andExpect(status().isForbidden());
+			mockMvc.perform(get("/api/v1/orders/{id}", USER_ID)
+					.header(HttpHeaders.AUTHORIZATION, token))
+					.andExpect(status().isForbidden());
+		}
+	}
+
+	@Test
+	void unauthenticatedInboxAndDetailRequestsAreUnauthorized() throws Exception {
+		mockMvc.perform(get("/api/v1/orders/inbox").queryParam("status", "SUBMITTED"))
+				.andExpect(status().isUnauthorized());
+		mockMvc.perform(get("/api/v1/orders/{id}", USER_ID))
+				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
 	void allowsCustomerToCancelButNotReject() throws Exception {
 		UserAccount customer = user(UserRole.CUSTOMER);
 		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(customer));
@@ -128,5 +176,11 @@ class OrderAuthorizationTest {
 		when(user.getRole()).thenReturn(role);
 		when(user.getStatus()).thenReturn(UserStatus.ACTIVE);
 		return user;
+	}
+
+	private String token(UserRole role) {
+		UserAccount account = user(role);
+		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(account));
+		return "Bearer " + jwtService.createToken(account);
 	}
 }
