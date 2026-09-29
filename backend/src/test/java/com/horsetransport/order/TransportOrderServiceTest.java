@@ -207,6 +207,27 @@ class TransportOrderServiceTest {
 	}
 
 	@Test
+	void transportSpecialistDocumentInboxContainsOnlyApprovedOrdersAndDeadlineMetadata() {
+		LocalDateTime deadline = LocalDateTime.of(2026, 10, 15, 17, 0);
+		TransportOrder approved = order(OrderStatus.APPROVED);
+		approved.setDocumentCompletionDeadline(deadline, UUID.randomUUID());
+		List<TransportOrder> orders = List.of(
+				order(OrderStatus.DRAFT), order(OrderStatus.SUBMITTED), order(OrderStatus.QUOTATION_SENT),
+				approved, order(OrderStatus.READY_TO_SHIP), order(OrderStatus.IN_PROGRESS),
+				order(OrderStatus.DELIVERED), order(OrderStatus.CANCELLED), order(OrderStatus.REJECTED));
+		when(orderRepository.findAllByStatusOrderByCreatedAtDesc(OrderStatus.APPROVED)).thenReturn(orders);
+
+		List<DocumentInboxResponse> result = service.findTransportSpecialistDocumentInbox();
+
+		assertThat(result).hasSize(1);
+		assertThat(result.getFirst().status()).isEqualTo(OrderStatus.APPROVED);
+		assertThat(result.getFirst().documentCompletionDeadlineAt()).isEqualTo(deadline);
+		assertThat(result.getFirst().documentDeadlineSetAt()).isNotNull();
+		verify(orderRepository).findAllByStatusOrderByCreatedAtDesc(OrderStatus.APPROVED);
+		verify(auditLogRepository, never()).saveAndFlush(any());
+	}
+
+	@Test
 	void detailForAnotherCustomerReturnsNotFound() {
 		when(orderRepository.findByIdAndCustomerId(ORDER_ID, CUSTOMER_ID)).thenReturn(Optional.empty());
 

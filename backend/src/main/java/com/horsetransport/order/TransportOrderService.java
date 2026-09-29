@@ -67,6 +67,14 @@ public class TransportOrderService {
 	}
 
 	@Transactional(readOnly = true)
+	public List<DocumentInboxResponse> findTransportSpecialistDocumentInbox() {
+		return orderRepository.findAllByStatusOrderByCreatedAtDesc(OrderStatus.APPROVED).stream()
+				.filter(order -> order.getStatus() == OrderStatus.APPROVED)
+				.map(DocumentInboxResponse::from)
+				.toList();
+	}
+
+	@Transactional(readOnly = true)
 	public OrderResponse findCurrentCustomerOrder(UUID orderId) {
 		return OrderResponse.from(findOwnedOrder(orderId, currentUserProvider.getCurrentUserId()));
 	}
