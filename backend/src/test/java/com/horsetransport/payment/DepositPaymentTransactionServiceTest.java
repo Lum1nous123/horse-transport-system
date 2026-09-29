@@ -300,6 +300,22 @@ class DepositPaymentTransactionServiceTest {
 		verify(documentPhaseStarter, never()).startForOrder(any());
 	}
 
+	@Test
+	void documentChecklistFailureRestoresPaymentOrderAndAttemptForTransactionRollback() {
+		WebhookFixture fixture = webhookFixture(OrderStatus.QUOTATION_SENT);
+		org.mockito.Mockito.doThrow(new DataIntegrityViolationException("checklist failure"))
+				.when(documentPhaseStarter).startForOrder(ORDER_ID);
+
+		assertThatThrownBy(() -> service.processWebhook(event("evt_checklist_rollback", StripeEventKind.SUCCESS, fixture)))
+				.isInstanceOf(DataIntegrityViolationException.class);
+		assertThat(fixture.payment().getStatus()).isEqualTo(PaymentStatus.PENDING);
+		assertThat(fixture.payment().getPaidAt()).isNull();
+		assertThat(fixture.order().getStatus()).isEqualTo(OrderStatus.QUOTATION_SENT);
+		assertThat(fixture.order().getApprovedAt()).isNull();
+		assertThat(fixture.attempt().getProviderStatus()).isEqualTo(PaymentAttemptStatus.OPEN);
+		verify(auditLogRepository).saveAndFlush(any());
+	}
+
 	private void stubCheckoutState(Payment payment, PaymentAttempt attempt) {
 		when(orderRepository.findOwnedByIdForUpdate(ORDER_ID, CUSTOMER_ID))
 				.thenReturn(Optional.of(order(OrderStatus.QUOTATION_SENT)));

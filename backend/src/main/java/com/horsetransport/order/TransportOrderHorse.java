@@ -71,4 +71,12 @@ public class TransportOrderHorse {
 	public UUID getHorseId() {
 		return horseId;
 	}
+
+	public UUID getId() {
+		return id;
+	}
+
+	public OrderHorseDocumentStatus getDocumentStatus() {
+		return documentStatus;
+	}
 }

@@ -4,6 +4,8 @@ import java.time.Instant;
 
 import com.horsetransport.auth.DuplicateEmailException;
 import com.horsetransport.auth.InvalidCredentialsException;
+import com.horsetransport.document.DocumentChecklistConflictException;
+import com.horsetransport.document.DocumentChecklistNotFoundException;
 import com.horsetransport.horse.DuplicateMicrochipException;
 import com.horsetransport.order.InvalidOrderHorsesException;
 import com.horsetransport.order.InvalidOrderTransitionException;
@@ -30,6 +32,16 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+	@ExceptionHandler(DocumentChecklistNotFoundException.class)
+	public ResponseEntity<ApiError> handleDocumentChecklistNotFound(DocumentChecklistNotFoundException exception) {
+		return error(HttpStatus.NOT_FOUND, "DOCUMENT_CHECKLIST_NOT_FOUND", exception.getMessage());
+	}
+
+	@ExceptionHandler(DocumentChecklistConflictException.class)
+	public ResponseEntity<ApiError> handleDocumentChecklistConflict(DocumentChecklistConflictException exception) {
+		return error(HttpStatus.CONFLICT, "DOCUMENT_CHECKLIST_CONFLICT", exception.getMessage());
+	}
 
 	@ExceptionHandler(UnsupportedOrderInboxStatusException.class)
 	public ResponseEntity<ApiError> handleUnsupportedOrderInboxStatus(
