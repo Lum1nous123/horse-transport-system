@@ -13,6 +13,7 @@ import com.horsetransport.order.InvalidRejectionReasonException;
 import com.horsetransport.order.OrderNotEditableException;
 import com.horsetransport.order.OrderNotFoundException;
 import com.horsetransport.order.OrderSubmissionValidationException;
+import com.horsetransport.order.UnsupportedOrderInboxStatusException;
 import com.horsetransport.payment.DepositPaymentConflictException;
 import com.horsetransport.payment.DepositPaymentNotFoundException;
 import com.horsetransport.payment.InvalidStripeWebhookException;
@@ -40,6 +41,12 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(DocumentChecklistConflictException.class)
 	public ResponseEntity<ApiError> handleDocumentChecklistConflict(DocumentChecklistConflictException exception) {
 		return error(HttpStatus.CONFLICT, "DOCUMENT_CHECKLIST_CONFLICT", exception.getMessage());
+	}
+
+	@ExceptionHandler(UnsupportedOrderInboxStatusException.class)
+	public ResponseEntity<ApiError> handleUnsupportedOrderInboxStatus(
+			UnsupportedOrderInboxStatusException exception) {
+		return error(HttpStatus.BAD_REQUEST, "UNSUPPORTED_ORDER_INBOX_STATUS", exception.getMessage());
 	}
 
 	@ExceptionHandler(DepositPaymentNotFoundException.class)
