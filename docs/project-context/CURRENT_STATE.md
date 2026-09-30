@@ -16,7 +16,7 @@ This file is a portable handoff and resume guide for a new Codex conversation or
 - GitHub Project #4 has three two-week Development Sprint iterations for course Weeks 4–9, and FR-001 through FR-020 are assigned according to the instructor-required, Human-Approved reforecast.
 - Course Week 10 is reserved for presentation, final demo, final bug fixing, and release stabilization; it is not a feature-development iteration.
 - Backend implementation is active. BE-01 through BE-07 and the JWT Authentication foundation are complete and merged into `main`.
-- FE-01, FE-02, and the FE-04 Customer document workspace preview are complete and merged into `main`.
+- FE-01, FE-02, FE-04, and FE-05 previews are complete and merged into `main`.
 - TS Document Inbox support is complete and merged into `main`.
 
 ## Authoritative Sources
@@ -128,8 +128,8 @@ These follow-ups do not change approved requirements and must not be used to inf
 PR #43–#46, PR #48–#50, and PR #53 cover BE-01 through BE-07, JWT
 Authentication, and the LM Order Inbox support; all are merged into `main`.
 PR #47 provides the frontend authentication/landing foundation, while PR #51
-(FE-01), PR #52 (FE-02), and PR #54 (FE-04 preview) are also merged. The latest
-`main` commit is `d33743e`.
+(FE-01), PR #52 (FE-02), PR #54 (FE-04 preview), and PR #55 (FE-05 preview)
+are also merged. The latest `main` commit is `edc8789`.
 
 BE-05 implements Stripe Deposit checkout/webhook handling. A successful
 Deposit atomically marks the payment `PAID`, moves the Order from
@@ -159,17 +159,22 @@ BE-07 Customer Document Draft and Submission Lifecycle is merged through PR
 version history, Cloudinary storage compensation, and status audit behavior.
 The next backend task is BE-08 Transport Specialist document review.
 
-FE-03 implementation is in progress on `feature/fe-03-deposit-documents` and
-has been preserved in a local Git stash while FE-04 is developed. It includes
-Deposit checkout/status UI, Stripe return pages, Customer checklist, and a TS
-deadline workspace.
+FE-03 is in progress on `feature/fe-03-deposit-documents`. Customer Deposit
+checkout/retry, payment status, Stripe return pages, and document deadline
+views are implemented. The Transport Specialist workspace loads the document
+inbox, sets an Order deadline once, and shows the saved deadline.
 
-FE-04 Customer document workspace preview is merged through PR #54. FE-05 is
-in progress on `feature/fe-05-ts-document-review`; it adds a sample-data TS
-document review workspace at `/transport-specialist/review`, including manual
-approve/reject controls, required rejection reasons, version history, and
-expiry information without automatic expiry decisions. Review decisions remain
-preview-only until BE-08 supplies the persisted review APIs.
+FE-04 Customer document workspace preview is merged through PR #54. FE-05 TS
+document review workspace preview is merged through PR #55; review decisions
+remain preview-only until BE-08 supplies the persisted review APIs.
+
+FE-03 is in progress on `feature/fe-03-deposit-documents`, based on current
+`main`. Customer Deposit checkout/retry, payment status, Stripe return pages,
+and required document checklist/deadline views are implemented. The Transport
+Specialist workspace loads the document inbox, sets an Order deadline once,
+and shows the saved deadline. Login routes Transport Specialist accounts to
+that workspace. Frontend lint and the optimized production build pass; browser
+validation and QA remain outstanding.
 
 ### COMPLETED
 
@@ -195,6 +200,7 @@ preview-only until BE-08 supplies the persisted review APIs.
 - FE-01 Customer Horse and Order flow, merged through PR #51
 - FE-02 Pre-approval and Quotation views, merged through PR #52
 - FE-04 Customer document workspace preview, merged through PR #54
+- FE-05 Transport Specialist document review workspace preview, merged through PR #55
 - Transport Specialist Document Inbox support
 
 ### DEFERRED / NON-BLOCKING
@@ -203,13 +209,13 @@ preview-only until BE-08 supplies the persisted review APIs.
 
 ### NEXT
 
-1. Finish and review FE-05 UI preview on `feature/fe-05-ts-document-review`.
-2. Restore the FE-03 stash and finish its review/publishing workflow.
-3. Implement BE-08 Transport Specialist document review APIs after Human Review.
+1. Complete FE-03 review and browser-connected verification.
+2. Implement BE-08 Transport Specialist document review APIs after Human Review.
 
 ### NOT STARTED
 
 - BE-08 and later backend vertical slices
+- FE-03 browser-connected validation and QA
 - Persisted Transport Specialist document review lifecycle
 - QA execution
 
