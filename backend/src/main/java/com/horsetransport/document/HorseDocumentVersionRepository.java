@@ -10,9 +10,9 @@ import org.springframework.data.repository.query.Param;
 
 public interface HorseDocumentVersionRepository extends JpaRepository<HorseDocumentVersion, UUID> {
 
-	Optional<HorseDocumentVersion> findByHorseDocumentIdAndCurrentTrue(UUID horseDocumentId);
+	Optional<HorseDocumentVersion> findByHorseDocument_IdAndCurrentTrue(UUID horseDocumentId);
 
-	List<HorseDocumentVersion> findAllByHorseDocumentIdOrderByVersionNoDesc(UUID horseDocumentId);
+	List<HorseDocumentVersion> findAllByHorseDocument_IdOrderByVersionNoDesc(UUID horseDocumentId);
 
 	@Query("select coalesce(max(version.versionNo), 0) from HorseDocumentVersion version "
 			+ "where version.horseDocument.id = :documentId")

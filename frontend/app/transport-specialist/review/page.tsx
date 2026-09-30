@@ -4,15 +4,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { clearAccessToken, getAccessToken, getCurrentUser } from "@/lib/auth";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, setDocumentDeadline } from "@/lib/api";
+import type { DocumentDeadlineResponse } from "@/lib/api";
 
 type DocumentKey = "HORSE_PASSPORT_OR_IDENTIFICATION" | "VACCINATION_CERTIFICATE" | "VETERINARY_HEALTH_CERTIFICATE" | "OWNERSHIP_CERTIFICATE" | "EXPORT_IMPORT_PERMIT";
 type VersionStatus = "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
-type DocumentOrder = { id: string; orderCode: string; status: "APPROVED"; originAddress: string | null; originCountry: string | null; destinationAddress: string | null; destinationCountry: string | null; requestedDepartureAt: string | null; horseCount: number };
+type DocumentOrder = { id: string; orderCode: string; status: "APPROVED"; originAddress: string | null; originCountry: string | null; destinationAddress: string | null; destinationCountry: string | null; requestedDepartureAt: string | null; horseCount: number; documentCompletionDeadlineAt: string | null; documentDeadlineSetAt: string | null };
 type Version = { id: string; documentId: string; versionNo: number; status: VersionStatus; isCurrent: boolean; fileUrl: string; expiryDate: string | null; uploadedAt: string; submittedAt: string | null; reviewedAt: string | null; rejectionReason: string | null };
 type ReviewDocument = { id: string; type: DocumentKey; required: boolean; versions: Version[] };
 type ReviewHorse = { orderHorseId: string; horseId: string; documentStatus: string; documents: ReviewDocument[] };
-type Checklist = { orderId: string; horses: { orderHorseId: string; horseId: string; documentStatus: string; documents: { id: string; documentType: DocumentKey; required: boolean }[] }[] };
+type Checklist = { orderId: string; documentCompletionDeadlineAt: string | null; documentDeadlineSetAt: string | null; horses: { orderHorseId: string; horseId: string; documentStatus: string; documents: { id: string; documentType: DocumentKey; required: boolean }[] }[] };
 
 const labels: Record<DocumentKey, string> = {
   HORSE_PASSPORT_OR_IDENTIFICATION: "Horse Passport / Identification Document",
@@ -40,6 +41,9 @@ export default function TransportSpecialistReviewPage() {
   const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [busyVersionId, setBusyVersionId] = useState("");
+  const [deadlineValue, setDeadlineValue] = useState("");
+  const [deadlineSaving, setDeadlineSaving] = useState(false);
+  const [deadlineError, setDeadlineError] = useState("");
 
   const request = useCallback(async (path: string, init?: RequestInit) => {
     const token = getAccessToken();
@@ -60,6 +64,11 @@ export default function TransportSpecialistReviewPage() {
     setDetailLoading(true); setError("");
     try {
       const checklist = await (await request(`/api/v1/orders/${orderId}/documents/checklist`)).json() as Checklist;
+      setOrders((current) => current.map((order) => order.id === orderId ? {
+        ...order,
+        documentCompletionDeadlineAt: checklist.documentCompletionDeadlineAt,
+        documentDeadlineSetAt: checklist.documentDeadlineSetAt,
+      } : order));
       const loaded = await Promise.all(checklist.horses.map(async (horse) => ({
         orderHorseId: horse.orderHorseId, horseId: horse.horseId, documentStatus: horse.documentStatus,
         documents: await Promise.all(horse.documents.map(async (document) => ({ id: document.id, type: document.documentType, required: document.required, versions: await (await request(`/api/v1/documents/${document.id}/versions`)).json() as Version[] }))),
@@ -96,7 +105,35 @@ export default function TransportSpecialistReviewPage() {
   const selectedHorse = horses.find((horse) => horse.horseId === selectedHorseId) ?? horses[0] ?? null;
   const pendingCount = useMemo(() => horses.reduce((total, horse) => total + horse.documents.filter((document) => document.versions.some((version) => version.isCurrent && version.status === "PENDING_REVIEW")).length, 0), [horses]);
 
-  async function chooseOrder(orderId: string) { setSelectedOrderId(orderId); setMessage(""); setExpanded({}); await loadOrder(orderId); }
+  async function chooseOrder(orderId: string) { setSelectedOrderId(orderId); setMessage(""); setDeadlineValue(""); setDeadlineError(""); setExpanded({}); await loadOrder(orderId); }
+
+  async function saveDeadline() {
+    if (!selectedOrder || !deadlineValue || selectedOrder.documentCompletionDeadlineAt) return;
+    setDeadlineSaving(true); setDeadlineError(""); setMessage("");
+    try {
+      const token = getAccessToken();
+      if (!token) throw new Error("SESSION_EXPIRED");
+      const timestamp = deadlineValue.length === 16 ? `${deadlineValue}:00` : deadlineValue;
+      const response = await setDocumentDeadline(selectedOrder.id, timestamp, token);
+      if (response.status === 401) { clearAccessToken(); throw new Error("SESSION_EXPIRED"); }
+      if (!response.ok) {
+        let detail = "We couldn't set the document deadline.";
+        try { const body = await response.json() as { message?: string }; if (body.message) detail = body.message; } catch { /* Keep default. */ }
+        throw new Error(detail);
+      }
+      const saved = await response.json() as DocumentDeadlineResponse;
+      setOrders((current) => current.map((order) => order.id === saved.orderId ? {
+        ...order,
+        documentCompletionDeadlineAt: saved.documentCompletionDeadlineAt,
+        documentDeadlineSetAt: saved.documentDeadlineSetAt,
+      } : order));
+      setDeadlineValue("");
+      setMessage("Document deadline set and locked.");
+    } catch (caught) {
+      if (caught instanceof Error && caught.message === "SESSION_EXPIRED") { router.replace("/login?next=/transport-specialist/review"); return; }
+      setDeadlineError(caught instanceof Error ? caught.message : "We couldn't set the document deadline.");
+    } finally { setDeadlineSaving(false); }
+  }
 
   async function review(documentId: string, versionId: string, decision: "approve" | "reject") {
     const reason = rejectionReasons[versionId]?.trim();
@@ -121,6 +158,9 @@ export default function TransportSpecialistReviewPage() {
       {message && <p className="customer-feedback review-feedback" role="status">{message}</p>}{error && <div className="customer-alert" role="alert"><span>{error}</span><button type="button" onClick={() => void loadOrders()}>Try again</button></div>}
       {loading ? <div className="customer-loading" role="status">Loading document review queue…</div> : orders.length === 0 ? <div className="customer-empty"><div className="customer-empty-icon" aria-hidden="true">✓</div><div><h3>No orders in document review</h3><p>Approved orders will appear after their document checklist is created.</p></div></div> : selectedOrder && <div className="review-workspace-layout"><aside className="review-order-queue" aria-labelledby="review-queue-title"><div className="review-queue-heading"><div><h2 id="review-queue-title">Approved orders</h2><p>Document work queue</p></div><span>{orders.length}</span></div><div className="review-order-list">{orders.map((order) => <button type="button" key={order.id} className={selectedOrder.id === order.id ? "review-order-option selected" : "review-order-option"} onClick={() => void chooseOrder(order.id)} aria-current={selectedOrder.id === order.id ? "true" : undefined}><span className="review-order-option-top"><strong>{order.orderCode}</strong><span>{order.horseCount}</span></span><span className="review-order-route">{displayLocation(order.originAddress, order.originCountry, "Origin")} → {displayLocation(order.destinationAddress, order.destinationCountry, "Destination")}</span><span className="review-order-meta">{order.requestedDepartureAt ? `Departure ${formatDate(order.requestedDepartureAt)}` : "Departure not set"}</span></button>)}</div></aside>
         <section className="review-detail-panel" aria-labelledby="selected-order-title"><div className="review-detail-heading"><div><p className="customer-eyebrow">ORDER {selectedOrder.orderCode}</p><h2 id="selected-order-title">{displayLocation(selectedOrder.originAddress, selectedOrder.originCountry, "Origin")} <span aria-hidden="true">→</span> {displayLocation(selectedOrder.destinationAddress, selectedOrder.destinationCountry, "Destination")}</h2><p>{selectedOrder.requestedDepartureAt ? `Requested departure · ${formatDateTime(selectedOrder.requestedDepartureAt)}` : "Requested departure not set"}</p></div><span className="order-status status-approved">APPROVED</span></div>
+          <section className="review-deadline-section" aria-labelledby="review-deadline-title"><div><p className="customer-eyebrow">ORDER REQUIREMENT</p><h3 id="review-deadline-title">Document deadline</h3><p>One completion deadline applies to every horse and required document in this order.</p></div>
+            {selectedOrder.documentCompletionDeadlineAt ? <div className="review-deadline-locked"><span>Deadline set</span><strong>{formatDateTime(selectedOrder.documentCompletionDeadlineAt)}</strong><small>Locked · this deadline can only be set once.</small></div> : <div className="review-deadline-form"><label className="customer-field"><span>Completion date and time <b aria-hidden="true">*</b></span><input type="datetime-local" required value={deadlineValue} disabled={deadlineSaving} onChange={(event) => { setDeadlineValue(event.target.value); setDeadlineError(""); }} /></label><button type="button" className="customer-primary-button compact" disabled={deadlineSaving || !deadlineValue} onClick={() => void saveDeadline()}>{deadlineSaving ? "Setting deadline…" : "Set deadline"}</button>{deadlineError && <p className="customer-form-error" role="alert">{deadlineError}</p>}<small>After saving, this deadline is locked and cannot be changed.</small></div>}
+          </section>
           {detailLoading ? <div className="customer-loading" role="status">Loading checklist and version history…</div> : selectedHorse && <><div className="document-horse-tabs review-horse-tabs" role="tablist" aria-label="Select horse">{horses.map((horse, index) => { const count = horse.documents.filter((document) => document.versions.some((version) => version.isCurrent && version.status === "PENDING_REVIEW")).length; return <button type="button" role="tab" aria-selected={selectedHorse.horseId === horse.horseId} className={selectedHorse.horseId === horse.horseId ? "document-horse-tab selected" : "document-horse-tab"} key={horse.horseId} onClick={() => { setSelectedHorseId(horse.horseId); setMessage(""); }}>Horse {index + 1}<span className="review-horse-pending">{count} pending</span></button>; })}</div><div className="review-guidance"><strong>{pendingCount} version{pendingCount === 1 ? "" : "s"} awaiting review on this order</strong><p>Expiry details are information for your review. The system does not decide based on expiry date.</p></div>
             <div className="review-document-list">{selectedHorse.documents.map((document) => { const current = document.versions.find((version) => version.isCurrent); const submitted = current?.status === "PENDING_REVIEW" ? current : null; const history = document.versions.filter((version) => !version.isCurrent); return <article className="review-document-card" key={document.id}><div className="review-document-heading"><div><h3>{labels[document.type]}</h3><p>{current ? `Version ${current.versionNo}${current.submittedAt ? ` · Submitted ${formatDateTime(current.submittedAt)}` : ""}` : "No submitted version"}</p></div><span className={`document-version-status ${current?.status.toLowerCase() ?? "missing"}`}>{current?.status === "PENDING_REVIEW" ? "Awaiting review" : current?.status === "APPROVED" ? "Approved" : current?.status === "REJECTED" ? "Rejected" : "Not submitted"}</span></div>
               {current && current.status !== "DRAFT" && <div className="review-document-file"><span aria-hidden="true">▧</span><div><strong>{fileLabel(current.fileUrl)}</strong><small>{current.expiryDate ? `Expiry date · ${formatDate(current.expiryDate)}` : "No expiry date provided"}</small></div><a className="customer-secondary-button compact" href={current.fileUrl} target="_blank" rel="noreferrer">Open file</a></div>}
