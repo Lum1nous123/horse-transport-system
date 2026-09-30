@@ -58,8 +58,8 @@ public class QuotationService {
 
 	@Transactional
 	public QuotationResponse update(UUID orderId, UpdateQuotationRequest request) {
+		TransportOrder order = findOrderForUpdate(orderId);
 		Quotation quotation = findQuotation(orderId);
-		TransportOrder order = findOrder(orderId);
 		if (quotation.getStatus() != QuotationStatus.DRAFT || order.getStatus() != OrderStatus.SUBMITTED) {
 			throw new QuotationNotEditableException();
 		}
@@ -91,8 +91,8 @@ public class QuotationService {
 	@Transactional
 	public QuotationResponse send(UUID orderId) {
 		UUID actorUserId = currentUserProvider.getCurrentUserId();
+		TransportOrder order = findOrderForUpdate(orderId);
 		Quotation quotation = findQuotation(orderId);
-		TransportOrder order = findOrder(orderId);
 		if (quotation.getStatus() != QuotationStatus.DRAFT) {
 			throw new QuotationNotEditableException();
 		}
@@ -182,6 +182,10 @@ public class QuotationService {
 
 	private TransportOrder findOrder(UUID orderId) {
 		return orderRepository.findById(orderId).orElseThrow(OrderNotFoundException::new);
+	}
+
+	private TransportOrder findOrderForUpdate(UUID orderId) {
+		return orderRepository.findByIdForUpdate(orderId).orElseThrow(OrderNotFoundException::new);
 	}
 
 	private Quotation findQuotation(UUID orderId) {

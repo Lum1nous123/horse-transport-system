@@ -145,7 +145,7 @@ class QuotationServiceTest {
 		Quotation quotation = validQuotation();
 		TransportOrder order = order(OrderStatus.SUBMITTED);
 		when(quotationRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(quotation));
-		when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+		when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
 
 		QuotationResponse response = service.send(ORDER_ID);
 
@@ -165,7 +165,7 @@ class QuotationServiceTest {
 	void rejectsSendingIncompleteDraft() {
 		Quotation quotation = quotation();
 		when(quotationRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(quotation));
-		when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order(OrderStatus.SUBMITTED)));
+		when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order(OrderStatus.SUBMITTED)));
 
 		assertThatThrownBy(() -> service.send(ORDER_ID))
 				.isInstanceOf(QuotationValidationException.class)
@@ -178,7 +178,7 @@ class QuotationServiceTest {
 		Quotation quotation = validQuotation();
 		TransportOrder order = order(OrderStatus.SUBMITTED);
 		when(quotationRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(quotation));
-		when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+		when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
 		when(auditLogRepository.saveAllAndFlush(any()))
 				.thenThrow(new DataIntegrityViolationException("audit insert failed"));
 
@@ -193,7 +193,7 @@ class QuotationServiceTest {
 		Quotation quotation = validQuotation();
 		TransportOrder order = order(OrderStatus.SUBMITTED);
 		when(quotationRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(quotation));
-		when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+		when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
 		when(orderRepository.save(order)).thenThrow(new DataIntegrityViolationException("order update failed"));
 
 		assertThatThrownBy(() -> service.send(ORDER_ID)).isInstanceOf(DataIntegrityViolationException.class);
@@ -208,7 +208,7 @@ class QuotationServiceTest {
 		Quotation quotation = validQuotation();
 		quotation.send();
 		when(quotationRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(quotation));
-		when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order(OrderStatus.QUOTATION_SENT)));
+		when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order(OrderStatus.QUOTATION_SENT)));
 
 		assertThatThrownBy(() -> service.update(ORDER_ID, new UpdateQuotationRequest(null, null, null)))
 				.isInstanceOf(QuotationNotEditableException.class);
@@ -262,7 +262,7 @@ class QuotationServiceTest {
 
 	private void stubDraft(Quotation quotation) {
 		when(quotationRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(quotation));
-		when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order(OrderStatus.SUBMITTED)));
+		when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order(OrderStatus.SUBMITTED)));
 		lenient().when(quotationRepository.save(quotation)).thenReturn(quotation);
 	}
 
@@ -309,5 +309,6 @@ class QuotationServiceTest {
 		assertThat(audit.getActorKind()).isEqualTo(AuditActorKind.USER);
 		assertThat(audit.getActorUserId()).isEqualTo(LM_ID);
 		assertThat(audit.getReason()).isNull();
+		assertThat(audit.getOccurredAt()).isNotNull();
 	}
 }
