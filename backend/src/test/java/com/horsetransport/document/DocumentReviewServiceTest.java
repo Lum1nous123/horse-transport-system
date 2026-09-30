@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.horsetransport.audit.AuditActorKind;
 import com.horsetransport.audit.AuditEntityType;
 import com.horsetransport.audit.StatusAuditLog;
 import com.horsetransport.audit.StatusAuditLogRepository;
@@ -80,11 +81,15 @@ class DocumentReviewServiceTest {
 		assertThat(pending.getRejectionReason()).isNull();
 		ArgumentCaptor<StatusAuditLog> audit = ArgumentCaptor.forClass(StatusAuditLog.class);
 		verify(auditRepository).saveAndFlush(audit.capture());
-		assertThat(audit.getValue().getEntityType()).isEqualTo(AuditEntityType.HORSE_DOCUMENT_VERSION);
-		assertThat(audit.getValue().getOldStatus()).isEqualTo("PENDING_REVIEW");
-		assertThat(audit.getValue().getNewStatus()).isEqualTo("APPROVED");
-		assertThat(audit.getValue().getActorUserId()).isEqualTo(TS_ID);
-		assertThat(audit.getValue().getReason()).isNull();
+		StatusAuditLog versionAudit = audit.getValue();
+		assertThat(versionAudit.getEntityType()).isEqualTo(AuditEntityType.HORSE_DOCUMENT_VERSION);
+		assertThat(versionAudit.getEntityId()).isEqualTo(pending.getId());
+		assertThat(versionAudit.getOldStatus()).isEqualTo("PENDING_REVIEW");
+		assertThat(versionAudit.getNewStatus()).isEqualTo("APPROVED");
+		assertThat(versionAudit.getActorKind()).isEqualTo(AuditActorKind.USER);
+		assertThat(versionAudit.getActorUserId()).isEqualTo(TS_ID);
+		assertThat(versionAudit.getReason()).isNull();
+		assertThat(versionAudit.getOccurredAt()).isNotNull();
 	}
 
 	@Test
@@ -103,12 +108,23 @@ class DocumentReviewServiceTest {
 		verify(auditRepository, org.mockito.Mockito.times(2)).saveAndFlush(audits.capture());
 		assertThat(audits.getAllValues()).anySatisfy(audit -> {
 			assertThat(audit.getEntityType()).isEqualTo(AuditEntityType.HORSE_DOCUMENT_VERSION);
+			assertThat(audit.getEntityId()).isEqualTo(pending.getId());
+			assertThat(audit.getOldStatus()).isEqualTo("PENDING_REVIEW");
+			assertThat(audit.getNewStatus()).isEqualTo("REJECTED");
+			assertThat(audit.getActorKind()).isEqualTo(AuditActorKind.USER);
+			assertThat(audit.getActorUserId()).isEqualTo(TS_ID);
 			assertThat(audit.getReason()).isEqualTo("Expired certificate");
+			assertThat(audit.getOccurredAt()).isNotNull();
 		});
 		assertThat(audits.getAllValues()).anySatisfy(audit -> {
 			assertThat(audit.getEntityType()).isEqualTo(AuditEntityType.TRANSPORT_ORDER_HORSE);
+			assertThat(audit.getEntityId()).isEqualTo(ORDER_HORSE_ID);
 			assertThat(audit.getOldStatus()).isEqualTo("UNDER_REVIEW");
 			assertThat(audit.getNewStatus()).isEqualTo("NEEDS_REVISION");
+			assertThat(audit.getActorKind()).isEqualTo(AuditActorKind.USER);
+			assertThat(audit.getActorUserId()).isEqualTo(TS_ID);
+			assertThat(audit.getReason()).isNull();
+			assertThat(audit.getOccurredAt()).isNotNull();
 		});
 	}
 

@@ -215,11 +215,13 @@ class DepositPaymentTransactionServiceTest {
 		verify(auditLogRepository).saveAndFlush(auditCaptor.capture());
 		StatusAuditLog audit = auditCaptor.getValue();
 		assertThat(audit.getEntityType()).isEqualTo(AuditEntityType.TRANSPORT_ORDER);
+		assertThat(audit.getEntityId()).isEqualTo(ORDER_ID);
 		assertThat(audit.getOldStatus()).isEqualTo("QUOTATION_SENT");
 		assertThat(audit.getNewStatus()).isEqualTo("APPROVED");
 		assertThat(audit.getActorKind()).isEqualTo(AuditActorKind.SYSTEM);
 		assertThat(audit.getActorUserId()).isNull();
 		assertThat(audit.getReason()).isNull();
+		assertThat(audit.getOccurredAt()).isNotNull();
 		verify(documentPhaseStarter).startForOrder(ORDER_ID);
 	}
 
