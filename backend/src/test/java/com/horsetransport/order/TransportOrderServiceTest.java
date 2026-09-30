@@ -41,6 +41,7 @@ class TransportOrderServiceTest {
 	private static final UUID CUSTOMER_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
 	private static final UUID ORDER_ID = UUID.fromString("22222222-2222-2222-2222-222222222222");
 	private static final UUID HORSE_ID = UUID.fromString("33333333-3333-3333-3333-333333333333");
+	private static final UUID LM_ID = UUID.fromString("44444444-4444-4444-4444-444444444444");
 
 	@Mock private TransportOrderRepository orderRepository;
 	@Mock private HorseRepository horseRepository;
@@ -124,7 +125,7 @@ class TransportOrderServiceTest {
 	@Test
 	void submitRejectsOnlyMissingConfirmedBusinessFields() {
 		TransportOrder order = order();
-		when(orderRepository.findByIdAndCustomerId(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+		when(orderRepository.findOwnedByIdForUpdate(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
 
 		assertThatThrownBy(() -> service.submit(order.getId()))
 				.isInstanceOf(OrderSubmissionValidationException.class)
@@ -135,7 +136,7 @@ class TransportOrderServiceTest {
 	@Test
 	void submitAllowsAddressWithoutCountryAndCreatesAudit() {
 		TransportOrder order = validOrder();
-		when(orderRepository.findByIdAndCustomerId(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+		when(orderRepository.findOwnedByIdForUpdate(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
 		when(auditLogRepository.saveAndFlush(any(StatusAuditLog.class)))
 				.thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -151,12 +152,14 @@ class TransportOrderServiceTest {
 		assertThat(audit.getNewStatus()).isEqualTo("SUBMITTED");
 		assertThat(audit.getActorKind()).isEqualTo(AuditActorKind.USER);
 		assertThat(audit.getActorUserId()).isEqualTo(CUSTOMER_ID);
+		assertThat(audit.getReason()).isNull();
+		assertThat(audit.getOccurredAt()).isNotNull();
 	}
 
 	@Test
 	void auditFailurePropagatesAndRestoresDraftForTransactionRollback() {
 		TransportOrder order = validOrder();
-		when(orderRepository.findByIdAndCustomerId(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+		when(orderRepository.findOwnedByIdForUpdate(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
 		when(auditLogRepository.saveAndFlush(any(StatusAuditLog.class)))
 				.thenThrow(new DataIntegrityViolationException("audit insert failed"));
 
@@ -204,6 +207,27 @@ class TransportOrderServiceTest {
 		assertThatThrownBy(() -> service.findLogisticsManagerInbox(OrderStatus.DRAFT))
 				.isInstanceOf(UnsupportedOrderInboxStatusException.class);
 		verify(orderRepository, never()).findAllByStatusOrderByCreatedAtDesc(any());
+	}
+
+	@Test
+	void transportSpecialistDocumentInboxContainsOnlyApprovedOrdersAndDeadlineMetadata() {
+		LocalDateTime deadline = LocalDateTime.of(2026, 10, 15, 17, 0);
+		TransportOrder approved = order(OrderStatus.APPROVED);
+		approved.setDocumentCompletionDeadline(deadline, UUID.randomUUID());
+		List<TransportOrder> orders = List.of(
+				order(OrderStatus.DRAFT), order(OrderStatus.SUBMITTED), order(OrderStatus.QUOTATION_SENT),
+				approved, order(OrderStatus.READY_TO_SHIP), order(OrderStatus.IN_PROGRESS),
+				order(OrderStatus.DELIVERED), order(OrderStatus.CANCELLED), order(OrderStatus.REJECTED));
+		when(orderRepository.findAllByStatusOrderByCreatedAtDesc(OrderStatus.APPROVED)).thenReturn(orders);
+
+		List<DocumentInboxResponse> result = service.findTransportSpecialistDocumentInbox();
+
+		assertThat(result).hasSize(1);
+		assertThat(result.getFirst().status()).isEqualTo(OrderStatus.APPROVED);
+		assertThat(result.getFirst().documentCompletionDeadlineAt()).isEqualTo(deadline);
+		assertThat(result.getFirst().documentDeadlineSetAt()).isNotNull();
+		verify(orderRepository).findAllByStatusOrderByCreatedAtDesc(OrderStatus.APPROVED);
+		verify(auditLogRepository, never()).saveAndFlush(any());
 	}
 
 	@Test
@@ -286,7 +310,8 @@ class TransportOrderServiceTest {
 	@Test
 	void logisticsManagerRejectsSubmittedOrderWithReasonAndAudit() {
 		TransportOrder order = order(OrderStatus.SUBMITTED);
-		when(orderRepository.findById(order.getId())).thenReturn(Optional.of(order));
+		when(currentUserProvider.getCurrentUserId()).thenReturn(LM_ID);
+		when(orderRepository.findByIdForUpdate(order.getId())).thenReturn(Optional.of(order));
 
 		OrderResponse response = service.reject(order.getId(), new RejectOrderRequest("  Invalid request  "));
 
@@ -294,18 +319,22 @@ class TransportOrderServiceTest {
 		assertThat(response.rejectionReason()).isEqualTo("Invalid request");
 		ArgumentCaptor<StatusAuditLog> captor = ArgumentCaptor.forClass(StatusAuditLog.class);
 		verify(auditLogRepository).saveAndFlush(captor.capture());
-		assertThat(captor.getValue().getOldStatus()).isEqualTo("SUBMITTED");
-		assertThat(captor.getValue().getNewStatus()).isEqualTo("REJECTED");
-		assertThat(captor.getValue().getActorKind()).isEqualTo(AuditActorKind.USER);
-		assertThat(captor.getValue().getActorUserId()).isEqualTo(CUSTOMER_ID);
-		assertThat(captor.getValue().getReason()).isEqualTo("Invalid request");
+		StatusAuditLog audit = captor.getValue();
+		assertThat(audit.getEntityType()).isEqualTo(AuditEntityType.TRANSPORT_ORDER);
+		assertThat(audit.getEntityId()).isEqualTo(order.getId());
+		assertThat(audit.getOldStatus()).isEqualTo("SUBMITTED");
+		assertThat(audit.getNewStatus()).isEqualTo("REJECTED");
+		assertThat(audit.getActorKind()).isEqualTo(AuditActorKind.USER);
+		assertThat(audit.getActorUserId()).isEqualTo(LM_ID);
+		assertThat(audit.getReason()).isEqualTo("Invalid request");
+		assertThat(audit.getOccurredAt()).isNotNull();
 	}
 
 	@Test
 	void logisticsManagerCannotRejectWithoutReason() {
 		assertThatThrownBy(() -> service.reject(ORDER_ID, new RejectOrderRequest("   ")))
 				.isInstanceOf(InvalidRejectionReasonException.class);
-		verify(orderRepository, never()).findById(any());
+		verify(orderRepository, never()).findByIdForUpdate(any());
 		verify(auditLogRepository, never()).saveAndFlush(any());
 	}
 
@@ -313,7 +342,7 @@ class TransportOrderServiceTest {
 	@EnumSource(value = OrderStatus.class, names = {"DRAFT", "QUOTATION_SENT", "REJECTED"})
 	void logisticsManagerCannotRejectInvalidOrTerminalStatuses(OrderStatus status) {
 		TransportOrder order = order(status);
-		when(orderRepository.findById(order.getId())).thenReturn(Optional.of(order));
+		when(orderRepository.findByIdForUpdate(order.getId())).thenReturn(Optional.of(order));
 
 		assertThatThrownBy(() -> service.reject(order.getId(), new RejectOrderRequest("Reason")))
 				.isInstanceOf(InvalidOrderTransitionException.class);
@@ -337,7 +366,7 @@ class TransportOrderServiceTest {
 	@Test
 	void rejectAuditFailureRollsBackStatusAndReason() {
 		TransportOrder order = order(OrderStatus.SUBMITTED);
-		when(orderRepository.findById(order.getId())).thenReturn(Optional.of(order));
+		when(orderRepository.findByIdForUpdate(order.getId())).thenReturn(Optional.of(order));
 		when(auditLogRepository.saveAndFlush(any(StatusAuditLog.class)))
 				.thenThrow(new DataIntegrityViolationException("audit insert failed"));
 

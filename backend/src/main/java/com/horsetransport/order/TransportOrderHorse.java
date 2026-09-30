@@ -71,4 +71,44 @@ public class TransportOrderHorse {
 	public UUID getHorseId() {
 		return horseId;
 	}
+
+	public UUID getId() {
+		return id;
+	}
+
+	public OrderHorseDocumentStatus getDocumentStatus() {
+		return documentStatus;
+	}
+
+	public TransportOrder getTransportOrder() {
+		return transportOrder;
+	}
+
+	public OrderHorseDocumentStatus markDocumentsIncomplete() {
+		OrderHorseDocumentStatus previous = documentStatus;
+		documentStatus = OrderHorseDocumentStatus.INCOMPLETE;
+		return previous;
+	}
+
+	public OrderHorseDocumentStatus markDocumentsUnderReview() {
+		OrderHorseDocumentStatus previous = documentStatus;
+		documentStatus = OrderHorseDocumentStatus.UNDER_REVIEW;
+		return previous;
+	}
+
+	public OrderHorseDocumentStatus markDocumentsNeedingRevision() {
+		OrderHorseDocumentStatus previous = documentStatus;
+		documentStatus = OrderHorseDocumentStatus.NEEDS_REVISION;
+		return previous;
+	}
+
+	public OrderHorseDocumentStatus markDocumentsEligibleForExport() {
+		OrderHorseDocumentStatus previous = documentStatus;
+		documentStatus = OrderHorseDocumentStatus.ELIGIBLE_FOR_EXPORT;
+		return previous;
+	}
+
+	public void restoreDocumentStatus(OrderHorseDocumentStatus previousStatus) {
+		documentStatus = previousStatus;
+	}
 }
