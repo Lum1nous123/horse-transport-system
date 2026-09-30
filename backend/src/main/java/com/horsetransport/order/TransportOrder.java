@@ -88,6 +88,9 @@ public class TransportOrder {
 	@Column(name = "document_deadline_set_at")
 	private LocalDateTime documentDeadlineSetAt;
 
+	@Column(name = "documents_locked_at")
+	private LocalDateTime documentsLockedAt;
+
 	@Enumerated(EnumType.STRING)
 	@JdbcTypeCode(SqlTypes.NAMED_ENUM)
 	@Column(nullable = false, columnDefinition = "order_status")
@@ -236,6 +239,7 @@ public class TransportOrder {
 	public LocalDateTime getDocumentCompletionDeadlineAt() { return documentCompletionDeadlineAt; }
 	public UUID getDocumentDeadlineSetBy() { return documentDeadlineSetBy; }
 	public LocalDateTime getDocumentDeadlineSetAt() { return documentDeadlineSetAt; }
+	public LocalDateTime getDocumentsLockedAt() { return documentsLockedAt; }
 	public OrderStatus getStatus() { return status; }
 	public LocalDateTime getCreatedAt() { return createdAt; }
 	public LocalDateTime getUpdatedAt() { return updatedAt; }
