@@ -19,4 +19,12 @@ class HorseDocumentRepositoryContractTest {
 		assertThat(method.getAnnotation(Lock.class)).isNotNull();
 		assertThat(method.getAnnotation(Lock.class).value()).isEqualTo(LockModeType.PESSIMISTIC_WRITE);
 	}
+
+	@Test
+	void specialistReviewQueryUsesPessimisticWriteLock() throws Exception {
+		Method method = HorseDocumentRepository.class.getMethod("findByIdForUpdate", UUID.class);
+
+		assertThat(method.getAnnotation(Lock.class)).isNotNull();
+		assertThat(method.getAnnotation(Lock.class).value()).isEqualTo(LockModeType.PESSIMISTIC_WRITE);
+	}
 }

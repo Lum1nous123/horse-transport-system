@@ -158,11 +158,8 @@ public class DocumentVersionService {
 
 			List<HorseDocumentVersion> currentVersions = versionRepository.findCurrentByOrderHorseId(
 					document.getTransportOrderHorseId());
-			boolean allPendingReview = currentVersions.size() == DocumentType.values().length
-					&& currentVersions.stream().allMatch(current ->
-							current.getStatus() == DocumentVersionStatus.PENDING_REVIEW);
-			updateHorseStatus(document.getTransportOrderHorse(), allPendingReview
-					? OrderHorseDocumentStatus.UNDER_REVIEW : OrderHorseDocumentStatus.INCOMPLETE, actorUserId);
+			updateHorseStatus(document.getTransportOrderHorse(),
+					HorseDocumentStatusResolver.resolve(currentVersions), actorUserId);
 			return DocumentVersionResponse.from(version);
 		}
 		catch (RuntimeException exception) {
@@ -204,8 +201,12 @@ public class DocumentVersionService {
 			UUID actorUserId) {
 		OrderHorseDocumentStatus previous = orderHorse.getDocumentStatus();
 		if (previous == target) return;
-		if (target == OrderHorseDocumentStatus.UNDER_REVIEW) orderHorse.markDocumentsUnderReview();
-		else orderHorse.markDocumentsIncomplete();
+		switch (target) {
+			case INCOMPLETE -> orderHorse.markDocumentsIncomplete();
+			case UNDER_REVIEW -> orderHorse.markDocumentsUnderReview();
+			case NEEDS_REVISION -> orderHorse.markDocumentsNeedingRevision();
+			case ELIGIBLE_FOR_EXPORT -> orderHorse.markDocumentsEligibleForExport();
+		}
 		auditRepository.saveAndFlush(StatusAuditLog.userTransition(AuditEntityType.TRANSPORT_ORDER_HORSE,
 				orderHorse.getId(), previous.name(), target.name(), actorUserId, null));
 	}
