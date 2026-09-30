@@ -202,6 +202,9 @@ class DocumentVersionServiceTest {
 		assertThat(created.submittedAt()).isNull();
 		assertThat(created.reviewedAt()).isNull();
 		assertThat(created.rejectionReason()).isNull();
+		ArgumentCaptor<HorseDocumentVersion> saved = ArgumentCaptor.forClass(HorseDocumentVersion.class);
+		verify(versionRepository, org.mockito.Mockito.times(2)).saveAndFlush(saved.capture());
+		assertThat(saved.getAllValues().getLast().getReviewedBy()).isNull();
 	}
 
 	@Test
@@ -417,6 +420,24 @@ class DocumentVersionServiceTest {
 			assertThat(audit.getOldStatus()).isEqualTo("INCOMPLETE");
 			assertThat(audit.getNewStatus()).isEqualTo("UNDER_REVIEW");
 		});
+	}
+
+	@Test
+	void replacementSubmitWithFourApprovedVersionsMovesHorseUnderReview() {
+		HorseDocumentVersion replacement = draft(2);
+		List<HorseDocumentVersion> current = new ArrayList<>();
+		current.add(replacement);
+		for (int index = 1; index <= 4; index++) {
+			HorseDocumentVersion approved = draft(index);
+			approved.submit();
+			approved.approve(UUID.randomUUID());
+			current.add(approved);
+		}
+		when(versionRepository.findCurrentByOrderHorseId(ORDER_HORSE_ID)).thenReturn(current);
+
+		service.submit(DOCUMENT_ID, replacement.getId());
+
+		verify(orderHorse).markDocumentsUnderReview();
 	}
 
 	@Test

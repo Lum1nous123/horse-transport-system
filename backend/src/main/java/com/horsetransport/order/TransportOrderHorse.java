@@ -96,6 +96,18 @@ public class TransportOrderHorse {
 		return previous;
 	}
 
+	public OrderHorseDocumentStatus markDocumentsNeedingRevision() {
+		OrderHorseDocumentStatus previous = documentStatus;
+		documentStatus = OrderHorseDocumentStatus.NEEDS_REVISION;
+		return previous;
+	}
+
+	public OrderHorseDocumentStatus markDocumentsEligibleForExport() {
+		OrderHorseDocumentStatus previous = documentStatus;
+		documentStatus = OrderHorseDocumentStatus.ELIGIBLE_FOR_EXPORT;
+		return previous;
+	}
+
 	public void restoreDocumentStatus(OrderHorseDocumentStatus previousStatus) {
 		documentStatus = previousStatus;
 	}

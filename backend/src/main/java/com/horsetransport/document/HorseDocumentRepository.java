@@ -25,6 +25,13 @@ public interface HorseDocumentRepository extends JpaRepository<HorseDocument, UU
 	java.util.Optional<HorseDocument> findOwnedByIdForUpdate(@Param("documentId") UUID documentId,
 			@Param("customerId") UUID customerId);
 
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select document from HorseDocument document "
+			+ "join fetch document.transportOrderHorse orderHorse "
+			+ "join fetch orderHorse.transportOrder transportOrder "
+			+ "where document.id = :documentId")
+	java.util.Optional<HorseDocument> findByIdForUpdate(@Param("documentId") UUID documentId);
+
 	@Query("select document from HorseDocument document "
 			+ "join fetch document.transportOrderHorse orderHorse "
 			+ "join fetch orderHorse.transportOrder transportOrder "
