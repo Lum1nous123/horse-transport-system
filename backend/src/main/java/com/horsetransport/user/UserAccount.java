@@ -53,19 +53,24 @@ public class UserAccount {
 	protected UserAccount() {
 	}
 
-	private UserAccount(String fullName, String email, String phone, String passwordHash) {
+	private UserAccount(String fullName, String email, String phone, String passwordHash, UserRole role) {
 		this.id = UUID.randomUUID();
 		this.fullName = fullName;
 		this.email = email;
 		this.phone = phone;
 		this.passwordHash = passwordHash;
-		this.role = UserRole.CUSTOMER;
+		this.role = role;
 		this.status = UserStatus.ACTIVE;
 		this.createdAt = LocalDateTime.now();
 	}
 
 	public static UserAccount registerCustomer(String fullName, String email, String phone, String passwordHash) {
-		return new UserAccount(fullName, email, phone, passwordHash);
+		return new UserAccount(fullName, email, phone, passwordHash, UserRole.CUSTOMER);
+	}
+
+	public static UserAccount createActive(String fullName, String email, String phone, String passwordHash,
+			UserRole role) {
+		return new UserAccount(fullName, email, phone, passwordHash, role);
 	}
 
 	@PrePersist
