@@ -62,5 +62,6 @@ public class HorseDocument {
 
 	public UUID getId() { return id; }
 	public UUID getTransportOrderHorseId() { return transportOrderHorse.getId(); }
+	public TransportOrderHorse getTransportOrderHorse() { return transportOrderHorse; }
 	public DocumentType getDocumentType() { return documentType; }
 }

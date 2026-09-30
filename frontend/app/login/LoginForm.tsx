@@ -55,9 +55,9 @@ export default function LoginForm() {
           });
           if (response.ok) {
             const user = await response.json() as { role?: string };
-            if (user.role === "TRANSPORT_SPECIALIST") destination = "/transport-specialist";
+            if (user.role === "TRANSPORT_SPECIALIST") destination = "/transport-specialist/review";
           }
-        } catch { /* Keep the existing Customer destination if profile lookup is unavailable. */ }
+        } catch { /* Keep the Customer route if profile lookup is unavailable. */ }
       }
       router.push(destination);
     } catch (error) {
