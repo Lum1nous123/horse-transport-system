@@ -128,7 +128,8 @@ These follow-ups do not change approved requirements and must not be used to inf
 PR #43–#46 and PR #48–#50 cover BE-01 through BE-06, JWT Authentication, and
 the LM Order Inbox support; all are merged into `main`. PR #47 provides the
 frontend authentication/landing foundation, while PR #51 (FE-01) and PR #52
-(FE-02) are also merged. The latest `main` commit is `1bb060a` (PR #50 BE-06).
+(FE-02) are also merged. The latest `main` commit is `ddf0e32` and includes the
+Transport Specialist document inbox support.
 
 BE-05 implements Stripe Deposit checkout/webhook handling. A successful
 Deposit atomically marks the payment `PAID`, moves the Order from
@@ -148,14 +149,22 @@ LM Order Inbox is available at `GET /api/v1/orders/inbox?status=SUBMITTED`, and
 LM can read Order detail through the existing detail endpoint. Customer list
 and ownership behavior remain unchanged.
 
-Current branch `fix/ts-document-inbox` adds the Transport Specialist work queue
-at `GET /api/v1/orders/document-inbox`. It returns only `APPROVED` Orders and
-includes deadline metadata without assignment filtering. Commit `6f45284` is
-pushed to `origin/fix/ts-document-inbox`; no PR exists yet. The clean full
-backend suite on this branch has 146 passing tests. No ERD, migration, or
-frontend changes were made for this support endpoint.
+The Transport Specialist work queue is available at
+`GET /api/v1/orders/document-inbox`. It returns `APPROVED` Orders and includes
+deadline metadata; it does not filter by assignment. Commit `6f45284` is part of
+the current `main` history. No ERD or migration changes were needed.
 
 Next backend task: BE-07 Customer Document Draft and Submission Lifecycle.
+
+FE-03 implementation is in progress on `feature/fe-03-deposit-documents` and
+has been preserved in a local Git stash while FE-04 is developed. It includes
+Deposit checkout/status UI, Stripe return pages, Customer checklist, and a TS
+deadline workspace.
+
+FE-04 UI preview is in progress on `feature/fe-04-customer-documents`. It adds
+a Customer document workspace for local draft upload/edit/delete, submission
+locking, version history, and a new draft after rejection. The workspace is
+explicitly preview-only; BE-07/BE-08 API integration is not yet available.
 
 ### COMPLETED
 
@@ -186,12 +195,13 @@ Next backend task: BE-07 Customer Document Draft and Submission Lifecycle.
 
 ### NEXT
 
-1. Human Review and open a PR for `fix/ts-document-inbox` when approved.
-2. Implement BE-07 Customer Document Draft and Submission Lifecycle.
+1. Complete FE-04 after BE-07/BE-08 provide the document version/upload API contract.
+2. Restore the FE-03 stash and finish its review/publishing workflow.
 
 ### NOT STARTED
 
 - BE-07 and later backend vertical slices
+- FE-04 document API integration
 - Customer document upload/version/submission and TS review lifecycle
 - QA execution
 
