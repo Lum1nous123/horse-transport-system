@@ -122,6 +122,25 @@ public class HorseDocumentVersion {
 		submittedAt = LocalDateTime.now();
 	}
 
+	void approve(UUID actorUserId) {
+		requireCurrentPendingReview();
+		status = DocumentVersionStatus.APPROVED;
+		reviewedBy = actorUserId;
+		reviewedAt = LocalDateTime.now();
+		rejectionReason = null;
+	}
+
+	void reject(UUID actorUserId, String reason) {
+		requireCurrentPendingReview();
+		if (reason == null || reason.isBlank()) {
+			throw new DocumentReviewValidationException("Rejection reason must not be blank");
+		}
+		status = DocumentVersionStatus.REJECTED;
+		reviewedBy = actorUserId;
+		reviewedAt = LocalDateTime.now();
+		rejectionReason = reason.trim();
+	}
+
 	void makeHistorical() {
 		current = false;
 	}
@@ -137,9 +156,25 @@ public class HorseDocumentVersion {
 		}
 	}
 
+	void restorePendingAfterReviewFailure() {
+		if (status == DocumentVersionStatus.APPROVED || status == DocumentVersionStatus.REJECTED) {
+			status = DocumentVersionStatus.PENDING_REVIEW;
+			reviewedBy = null;
+			reviewedAt = null;
+			rejectionReason = null;
+		}
+	}
+
 	void requireCurrentDraft(String action) {
 		if (!current || status != DocumentVersionStatus.DRAFT) {
 			throw new DocumentVersionConflictException("Only the current DRAFT version can be " + action);
+		}
+	}
+
+	private void requireCurrentPendingReview() {
+		if (!current || status != DocumentVersionStatus.PENDING_REVIEW) {
+			throw new DocumentVersionConflictException(
+					"Only the current PENDING_REVIEW version can be reviewed");
 		}
 	}
 
