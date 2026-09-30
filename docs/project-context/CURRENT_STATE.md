@@ -15,9 +15,9 @@ This file is a portable handoff and resume guide for a new Codex conversation or
 - Scrum planning / Sprint planning is complete and Human Review approved.
 - GitHub Project #4 has three two-week Development Sprint iterations for course Weeks 4–9, and FR-001 through FR-020 are assigned according to the instructor-required, Human-Approved reforecast.
 - Course Week 10 is reserved for presentation, final demo, final bug fixing, and release stabilization; it is not a feature-development iteration.
-- Backend implementation is active. BE-01 through BE-06 and the JWT Authentication foundation are complete and merged into `main`.
-- FE-01 and FE-02 are complete and merged into `main`.
-- TS Document Inbox support is implemented and pushed on `fix/ts-document-inbox`, awaiting Human Review/PR.
+- Backend implementation is active. BE-01 through BE-07 and the JWT Authentication foundation are complete and merged into `main`.
+- FE-01, FE-02, and the FE-04 Customer document workspace preview are complete and merged into `main`.
+- TS Document Inbox support is complete and merged into `main`.
 
 ## Authoritative Sources
 
@@ -125,10 +125,11 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
-PR #43–#46 and PR #48–#50 cover BE-01 through BE-06, JWT Authentication, and
-the LM Order Inbox support; all are merged into `main`. PR #47 provides the
-frontend authentication/landing foundation, while PR #51 (FE-01) and PR #52
-(FE-02) are also merged. The latest `main` commit is `1bb060a` (PR #50 BE-06).
+PR #43–#46, PR #48–#50, and PR #53 cover BE-01 through BE-07, JWT
+Authentication, and the LM Order Inbox support; all are merged into `main`.
+PR #47 provides the frontend authentication/landing foundation, while PR #51
+(FE-01), PR #52 (FE-02), and PR #54 (FE-04 preview) are also merged. The latest
+`main` commit is `d33743e`.
 
 BE-05 implements Stripe Deposit checkout/webhook handling. A successful
 Deposit atomically marks the payment `PAID`, moves the Order from
@@ -148,22 +149,27 @@ LM Order Inbox is available at `GET /api/v1/orders/inbox?status=SUBMITTED`, and
 LM can read Order detail through the existing detail endpoint. Customer list
 and ownership behavior remain unchanged.
 
-Backend support branch `fix/ts-document-inbox` adds the Transport Specialist work queue
-at `GET /api/v1/orders/document-inbox`. It returns only `APPROVED` Orders and
-includes deadline metadata without assignment filtering. Commit `6f45284` is
-pushed to `origin/fix/ts-document-inbox`; no PR exists yet. The clean full
-backend suite on this branch has 146 passing tests. No ERD, migration, or
-frontend changes were made for this support endpoint.
+The Transport Specialist work queue is available at
+`GET /api/v1/orders/document-inbox`. It returns `APPROVED` Orders and includes
+deadline metadata; it does not filter by assignment. Commit `6f45284` is part of
+the current `main` history. No ERD or migration changes were needed.
 
-Next backend task: BE-07 Customer Document Draft and Submission Lifecycle.
+BE-07 Customer Document Draft and Submission Lifecycle is merged through PR
+#53. It provides Customer-owned upload, DRAFT replacement/deletion, submission,
+version history, Cloudinary storage compensation, and status audit behavior.
+The next backend task is BE-08 Transport Specialist document review.
 
-FE-05 is in progress on `feature/fe-05-ts-document-review`. The branch adds a
-sample-data TS document review workspace at `/transport-specialist/review`,
-including manual approve/reject controls, required rejection reasons, version
-history, and expiry information without automatic expiry decisions. It is a UI
-preview only: document review APIs are not available on the base branch, so
-decisions and sample data are not persisted. The FE-04 Customer document UI
-work remains preserved separately and has not been folded into this branch.
+FE-03 implementation is in progress on `feature/fe-03-deposit-documents` and
+has been preserved in a local Git stash while FE-04 is developed. It includes
+Deposit checkout/status UI, Stripe return pages, Customer checklist, and a TS
+deadline workspace.
+
+FE-04 Customer document workspace preview is merged through PR #54. FE-05 is
+in progress on `feature/fe-05-ts-document-review`; it adds a sample-data TS
+document review workspace at `/transport-specialist/review`, including manual
+approve/reject controls, required rejection reasons, version history, and
+expiry information without automatic expiry decisions. Review decisions remain
+preview-only until BE-08 supplies the persisted review APIs.
 
 ### COMPLETED
 
@@ -184,9 +190,12 @@ work remains preserved separately and has not been folded into this branch.
 - BE-05 Pay Deposit and Approve Order / FR-005, merged through PR #48
 - LM Order Inbox support, merged through PR #49
 - BE-06 Mandatory Document Checklist / Deadline / FR-006, merged through PR #50
+- BE-07 Customer Document Draft and Submission Lifecycle / FR-007, merged through PR #53
 - Frontend authentication and landing foundation, merged through PR #47
 - FE-01 Customer Horse and Order flow, merged through PR #51
 - FE-02 Pre-approval and Quotation views, merged through PR #52
+- FE-04 Customer document workspace preview, merged through PR #54
+- Transport Specialist Document Inbox support
 
 ### DEFERRED / NON-BLOCKING
 
@@ -195,13 +204,13 @@ work remains preserved separately and has not been folded into this branch.
 ### NEXT
 
 1. Finish and review FE-05 UI preview on `feature/fe-05-ts-document-review`.
-2. Human Review and open a PR for `fix/ts-document-inbox` when approved.
-3. Implement BE-07 Customer Document Draft and Submission Lifecycle.
+2. Restore the FE-03 stash and finish its review/publishing workflow.
+3. Implement BE-08 Transport Specialist document review APIs after Human Review.
 
 ### NOT STARTED
 
-- BE-07 and later backend vertical slices
-- Customer document upload/version/submission and persisted TS review lifecycle
+- BE-08 and later backend vertical slices
+- Persisted Transport Specialist document review lifecycle
 - QA execution
 
 ## Resume Protocol
