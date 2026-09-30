@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { clearAccessToken, getAccessToken } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
+import DocumentWorkspace from "./DocumentWorkspace";
 
 type Horse = {
   id: string;
@@ -58,14 +59,6 @@ type DepositPayment = {
   latestAttempt?: { providerStatus: "PENDING" | "OPEN" | "SUCCEEDED" | "CANCELLED" | "EXPIRED" } | null;
 };
 type DepositCheckout = { checkoutUrl: string };
-type DocumentType = "HORSE_PASSPORT_OR_IDENTIFICATION" | "VACCINATION_CERTIFICATE" | "VETERINARY_HEALTH_CERTIFICATE" | "OWNERSHIP_CERTIFICATE" | "EXPORT_IMPORT_PERMIT";
-type DocumentChecklist = {
-  orderId: string;
-  documentCompletionDeadlineAt: string | null;
-  documentDeadlineSetAt: string | null;
-  horses: { orderHorseId: string; horseId: string; documentStatus: string; documents: { id: string; documentType: DocumentType; required: boolean }[] }[];
-};
-
 const emptyOrder: OrderFields = {
   originAddress: "", originCountry: "", destinationAddress: "", destinationCountry: "",
   requestedDepartureAt: "", transportMode: null, specialRequirements: "", recipientName: "",
@@ -93,6 +86,11 @@ const previewOrders: Order[] = [
     id: "preview-order-3", orderCode: "ORD-DEMO-1024", originCountry: "United Kingdom",
     destinationCountry: "Belgium", transportMode: "ROAD", recipientName: "Taylor Reed",
     recipientPhone: "+32 2 555 0175", horseIds: ["preview-horse-2"], status: "QUOTATION_SENT",
+  },
+  {
+    id: "preview-order-4", orderCode: "ORD-DEMO-1019", originCountry: "Ireland",
+    destinationCountry: "France", transportMode: "COMBINED", recipientName: "Morgan Ellis",
+    recipientPhone: "+33 1 55 01 27 40", horseIds: ["preview-horse-1", "preview-horse-2"], status: "APPROVED",
   },
 ];
 
@@ -168,9 +166,6 @@ export default function CustomerPage() {
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelError, setCancelError] = useState("");
   const [documentOrder, setDocumentOrder] = useState<Order | null>(null);
-  const [documentChecklist, setDocumentChecklist] = useState<DocumentChecklist | null>(null);
-  const [documentLoading, setDocumentLoading] = useState(false);
-  const [documentError, setDocumentError] = useState("");
 
   const loadWorkspace = useCallback(async () => {
     if (preview || isLocalPreviewRequested()) {
@@ -381,16 +376,6 @@ export default function CustomerPage() {
     } finally { setDepositLoading(false); }
   }
 
-  async function openDocumentChecklist(order: Order) {
-    setDocumentOrder(order); setDocumentChecklist(null); setDocumentError(""); setDocumentLoading(true);
-    try {
-      const checklist = await customerFetch(`/api/v1/orders/${order.id}/documents/checklist`) as DocumentChecklist;
-      setDocumentChecklist(checklist);
-    } catch (error) {
-      setDocumentError(error instanceof Error ? error.message : "We couldn't load the document checklist.");
-    } finally { setDocumentLoading(false); }
-  }
-
   async function confirmCancel() {
     if (!cancelOrder) return;
     setCancelBusy(true); setCancelError("");
@@ -439,7 +424,7 @@ export default function CustomerPage() {
                 <div className="customer-order-actions">
                   {order.status === "DRAFT" && <button className="customer-secondary-button compact" type="button" onClick={() => startEdit(order)}>Edit draft</button>}
                   {order.status === "QUOTATION_SENT" && <button className="customer-secondary-button compact" type="button" onClick={() => void openQuotation(order)}>View bill</button>}
-                  {["APPROVED", "READY_TO_SHIP", "IN_PROGRESS", "DELIVERED"].includes(order.status) && <button className="customer-secondary-button compact" type="button" onClick={() => void openDocumentChecklist(order)}>View documents</button>}
+                  {["APPROVED", "READY_TO_SHIP", "IN_PROGRESS", "DELIVERED"].includes(order.status) && <button className="customer-secondary-button compact" type="button" onClick={() => setDocumentOrder(order)}>Manage documents</button>}
                   {["DRAFT", "SUBMITTED", "QUOTATION_SENT"].includes(order.status) && <button className="customer-text-button compact" type="button" onClick={() => { setCancelOrder(order); setCancelError(""); }}>Cancel order</button>}
                   {order.status !== "DRAFT" && <span className="customer-locked-label">Editing locked</span>}
                 </div>
@@ -490,10 +475,12 @@ export default function CustomerPage() {
             </div>}
             {preview && <div className="deposit-checkout-panel preview-payment"><strong>Deposit checkout preview</strong><p>Preview mode does not contact the payment service or open a checkout session.</p></div>}
           </div></section></div>}
-        {documentOrder && <div className="customer-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDocumentOrder(null); }}><section className="customer-dialog document-dialog" role="dialog" aria-modal="true" aria-labelledby="documents-title"><div className="customer-dialog-header"><div><p className="customer-eyebrow">ORDER {documentOrder.orderCode}</p><h2 id="documents-title">Horse documents</h2><p>Required documents for each horse in this order</p></div><button type="button" className="customer-dialog-close" aria-label="Close document checklist" onClick={() => setDocumentOrder(null)}>×</button></div><div className="document-checklist-content">{documentLoading ? <p role="status">Loading document checklist…</p> : documentError ? <p className="customer-form-error" role="alert">{documentError}</p> : documentChecklist && <>
-          <div className="document-deadline-card"><span>Document completion deadline</span><strong>{documentChecklist.documentCompletionDeadlineAt ? new Date(documentChecklist.documentCompletionDeadlineAt).toLocaleString() : "Not set yet"}</strong>{!documentChecklist.documentCompletionDeadlineAt && <small>The Transport Specialist has not set a deadline yet.</small>}</div>
-          {documentChecklist.horses.map((entry) => <section className="document-horse-group" key={entry.orderHorseId}><h3>{horses.find((horse) => horse.id === entry.horseId)?.name ?? "Horse"}</h3><p className="document-horse-status">{entry.documentStatus.replaceAll("_", " ")}</p><ul>{entry.documents.map((document) => <li key={document.id}><span className="document-required-mark" aria-hidden="true">✓</span><span>{documentTypeLabel(document.documentType)}</span>{document.required && <small>Required</small>}</li>)}</ul></section>)}
-        </>}</div></section></div>}
+        {documentOrder && <DocumentWorkspace
+          orderCode={documentOrder.orderCode}
+          horses={documentOrder.horseIds.map((id) => horses.find((horse) => horse.id === id)).filter((horse): horse is Horse => Boolean(horse)).map((horse) => ({ id: horse.id, name: horse.name }))}
+          preview={preview}
+          onClose={() => setDocumentOrder(null)}
+        />}
       </div>
     </main>
   );
@@ -501,17 +488,6 @@ export default function CustomerPage() {
 
 function formatMoney(amount: number, currency: string) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
-}
-
-function documentTypeLabel(type: DocumentType) {
-  const labels: Record<DocumentType, string> = {
-    HORSE_PASSPORT_OR_IDENTIFICATION: "Horse Passport / Identification Document",
-    VACCINATION_CERTIFICATE: "Vaccination Certificate",
-    VETERINARY_HEALTH_CERTIFICATE: "Veterinary Health Certificate",
-    OWNERSHIP_CERTIFICATE: "Ownership Certificate",
-    EXPORT_IMPORT_PERMIT: "Export / Import Permit",
-  };
-  return labels[type];
 }
 
 function Field({ label, name, type = "text", required = false, optional = false, maxLength, value, onChange }: {
