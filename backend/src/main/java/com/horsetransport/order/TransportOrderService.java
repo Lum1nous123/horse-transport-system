@@ -102,7 +102,8 @@ public class TransportOrderService {
 	@Transactional
 	public OrderResponse submit(UUID orderId) {
 		UUID customerId = currentUserProvider.getCurrentUserId();
-		TransportOrder order = findOwnedOrder(orderId, customerId);
+		TransportOrder order = orderRepository.findOwnedByIdForUpdate(orderId, customerId)
+				.orElseThrow(OrderNotFoundException::new);
 		if (order.getStatus() != OrderStatus.DRAFT) {
 			throw new OrderNotEditableException();
 		}
@@ -153,7 +154,8 @@ public class TransportOrderService {
 			throw new InvalidRejectionReasonException();
 		}
 		UUID actorUserId = currentUserProvider.getCurrentUserId();
-		TransportOrder order = orderRepository.findById(orderId).orElseThrow(OrderNotFoundException::new);
+		TransportOrder order = orderRepository.findByIdForUpdate(orderId)
+				.orElseThrow(OrderNotFoundException::new);
 		OrderStatus oldStatus = order.getStatus();
 		if (oldStatus != OrderStatus.SUBMITTED) {
 			throw new InvalidOrderTransitionException(oldStatus, "rejected");
