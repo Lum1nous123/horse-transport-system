@@ -83,7 +83,7 @@ class DocumentVersionServiceTest {
 
 	@Test
 	void createsFirstDraftWithoutCreatingChecklistParent() {
-		when(versionRepository.findByHorseDocumentIdAndCurrentTrue(DOCUMENT_ID)).thenReturn(Optional.empty());
+		when(versionRepository.findByHorseDocument_IdAndCurrentTrue(DOCUMENT_ID)).thenReturn(Optional.empty());
 		when(versionRepository.findMaximumVersionNo(DOCUMENT_ID)).thenReturn(0);
 
 		DocumentVersionResponse response = service.create(DOCUMENT_ID, pdf(), LocalDate.of(2027, 1, 1));
@@ -134,7 +134,7 @@ class DocumentVersionServiceTest {
 
 	@Test
 	void deletedUnsubmittedDraftAllowsVersionOneReuse() {
-		when(versionRepository.findByHorseDocumentIdAndCurrentTrue(DOCUMENT_ID)).thenReturn(Optional.empty());
+		when(versionRepository.findByHorseDocument_IdAndCurrentTrue(DOCUMENT_ID)).thenReturn(Optional.empty());
 		when(versionRepository.findMaximumVersionNo(DOCUMENT_ID)).thenReturn(0);
 
 		assertThat(service.create(DOCUMENT_ID, pdf(), null).versionNo()).isEqualTo(1);
@@ -194,7 +194,7 @@ class DocumentVersionServiceTest {
 		ReflectionTestUtils.setField(rejected, "status", DocumentVersionStatus.REJECTED);
 		ReflectionTestUtils.setField(rejected, "reviewedAt", LocalDateTime.of(2026, 10, 1, 12, 0));
 		ReflectionTestUtils.setField(rejected, "rejectionReason", "Invalid certificate");
-		when(versionRepository.findByHorseDocumentIdAndCurrentTrue(DOCUMENT_ID)).thenReturn(Optional.of(rejected));
+		when(versionRepository.findByHorseDocument_IdAndCurrentTrue(DOCUMENT_ID)).thenReturn(Optional.of(rejected));
 		when(versionRepository.findMaximumVersionNo(DOCUMENT_ID)).thenReturn(1);
 		when(storage.upload(any(), any(), any(), eq(false))).thenReturn(URL);
 
@@ -218,7 +218,7 @@ class DocumentVersionServiceTest {
 		HorseDocumentVersion rejected = draft(1);
 		ReflectionTestUtils.setField(rejected, "status", DocumentVersionStatus.REJECTED);
 		when(orderHorse.getDocumentStatus()).thenReturn(OrderHorseDocumentStatus.NEEDS_REVISION);
-		when(versionRepository.findByHorseDocumentIdAndCurrentTrue(DOCUMENT_ID)).thenReturn(Optional.of(rejected));
+		when(versionRepository.findByHorseDocument_IdAndCurrentTrue(DOCUMENT_ID)).thenReturn(Optional.of(rejected));
 		when(versionRepository.findMaximumVersionNo(DOCUMENT_ID)).thenReturn(1);
 
 		service.create(DOCUMENT_ID, pdf(), null);
@@ -237,7 +237,7 @@ class DocumentVersionServiceTest {
 				DocumentVersionStatus.APPROVED)) {
 			HorseDocumentVersion current = draft(1);
 			ReflectionTestUtils.setField(current, "status", status);
-			when(versionRepository.findByHorseDocumentIdAndCurrentTrue(DOCUMENT_ID))
+			when(versionRepository.findByHorseDocument_IdAndCurrentTrue(DOCUMENT_ID))
 					.thenReturn(Optional.of(current));
 			assertThatThrownBy(() -> service.create(DOCUMENT_ID, pdf(), null))
 					.isInstanceOf(DocumentVersionConflictException.class);
@@ -249,7 +249,7 @@ class DocumentVersionServiceTest {
 		when(documentRepository.findOwnedById(DOCUMENT_ID, CUSTOMER_ID)).thenReturn(Optional.of(document));
 		HorseDocumentVersion first = draft(1);
 		HorseDocumentVersion second = draft(2);
-		when(versionRepository.findAllByHorseDocumentIdOrderByVersionNoDesc(DOCUMENT_ID))
+		when(versionRepository.findAllByHorseDocument_IdOrderByVersionNoDesc(DOCUMENT_ID))
 				.thenReturn(List.of(second, first));
 
 		assertThat(service.history(DOCUMENT_ID)).extracting(DocumentVersionResponse::versionNo)
@@ -262,7 +262,7 @@ class DocumentVersionServiceTest {
 		when(documentRepository.findById(DOCUMENT_ID)).thenReturn(Optional.of(document));
 		HorseDocumentVersion version = draft(1);
 		ReflectionTestUtils.setField(version, "status", DocumentVersionStatus.PENDING_REVIEW);
-		when(versionRepository.findAllByHorseDocumentIdOrderByVersionNoDesc(DOCUMENT_ID))
+		when(versionRepository.findAllByHorseDocument_IdOrderByVersionNoDesc(DOCUMENT_ID))
 				.thenReturn(List.of(version));
 
 		assertThat(service.history(DOCUMENT_ID)).extracting(DocumentVersionResponse::versionNo)
@@ -275,7 +275,7 @@ class DocumentVersionServiceTest {
 		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.TRANSPORT_SPECIALIST);
 		when(documentRepository.findById(DOCUMENT_ID)).thenReturn(Optional.of(document));
 		HorseDocumentVersion version = draft(1);
-		when(versionRepository.findAllByHorseDocumentIdOrderByVersionNoDesc(DOCUMENT_ID))
+		when(versionRepository.findAllByHorseDocument_IdOrderByVersionNoDesc(DOCUMENT_ID))
 				.thenReturn(List.of(version));
 
 		assertThat(service.history(DOCUMENT_ID)).isEmpty();
@@ -306,7 +306,7 @@ class DocumentVersionServiceTest {
 
 	@Test
 	void storageFailureDoesNotWriteVersion() {
-		when(versionRepository.findByHorseDocumentIdAndCurrentTrue(DOCUMENT_ID)).thenReturn(Optional.empty());
+		when(versionRepository.findByHorseDocument_IdAndCurrentTrue(DOCUMENT_ID)).thenReturn(Optional.empty());
 		when(versionRepository.findMaximumVersionNo(DOCUMENT_ID)).thenReturn(0);
 		when(storage.upload(any(), any(), any(), eq(false))).thenThrow(new DocumentStorageException("failed"));
 
@@ -430,7 +430,7 @@ class DocumentVersionServiceTest {
 
 	@Test
 	void databaseFailureAfterUploadTriggersBestEffortCleanupOutsideManagedTransaction() {
-		when(versionRepository.findByHorseDocumentIdAndCurrentTrue(DOCUMENT_ID)).thenReturn(Optional.empty());
+		when(versionRepository.findByHorseDocument_IdAndCurrentTrue(DOCUMENT_ID)).thenReturn(Optional.empty());
 		when(versionRepository.findMaximumVersionNo(DOCUMENT_ID)).thenReturn(0);
 		when(versionRepository.saveAndFlush(any())).thenThrow(new IllegalStateException("database failed"));
 
@@ -484,7 +484,7 @@ class DocumentVersionServiceTest {
 	@Test
 	void doesNotEnforcePastDeadlineButBlocksInactiveOrderState() {
 		when(order.getDocumentCompletionDeadlineAt()).thenReturn(LocalDateTime.of(2020, 1, 1, 0, 0));
-		when(versionRepository.findByHorseDocumentIdAndCurrentTrue(DOCUMENT_ID)).thenReturn(Optional.empty());
+		when(versionRepository.findByHorseDocument_IdAndCurrentTrue(DOCUMENT_ID)).thenReturn(Optional.empty());
 		when(versionRepository.findMaximumVersionNo(DOCUMENT_ID)).thenReturn(0);
 		assertThat(service.create(DOCUMENT_ID, pdf(), null).status()).isEqualTo(DocumentVersionStatus.DRAFT);
 

@@ -54,7 +54,7 @@ public class DocumentVersionService {
 		HorseDocument document = findOwnedForUpdate(documentId, actorUserId);
 		ensureActiveDocumentPhase(document);
 
-		HorseDocumentVersion previous = versionRepository.findByHorseDocumentIdAndCurrentTrue(documentId)
+		HorseDocumentVersion previous = versionRepository.findByHorseDocument_IdAndCurrentTrue(documentId)
 				.orElse(null);
 		if (previous != null && previous.getStatus() != DocumentVersionStatus.REJECTED) {
 			throw new DocumentVersionConflictException("A current document version already exists");
@@ -183,7 +183,7 @@ public class DocumentVersionService {
 			documentRepository.findOwnedById(documentId, actorUserId)
 					.orElseThrow(HorseDocumentNotFoundException::new);
 		}
-		return versionRepository.findAllByHorseDocumentIdOrderByVersionNoDesc(documentId).stream()
+		return versionRepository.findAllByHorseDocument_IdOrderByVersionNoDesc(documentId).stream()
 				.filter(version -> !transportSpecialist || version.getStatus() != DocumentVersionStatus.DRAFT)
 				.map(DocumentVersionResponse::from)
 				.toList();

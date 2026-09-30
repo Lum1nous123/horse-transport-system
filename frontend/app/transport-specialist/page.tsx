@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { clearAccessToken, getAccessToken } from "@/lib/auth";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, setDocumentDeadline } from "@/lib/api";
+import type { DocumentDeadlineResponse } from "@/lib/api";
 
 type DocumentOrder = {
   id: string;
@@ -73,15 +74,9 @@ export default function TransportSpecialistPage() {
     if (!selectedOrder || !deadline) return;
     setSaving(true); setFormError(""); setFeedback("");
     try {
-      const response = await apiFetch(`/api/v1/orders/${selectedOrder.id}/documents/deadline`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${getAccessToken()}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({ documentCompletionDeadlineAt: `${deadline}:00` }),
-      });
+      const token = getAccessToken();
+      if (!token) throw new Error("Your session has expired. Please sign in again.");
+      const response = await setDocumentDeadline(selectedOrder.id, `${deadline}:00`, token);
       if (response.status === 401) {
         clearAccessToken(); router.replace("/login?next=/transport-specialist"); return;
       }
@@ -93,7 +88,7 @@ export default function TransportSpecialistPage() {
         } catch { /* Keep the useful default message. */ }
         throw new Error(message);
       }
-      const result = await response.json() as { documentCompletionDeadlineAt: string; documentDeadlineSetAt: string };
+      const result = await response.json() as DocumentDeadlineResponse;
       setOrders((current) => current.map((order) => order.id === selectedOrder.id
         ? { ...order, documentCompletionDeadlineAt: result.documentCompletionDeadlineAt, documentDeadlineSetAt: result.documentDeadlineSetAt }
         : order));

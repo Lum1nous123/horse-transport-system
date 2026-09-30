@@ -16,3 +16,25 @@ export function apiFetch(
 ): Promise<Response> {
   return fetch(apiUrl(path), init);
 }
+
+export type DocumentDeadlineResponse = {
+  orderId: string;
+  documentCompletionDeadlineAt: string;
+  documentDeadlineSetAt: string;
+};
+
+export function setDocumentDeadline(
+  orderId: string,
+  documentCompletionDeadlineAt: string,
+  accessToken: string,
+): Promise<Response> {
+  return apiFetch(`/api/v1/orders/${orderId}/documents/deadline`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ documentCompletionDeadlineAt }),
+  });
+}
