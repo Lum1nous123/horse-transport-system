@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { clearAccessToken, getAccessToken } from "@/lib/auth";
+import { clearAccessToken, getAccessToken, getCurrentUser } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import DocumentWorkspace from "./DocumentWorkspace";
 
@@ -184,6 +184,11 @@ export default function CustomerPage() {
     setLoading(true);
     setLoadError("");
     try {
+      const currentUser = await getCurrentUser();
+      if (currentUser.role !== "CUSTOMER") {
+        router.replace(currentUser.role === "LOGISTICS_MANAGER" ? "/logistics" : "/login");
+        return;
+      }
       const [horseData, orderData] = await Promise.all([
         customerFetch("/api/v1/horses"), customerFetch("/api/v1/orders"),
       ]) as [Horse[], Order[]];

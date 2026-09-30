@@ -15,8 +15,8 @@ This file is a portable handoff and resume guide for a new Codex conversation or
 - Scrum planning / Sprint planning is complete and Human Review approved.
 - GitHub Project #4 has three two-week Development Sprint iterations for course Weeks 4–9, and FR-001 through FR-020 are assigned according to the instructor-required, Human-Approved reforecast.
 - Course Week 10 is reserved for presentation, final demo, final bug fixing, and release stabilization; it is not a feature-development iteration.
-- Backend implementation is active. BE-01 through BE-07 and the JWT Authentication foundation are complete and merged into `main`.
-- FE-01, FE-02, FE-04, and FE-05 previews are complete and merged into `main`.
+- Backend implementation is active. BE-01 through BE-09 and the JWT Authentication foundation are complete and merged into `main`.
+- FE-01, the Customer portion of FE-02, FE-03, FE-04, and FE-05 are merged into `main`. FE-02 Logistics Manager work is in review through PR #59.
 - TS Document Inbox support is complete and merged into `main`.
 
 ## Authoritative Sources
@@ -128,8 +128,9 @@ These follow-ups do not change approved requirements and must not be used to inf
 PR #43–#46, PR #48–#50, and PR #53 cover BE-01 through BE-07, JWT
 Authentication, and the LM Order Inbox support; all are merged into `main`.
 PR #47 provides the frontend authentication/landing foundation, while PR #51
-(FE-01), PR #52 (FE-02), PR #54 (FE-04 preview), and PR #55 (FE-05 preview)
-are also merged. The latest `main` commit is `edc8789`.
+(FE-01), PR #52 (Customer FE-02), PR #54 (FE-04), PR #55 (FE-05), and PR #56
+(FE-03) are also merged. BE-08 and BE-09 are merged through PR #57 and PR #58.
+The latest `main` commit is `7aeb20e`.
 
 BE-05 implements Stripe Deposit checkout/webhook handling. A successful
 Deposit atomically marks the payment `PAID`, moves the Order from
@@ -157,24 +158,24 @@ the current `main` history. No ERD or migration changes were needed.
 BE-07 Customer Document Draft and Submission Lifecycle is merged through PR
 #53. It provides Customer-owned upload, DRAFT replacement/deletion, submission,
 version history, Cloudinary storage compensation, and status audit behavior.
-The next backend task is BE-08 Transport Specialist document review.
 
-FE-03 is in progress on `feature/fe-03-deposit-documents`. Customer Deposit
-checkout/retry, payment status, Stripe return pages, and document deadline
-views are implemented. The Transport Specialist workspace loads the document
-inbox, sets an Order deadline once, and shows the saved deadline.
+BE-08 Transport Specialist document review is merged through PR #57. BE-09
+transactional status-audit hardening is merged through PR #58.
 
 FE-04 Customer document workspace preview is merged through PR #54. FE-05 TS
-document review workspace preview is merged through PR #55; review decisions
-remain preview-only until BE-08 supplies the persisted review APIs.
+document review workspace preview is merged through PR #55.
 
-FE-03 is in progress on `feature/fe-03-deposit-documents`, based on current
-`main`. Customer Deposit checkout/retry, payment status, Stripe return pages,
+FE-03 is merged through PR #56. Customer Deposit checkout/retry, payment status, Stripe return pages,
 and required document checklist/deadline views are implemented. The Transport
 Specialist workspace loads the document inbox, sets an Order deadline once,
 and shows the saved deadline. Login routes Transport Specialist accounts to
-that workspace. Frontend lint and the optimized production build pass; browser
-validation and QA remain outstanding.
+that workspace.
+
+Customer FE-02 cancellation and read-only SENT quotation views are merged
+through PR #52. PR #59 adds the Logistics Manager workspace for submitted-order
+review, required rejection reasons, and quotation DRAFT create/edit/send. Login
+routes Customers, Logistics Managers, and Transport Specialists to their current
+workspaces. Browser-connected QA remains outstanding.
 
 ### COMPLETED
 
@@ -202,6 +203,9 @@ validation and QA remain outstanding.
 - FE-04 Customer document workspace preview, merged through PR #54
 - FE-05 Transport Specialist document review workspace preview, merged through PR #55
 - Transport Specialist Document Inbox support
+- BE-08 Transport Specialist document review lifecycle, merged through PR #57
+- BE-09 Transactional Audit hardening, merged through PR #58
+- FE-03 Deposit and document deadline views, merged through PR #56
 
 ### DEFERRED / NON-BLOCKING
 
@@ -209,14 +213,12 @@ validation and QA remain outstanding.
 
 ### NEXT
 
-1. Complete FE-03 review and browser-connected verification.
-2. Implement BE-08 Transport Specialist document review APIs after Human Review.
+1. Complete Human Review for FE-02 Logistics Manager workspace in PR #59.
+2. Complete browser-connected validation and QA for the merged frontend flows.
 
 ### NOT STARTED
 
-- BE-08 and later backend vertical slices
-- FE-03 browser-connected validation and QA
-- Persisted Transport Specialist document review lifecycle
+- Later backend vertical slices beyond BE-09
 - QA execution
 
 ## Resume Protocol
