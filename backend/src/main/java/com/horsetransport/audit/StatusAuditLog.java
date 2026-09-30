@@ -103,4 +103,5 @@ public class StatusAuditLog {
 	public AuditActorKind getActorKind() { return actorKind; }
 	public UUID getActorUserId() { return actorUserId; }
 	public String getReason() { return reason; }
+	public LocalDateTime getOccurredAt() { return occurredAt; }
 }

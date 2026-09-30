@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.horsetransport.audit.AuditActorKind;
 import com.horsetransport.audit.AuditEntityType;
 import com.horsetransport.audit.StatusAuditLog;
 import com.horsetransport.audit.StatusAuditLogRepository;
@@ -152,7 +153,10 @@ class DocumentVersionServiceTest {
 		assertThat(audit.getValue().getEntityId()).isEqualTo(draft.getId());
 		assertThat(audit.getValue().getOldStatus()).isEqualTo("DRAFT");
 		assertThat(audit.getValue().getNewStatus()).isEqualTo("PENDING_REVIEW");
+		assertThat(audit.getValue().getActorKind()).isEqualTo(AuditActorKind.USER);
 		assertThat(audit.getValue().getActorUserId()).isEqualTo(CUSTOMER_ID);
+		assertThat(audit.getValue().getReason()).isNull();
+		assertThat(audit.getValue().getOccurredAt()).isNotNull();
 		verify(orderHorse, never()).markDocumentsUnderReview();
 	}
 
