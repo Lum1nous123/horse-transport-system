@@ -25,6 +25,7 @@ import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderHorse;
 import com.horsetransport.security.CurrentUserProvider;
+import com.horsetransport.user.UserRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -65,6 +66,7 @@ class DocumentVersionServiceTest {
 		service = new DocumentVersionService(documentRepository, versionRepository, auditRepository,
 				currentUserProvider, storage);
 		when(currentUserProvider.getCurrentUserId()).thenReturn(CUSTOMER_ID);
+		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.CUSTOMER);
 		when(documentRepository.findOwnedByIdForUpdate(DOCUMENT_ID, CUSTOMER_ID))
 				.thenReturn(Optional.of(document));
 		when(document.getId()).thenReturn(DOCUMENT_ID);
@@ -252,6 +254,41 @@ class DocumentVersionServiceTest {
 
 		assertThat(service.history(DOCUMENT_ID)).extracting(DocumentVersionResponse::versionNo)
 				.containsExactly(2, 1);
+	}
+
+	@Test
+	void transportSpecialistCanReadHistoryForAnActiveDocumentPhase() {
+		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.TRANSPORT_SPECIALIST);
+		when(documentRepository.findById(DOCUMENT_ID)).thenReturn(Optional.of(document));
+		HorseDocumentVersion version = draft(1);
+		ReflectionTestUtils.setField(version, "status", DocumentVersionStatus.PENDING_REVIEW);
+		when(versionRepository.findAllByHorseDocumentIdOrderByVersionNoDesc(DOCUMENT_ID))
+				.thenReturn(List.of(version));
+
+		assertThat(service.history(DOCUMENT_ID)).extracting(DocumentVersionResponse::versionNo)
+				.containsExactly(1);
+		verify(documentRepository, never()).findOwnedById(DOCUMENT_ID, CUSTOMER_ID);
+	}
+
+	@Test
+	void transportSpecialistHistoryDoesNotExposeCustomerDraft() {
+		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.TRANSPORT_SPECIALIST);
+		when(documentRepository.findById(DOCUMENT_ID)).thenReturn(Optional.of(document));
+		HorseDocumentVersion version = draft(1);
+		when(versionRepository.findAllByHorseDocumentIdOrderByVersionNoDesc(DOCUMENT_ID))
+				.thenReturn(List.of(version));
+
+		assertThat(service.history(DOCUMENT_ID)).isEmpty();
+	}
+
+	@Test
+	void transportSpecialistCannotReadHistoryOutsideActiveDocumentPhase() {
+		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.TRANSPORT_SPECIALIST);
+		when(documentRepository.findById(DOCUMENT_ID)).thenReturn(Optional.of(document));
+		when(order.getStatus()).thenReturn(OrderStatus.READY_TO_SHIP);
+
+		assertThatThrownBy(() -> service.history(DOCUMENT_ID))
+				.isInstanceOf(DocumentVersionConflictException.class);
 	}
 
 	@Test

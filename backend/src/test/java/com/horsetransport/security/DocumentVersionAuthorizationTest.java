@@ -52,8 +52,16 @@ class DocumentVersionAuthorizationTest {
 	}
 
 	@Test
-	void transportSpecialistAndOtherRolesAreForbidden() throws Exception {
-		for (UserRole role : new UserRole[] {UserRole.TRANSPORT_SPECIALIST, UserRole.LOGISTICS_MANAGER,
+	void transportSpecialistCanReadHistoryButCannotMutateVersions() throws Exception {
+		String token = token(UserRole.TRANSPORT_SPECIALIST);
+		mockMvc.perform(get(path()).header(HttpHeaders.AUTHORIZATION, token)).andExpect(status().isOk());
+		mockMvc.perform(multipart(path()).file(file()).header(HttpHeaders.AUTHORIZATION, token))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void otherRolesAreForbidden() throws Exception {
+		for (UserRole role : new UserRole[] {UserRole.LOGISTICS_MANAGER,
 				UserRole.FLEET_ROUTE_COORDINATOR, UserRole.DRIVER, UserRole.ESCORT}) {
 			String token = token(role);
 			mockMvc.perform(get(path()).header(HttpHeaders.AUTHORIZATION, token))

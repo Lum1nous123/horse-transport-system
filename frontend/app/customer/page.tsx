@@ -481,9 +481,11 @@ export default function CustomerPage() {
             {preview && <div className="deposit-checkout-panel preview-payment"><strong>Deposit checkout preview</strong><p>Preview mode does not contact the payment service or open a checkout session.</p></div>}
           </div></section></div>}
         {documentOrder && <DocumentWorkspace
+          orderId={documentOrder.id}
           orderCode={documentOrder.orderCode}
           horses={documentOrder.horseIds.map((id) => horses.find((horse) => horse.id === id)).filter((horse): horse is Horse => Boolean(horse)).map((horse) => ({ id: horse.id, name: horse.name }))}
           preview={preview}
+          editable={documentOrder.status === "APPROVED"}
           onClose={() => setDocumentOrder(null)}
         />}
       </div>
