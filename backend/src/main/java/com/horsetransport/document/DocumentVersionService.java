@@ -14,6 +14,7 @@ import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderHorse;
 import com.horsetransport.security.CurrentUserProvider;
+import com.horsetransport.user.UserRole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -172,9 +173,18 @@ public class DocumentVersionService {
 	@Transactional(readOnly = true)
 	public List<DocumentVersionResponse> history(UUID documentId) {
 		UUID actorUserId = currentUserProvider.getCurrentUserId();
-		documentRepository.findOwnedById(documentId, actorUserId)
-				.orElseThrow(HorseDocumentNotFoundException::new);
+		boolean transportSpecialist = currentUserProvider.getCurrentUserRole() == UserRole.TRANSPORT_SPECIALIST;
+		if (transportSpecialist) {
+			HorseDocument document = documentRepository.findById(documentId)
+					.orElseThrow(HorseDocumentNotFoundException::new);
+			ensureActiveDocumentPhase(document);
+		}
+		else {
+			documentRepository.findOwnedById(documentId, actorUserId)
+					.orElseThrow(HorseDocumentNotFoundException::new);
+		}
 		return versionRepository.findAllByHorseDocumentIdOrderByVersionNoDesc(documentId).stream()
+				.filter(version -> !transportSpecialist || version.getStatus() != DocumentVersionStatus.DRAFT)
 				.map(DocumentVersionResponse::from)
 				.toList();
 	}

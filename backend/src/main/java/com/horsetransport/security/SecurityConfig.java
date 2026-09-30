@@ -59,6 +59,8 @@ public class SecurityConfig {
 								"/api/v1/documents/{documentId}/versions/{versionId}/approve",
 								"/api/v1/documents/{documentId}/versions/{versionId}/reject")
 								.hasRole("TRANSPORT_SPECIALIST")
+						.requestMatchers(HttpMethod.GET, "/api/v1/documents/{documentId}/versions")
+								.hasAnyRole("CUSTOMER", "TRANSPORT_SPECIALIST")
 						.requestMatchers("/api/v1/documents/**").hasRole("CUSTOMER")
 						.requestMatchers(HttpMethod.GET, "/api/v1/orders/{orderId}")
 								.hasAnyRole("CUSTOMER", "LOGISTICS_MANAGER")
