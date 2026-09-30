@@ -79,4 +79,24 @@ public class TransportOrderHorse {
 	public OrderHorseDocumentStatus getDocumentStatus() {
 		return documentStatus;
 	}
+
+	public TransportOrder getTransportOrder() {
+		return transportOrder;
+	}
+
+	public OrderHorseDocumentStatus markDocumentsIncomplete() {
+		OrderHorseDocumentStatus previous = documentStatus;
+		documentStatus = OrderHorseDocumentStatus.INCOMPLETE;
+		return previous;
+	}
+
+	public OrderHorseDocumentStatus markDocumentsUnderReview() {
+		OrderHorseDocumentStatus previous = documentStatus;
+		documentStatus = OrderHorseDocumentStatus.UNDER_REVIEW;
+		return previous;
+	}
+
+	public void restoreDocumentStatus(OrderHorseDocumentStatus previousStatus) {
+		documentStatus = previousStatus;
+	}
 }
