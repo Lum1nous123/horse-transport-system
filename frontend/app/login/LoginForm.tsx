@@ -3,8 +3,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, signIn } from "@/lib/auth";
-import { apiFetch } from "@/lib/api";
+import { clearAccessToken, getCurrentUser, signIn } from "@/lib/auth";
 
 type FieldErrors = {
   email?: string;
@@ -46,20 +45,17 @@ export default function LoginForm() {
     setIsSubmitting(true);
     try {
       await signIn(email, password);
-      let destination = "/customer";
-      const token = getAccessToken();
-      if (token) {
-        try {
-          const response = await apiFetch("/api/v1/auth/me", {
-            headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-          });
-          if (response.ok) {
-            const user = await response.json() as { role?: string };
-            if (user.role === "TRANSPORT_SPECIALIST") destination = "/transport-specialist/review";
-          }
-        } catch { /* Keep the Customer route if profile lookup is unavailable. */ }
+      const currentUser = await getCurrentUser();
+      if (currentUser.role === "LOGISTICS_MANAGER") {
+        router.replace("/logistics");
+      } else if (currentUser.role === "TRANSPORT_SPECIALIST") {
+        router.replace("/transport-specialist/review");
+      } else if (currentUser.role === "CUSTOMER") {
+        router.replace("/customer");
+      } else {
+        clearAccessToken();
+        setFormError("This account role does not have a workspace available yet.");
       }
-      router.push(destination);
     } catch (error) {
       setFormError(getSignInErrorMessage(error));
     } finally {
@@ -159,6 +155,14 @@ function getSignInErrorMessage(error: unknown): string {
 
   if (error.message === "NETWORK_ERROR") {
     return "We couldn't reach the sign-in service. Check your connection and try again.";
+  }
+
+  if (error.message === "PROFILE_UNAVAILABLE") {
+    return "We couldn't load your account. Please try signing in again.";
+  }
+
+  if (error.message === "SESSION_EXPIRED") {
+    return "Your session expired. Please sign in again.";
   }
 
   return "We couldn't sign you in. Please try again.";
