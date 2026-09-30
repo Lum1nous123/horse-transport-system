@@ -7,6 +7,7 @@ import com.horsetransport.auth.InvalidCredentialsException;
 import com.horsetransport.document.DocumentChecklistConflictException;
 import com.horsetransport.document.DocumentChecklistNotFoundException;
 import com.horsetransport.document.DocumentFileValidationException;
+import com.horsetransport.document.DocumentReviewValidationException;
 import com.horsetransport.document.DocumentStorageException;
 import com.horsetransport.document.DocumentVersionConflictException;
 import com.horsetransport.document.DocumentVersionNotFoundException;
@@ -53,6 +54,12 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(DocumentFileValidationException.class)
 	public ResponseEntity<ApiError> handleDocumentFileValidation(DocumentFileValidationException exception) {
 		return error(HttpStatus.BAD_REQUEST, "DOCUMENT_FILE_VALIDATION_ERROR", exception.getMessage());
+	}
+
+	@ExceptionHandler(DocumentReviewValidationException.class)
+	public ResponseEntity<ApiError> handleDocumentReviewValidation(
+			DocumentReviewValidationException exception) {
+		return error(HttpStatus.BAD_REQUEST, "DOCUMENT_REVIEW_VALIDATION_ERROR", exception.getMessage());
 	}
 
 	@ExceptionHandler(DocumentStorageException.class)
