@@ -55,6 +55,7 @@ public class SecurityConfig {
 								.hasRole("LOGISTICS_MANAGER")
 						.requestMatchers(HttpMethod.GET, "/api/v1/orders/document-inbox")
 								.hasRole("TRANSPORT_SPECIALIST")
+						.requestMatchers("/api/v1/documents/**").hasRole("CUSTOMER")
 						.requestMatchers(HttpMethod.GET, "/api/v1/orders/{orderId}")
 								.hasAnyRole("CUSTOMER", "LOGISTICS_MANAGER")
 						.requestMatchers("/api/v1/orders/**").hasRole("CUSTOMER")
