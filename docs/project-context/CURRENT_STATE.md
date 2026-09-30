@@ -15,8 +15,9 @@ This file is a portable handoff and resume guide for a new Codex conversation or
 - Scrum planning / Sprint planning is complete and Human Review approved.
 - GitHub Project #4 has three two-week Development Sprint iterations for course Weeks 4–9, and FR-001 through FR-020 are assigned according to the instructor-required, Human-Approved reforecast.
 - Course Week 10 is reserved for presentation, final demo, final bug fixing, and release stabilization; it is not a feature-development iteration.
-- Backend implementation is active through BE-05. BE-01, JWT Authentication foundation, BE-02, BE-03, BE-04, and BE-05 are merged into `main`.
-- FE-01 and the Customer portion of FE-02 are merged. FE-02 Logistics Manager work is in progress on `feature/fe-02-lm-workflow`.
+- Backend implementation is active. BE-01 through BE-09 and the JWT Authentication foundation are complete and merged into `main`.
+- FE-01, the Customer portion of FE-02, FE-03, FE-04, and FE-05 are merged into `main`. FE-02 Logistics Manager work is in review through PR #59.
+- TS Document Inbox support is complete and merged into `main`.
 
 ## Authoritative Sources
 
@@ -124,50 +125,57 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
-PR #43 (BE-01 + JWT Authentication foundation), PR #44 (BE-02 Order
-Draft-to-Submit), PR #45 (BE-03 Cancel / Reject Pre-Approval), PR #46
-(BE-04 Quotation Draft-to-Sent), PR #48 (BE-05 Deposit Payment), PR #49
-(LM Order Inbox), PR #51 (FE-01), and PR #52 (Customer FE-02) are merged into
-`main`. The latest merge is commit `25b0df7`.
+PR #43–#46, PR #48–#50, and PR #53 cover BE-01 through BE-07, JWT
+Authentication, and the LM Order Inbox support; all are merged into `main`.
+PR #47 provides the frontend authentication/landing foundation, while PR #51
+(FE-01), PR #52 (Customer FE-02), PR #54 (FE-04), PR #55 (FE-05), and PR #56
+(FE-03) are also merged. BE-08 and BE-09 are merged through PR #57 and PR #58.
+The latest `main` commit is `7aeb20e`.
 
-BE-04 implements Quotation create DRAFT, edit DRAFT, LM get, and atomic send
-from DRAFT to SENT. Send also moves the Order from `SUBMITTED` to
-`QUOTATION_SENT` and writes `QUOTATION` plus `TRANSPORT_ORDER` status audits in
-the same transaction. LM can create/edit/get/send; a Customer can only view a
-SENT quotation belonging to their own Order. SENT quotations are immutable.
+BE-05 implements Stripe Deposit checkout/webhook handling. A successful
+Deposit atomically marks the payment `PAID`, moves the Order from
+`QUOTATION_SENT` to `APPROVED`, records the Order audit, and starts the document
+phase. There is no separate Customer quotation-accept action or LM manual
+approval.
 
-The backend calculates `totalAmount` and `remainingAmount`, uses fixed currency
-`USD`, and stores `depositAmount` on the quotation. BE-05 handles Deposit
-payment; there is no Customer Accept Quotation action and no LM manual approval.
-Successful Deposit payment moves `QUOTATION_SENT` to `APPROVED`.
+BE-06 replaces the deferred document-phase hook with an idempotent generator
+that creates the fixed five-document checklist for every Horse in an approved
+Order. Customer owners and Transport Specialists can read the checklist; any
+Transport Specialist can set the Order-level document deadline once. Checklist
+generation joins the BE-05 approval transaction, and generation/deadline do not
+create artificial status audits. Upload, document versions/review, deadline
+enforcement, refund, and deadline notification remain outside BE-06.
 
-The full backend suite has 90 passing tests after BE-04. BE-04 reused V1 and did
-not change the ERD, migration, or frontend.
+LM Order Inbox is available at `GET /api/v1/orders/inbox?status=SUBMITTED`, and
+LM can read Order detail through the existing detail endpoint. Customer list
+and ownership behavior remain unchanged.
 
-FE-01 Customer Horse and Order create/edit/submit UI is merged from
-`feature/fe-01-customer-horse-orders`. The Customer workspace uses the
-existing Horse and Order APIs, retains the login JWT for the current tab, and
-shows the approved pre-submit warning and locked state. Horse editing is not
-exposed because FR-001 and the current API contract only define Horse create
-and list; Order editing is limited to DRAFT. A development-only `?preview=1`
-mode displays sample data and keeps preview interactions local to the tab
-without calling the backend. Lint and TypeScript pass. Backend-connected
-browser validation and QA remain outstanding.
+The Transport Specialist work queue is available at
+`GET /api/v1/orders/document-inbox`. It returns `APPROVED` Orders and includes
+deadline metadata; it does not filter by assignment. Commit `6f45284` is part of
+the current `main` history. No ERD or migration changes were needed.
 
-Customer FE-02 work is merged from `feature/fe-02-quotation-workflow`:
-Customers may cancel only DRAFT, SUBMITTED, and QUOTATION_SENT Orders, and may
-view a SENT quotation as a read-only bill. Development preview includes sample
-Customer data.
+BE-07 Customer Document Draft and Submission Lifecycle is merged through PR
+#53. It provides Customer-owned upload, DRAFT replacement/deletion, submission,
+version history, Cloudinary storage compensation, and status audit behavior.
 
-LM inbox API is available at `GET /api/v1/orders/inbox?status=SUBMITTED`, with
-detail at `GET /api/v1/orders/{orderId}`. The FE-02 LM workspace is implemented
-locally on `feature/fe-02-lm-workflow`; it supports submitted-order review,
-required rejection reason, and quotation DRAFT create/edit/send. Login routes
-Customers to `/customer` and Logistics Managers to `/logistics`. Lint,
-TypeScript, and the Webpack production build pass. Browser interaction and
-backend-connected QA remain outstanding. The backend detail endpoint currently
-permits LM detail reads regardless of Order status; FE opens details from the
-SUBMITTED inbox and checks the returned status.
+BE-08 Transport Specialist document review is merged through PR #57. BE-09
+transactional status-audit hardening is merged through PR #58.
+
+FE-04 Customer document workspace preview is merged through PR #54. FE-05 TS
+document review workspace preview is merged through PR #55.
+
+FE-03 is merged through PR #56. Customer Deposit checkout/retry, payment status, Stripe return pages,
+and required document checklist/deadline views are implemented. The Transport
+Specialist workspace loads the document inbox, sets an Order deadline once,
+and shows the saved deadline. Login routes Transport Specialist accounts to
+that workspace.
+
+Customer FE-02 cancellation and read-only SENT quotation views are merged
+through PR #52. PR #59 adds the Logistics Manager workspace for submitted-order
+review, required rejection reasons, and quotation DRAFT create/edit/send. Login
+routes Customers, Logistics Managers, and Transport Specialists to their current
+workspaces. Browser-connected QA remains outstanding.
 
 ### COMPLETED
 
@@ -185,9 +193,19 @@ SUBMITTED inbox and checks the returned status.
 - BE-02 Order Draft-to-Submit
 - BE-03 Cancel / Reject Pre-Approval
 - BE-04 Quotation Draft-to-Sent / FR-004 implementation, merged through PR #46
-- BE-05 Deposit Payment and automatic Order approval, merged through PR #48
-- FE-01 Customer Horse and Order workspace, merged through PR #51
-- FE-02 Customer cancellation and quotation bill, merged through PR #52
+- BE-05 Pay Deposit and Approve Order / FR-005, merged through PR #48
+- LM Order Inbox support, merged through PR #49
+- BE-06 Mandatory Document Checklist / Deadline / FR-006, merged through PR #50
+- BE-07 Customer Document Draft and Submission Lifecycle / FR-007, merged through PR #53
+- Frontend authentication and landing foundation, merged through PR #47
+- FE-01 Customer Horse and Order flow, merged through PR #51
+- FE-02 Pre-approval and Quotation views, merged through PR #52
+- FE-04 Customer document workspace preview, merged through PR #54
+- FE-05 Transport Specialist document review workspace preview, merged through PR #55
+- Transport Specialist Document Inbox support
+- BE-08 Transport Specialist document review lifecycle, merged through PR #57
+- BE-09 Transactional Audit hardening, merged through PR #58
+- FE-03 Deposit and document deadline views, merged through PR #56
 
 ### DEFERRED / NON-BLOCKING
 
@@ -195,12 +213,12 @@ SUBMITTED inbox and checks the returned status.
 
 ### NEXT
 
-1. Finish and review FE-02 Logistics Manager workspace on `feature/fe-02-lm-workflow`.
-2. Continue the approved backend backlog after BE-05.
+1. Complete Human Review for FE-02 Logistics Manager workspace in PR #59.
+2. Complete browser-connected validation and QA for the merged frontend flows.
 
 ### NOT STARTED
 
-- Later backend vertical slices
+- Later backend vertical slices beyond BE-09
 - QA execution
 
 ## Resume Protocol

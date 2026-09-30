@@ -21,8 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TransportOrderService {
 
-	private static final Set<OrderStatus> CUSTOMER_CANCELLABLE_STATUSES =
-			EnumSet.of(OrderStatus.DRAFT, OrderStatus.SUBMITTED, OrderStatus.QUOTATION_SENT);
+	private static final Set<OrderStatus> CUSTOMER_CANCELLABLE_STATUSES = EnumSet.of(OrderStatus.DRAFT,
+			OrderStatus.SUBMITTED, OrderStatus.QUOTATION_SENT);
 
 	private final TransportOrderRepository orderRepository;
 	private final HorseRepository horseRepository;
@@ -67,6 +67,14 @@ public class TransportOrderService {
 	}
 
 	@Transactional(readOnly = true)
+	public List<DocumentInboxResponse> findTransportSpecialistDocumentInbox() {
+		return orderRepository.findAllByStatusOrderByCreatedAtDesc(OrderStatus.APPROVED).stream()
+				.filter(order -> order.getStatus() == OrderStatus.APPROVED)
+				.map(DocumentInboxResponse::from)
+				.toList();
+	}
+
+	@Transactional(readOnly = true)
 	public OrderResponse findCurrentCustomerOrder(UUID orderId) {
 		return OrderResponse.from(findOwnedOrder(orderId, currentUserProvider.getCurrentUserId()));
 	}
@@ -94,7 +102,8 @@ public class TransportOrderService {
 	@Transactional
 	public OrderResponse submit(UUID orderId) {
 		UUID customerId = currentUserProvider.getCurrentUserId();
-		TransportOrder order = findOwnedOrder(orderId, customerId);
+		TransportOrder order = orderRepository.findOwnedByIdForUpdate(orderId, customerId)
+				.orElseThrow(OrderNotFoundException::new);
 		if (order.getStatus() != OrderStatus.DRAFT) {
 			throw new OrderNotEditableException();
 		}
@@ -145,7 +154,8 @@ public class TransportOrderService {
 			throw new InvalidRejectionReasonException();
 		}
 		UUID actorUserId = currentUserProvider.getCurrentUserId();
-		TransportOrder order = orderRepository.findById(orderId).orElseThrow(OrderNotFoundException::new);
+		TransportOrder order = orderRepository.findByIdForUpdate(orderId)
+				.orElseThrow(OrderNotFoundException::new);
 		OrderStatus oldStatus = order.getStatus();
 		if (oldStatus != OrderStatus.SUBMITTED) {
 			throw new InvalidOrderTransitionException(oldStatus, "rejected");

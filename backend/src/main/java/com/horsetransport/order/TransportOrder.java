@@ -79,6 +79,18 @@ public class TransportOrder {
 	@Column(name = "approved_at")
 	private LocalDateTime approvedAt;
 
+	@Column(name = "document_completion_deadline_at")
+	private LocalDateTime documentCompletionDeadlineAt;
+
+	@Column(name = "document_deadline_set_by")
+	private UUID documentDeadlineSetBy;
+
+	@Column(name = "document_deadline_set_at")
+	private LocalDateTime documentDeadlineSetAt;
+
+	@Column(name = "documents_locked_at")
+	private LocalDateTime documentsLockedAt;
+
 	@Enumerated(EnumType.STRING)
 	@JdbcTypeCode(SqlTypes.NAMED_ENUM)
 	@Column(nullable = false, columnDefinition = "order_status")
@@ -185,6 +197,12 @@ public class TransportOrder {
 		}
 	}
 
+	public void setDocumentCompletionDeadline(LocalDateTime deadline, UUID actorUserId) {
+		documentCompletionDeadlineAt = deadline;
+		documentDeadlineSetBy = actorUserId;
+		documentDeadlineSetAt = LocalDateTime.now();
+	}
+
 	void restoreDraft() {
 		status = OrderStatus.DRAFT;
 	}
@@ -218,6 +236,10 @@ public class TransportOrder {
 	public String getCancellationReason() { return cancellationReason; }
 	public LocalDateTime getCancelledAt() { return cancelledAt; }
 	public LocalDateTime getApprovedAt() { return approvedAt; }
+	public LocalDateTime getDocumentCompletionDeadlineAt() { return documentCompletionDeadlineAt; }
+	public UUID getDocumentDeadlineSetBy() { return documentDeadlineSetBy; }
+	public LocalDateTime getDocumentDeadlineSetAt() { return documentDeadlineSetAt; }
+	public LocalDateTime getDocumentsLockedAt() { return documentsLockedAt; }
 	public OrderStatus getStatus() { return status; }
 	public LocalDateTime getCreatedAt() { return createdAt; }
 	public LocalDateTime getUpdatedAt() { return updatedAt; }

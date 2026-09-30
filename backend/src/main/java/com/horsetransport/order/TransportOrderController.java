@@ -42,6 +42,11 @@ public class TransportOrderController {
 		return orderService.findLogisticsManagerInbox(status);
 	}
 
+	@GetMapping("/document-inbox")
+	public List<DocumentInboxResponse> documentInbox() {
+		return orderService.findTransportSpecialistDocumentInbox();
+	}
+
 	@GetMapping("/{orderId}")
 	public OrderResponse detail(@PathVariable UUID orderId) {
 		return orderService.findOrderDetail(orderId);

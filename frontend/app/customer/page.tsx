@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { clearAccessToken, getAccessToken, getCurrentUser } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
+import DocumentWorkspace from "./DocumentWorkspace";
 
 type Horse = {
   id: string;
@@ -48,7 +49,16 @@ type Quotation = {
   sentAt?: string | null;
   lineItems: { id: string; sequenceNo: number; description: string; amount: number }[];
 };
-
+type DepositPayment = {
+  id: string;
+  orderId: string;
+  amount: number;
+  currency: string;
+  status: "PENDING" | "PAID" | "REFUNDED";
+  paidAt?: string | null;
+  latestAttempt?: { providerStatus: "PENDING" | "OPEN" | "SUCCEEDED" | "CANCELLED" | "EXPIRED" } | null;
+};
+type DepositCheckout = { checkoutUrl: string };
 const emptyOrder: OrderFields = {
   originAddress: "", originCountry: "", destinationAddress: "", destinationCountry: "",
   requestedDepartureAt: "", transportMode: null, specialRequirements: "", recipientName: "",
@@ -76,6 +86,11 @@ const previewOrders: Order[] = [
     id: "preview-order-3", orderCode: "ORD-DEMO-1024", originCountry: "United Kingdom",
     destinationCountry: "Belgium", transportMode: "ROAD", recipientName: "Taylor Reed",
     recipientPhone: "+32 2 555 0175", horseIds: ["preview-horse-2"], status: "QUOTATION_SENT",
+  },
+  {
+    id: "preview-order-4", orderCode: "ORD-DEMO-1019", originCountry: "Ireland",
+    destinationCountry: "France", transportMode: "COMBINED", recipientName: "Morgan Ellis",
+    recipientPhone: "+33 1 55 01 27 40", horseIds: ["preview-horse-1", "preview-horse-2"], status: "APPROVED",
   },
 ];
 
@@ -115,6 +130,7 @@ async function customerFetch(path: string, init?: RequestInit) {
       const error = await response.json() as { message?: string; code?: string };
       if (error.code === "DUPLICATE_MICROCHIP") message = "That microchip ID is already registered.";
       else if (error.code === "ORDER_NOT_EDITABLE") message = "Only draft orders can be edited.";
+      else if (error.code === "DEPOSIT_PAYMENT_NOT_FOUND") message = "DEPOSIT_PAYMENT_NOT_FOUND";
       else if (error.message) message = error.message;
     } catch { /* Keep the useful default message. */ }
     throw new Error(message);
@@ -142,9 +158,14 @@ export default function CustomerPage() {
   const [quotation, setQuotation] = useState<Quotation | null>(null);
   const [quotationBusy, setQuotationBusy] = useState(false);
   const [quotationError, setQuotationError] = useState("");
+  const [deposit, setDeposit] = useState<DepositPayment | null>(null);
+  const [depositLoading, setDepositLoading] = useState(false);
+  const [depositBusy, setDepositBusy] = useState(false);
+  const [depositError, setDepositError] = useState("");
   const [cancelOrder, setCancelOrder] = useState<Order | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelError, setCancelError] = useState("");
+  const [documentOrder, setDocumentOrder] = useState<Order | null>(null);
 
   const loadWorkspace = useCallback(async () => {
     if (preview || isLocalPreviewRequested()) {
@@ -313,6 +334,7 @@ export default function CustomerPage() {
 
   async function openQuotation(order: Order) {
     setQuoteOrder(order); setQuotation(null); setQuotationError(""); setQuotationBusy(true);
+    setDeposit(null); setDepositError(""); setDepositLoading(!preview);
     try {
       const quote = preview ? previewQuotation : await customerFetch(`/api/v1/orders/${order.id}/quotation`) as Quotation;
       if (quote.status !== "SENT") throw new Error("This quotation is not available yet.");
@@ -320,6 +342,43 @@ export default function CustomerPage() {
     } catch (error) {
       setQuotationError(error instanceof Error ? error.message : "We couldn't load this quotation.");
     } finally { setQuotationBusy(false); }
+    if (!preview) {
+      try {
+        const payment = await customerFetch(`/api/v1/orders/${order.id}/deposit`) as DepositPayment;
+        setDeposit(payment);
+      } catch (error) {
+        // No deposit record exists until the Customer starts checkout.
+        const message = error instanceof Error ? error.message : "We couldn't load payment status.";
+        if (!message.includes("DEPOSIT_PAYMENT_NOT_FOUND")) setDepositError(message);
+      } finally { setDepositLoading(false); }
+    }
+  }
+
+  async function startDepositCheckout() {
+    if (!quoteOrder || !quotation || preview) return;
+    setDepositBusy(true); setDepositError("");
+    try {
+      const checkout = await customerFetch(`/api/v1/orders/${quoteOrder.id}/deposit/checkout`, { method: "POST" }) as DepositCheckout;
+      if (!checkout.checkoutUrl) throw new Error("Checkout could not be opened. Please try again.");
+      window.location.assign(checkout.checkoutUrl);
+    } catch (error) {
+      setDepositError(error instanceof Error ? error.message : "We couldn't start deposit checkout.");
+      setDepositBusy(false);
+    }
+  }
+
+  async function refreshDepositStatus() {
+    if (!quoteOrder || preview) return;
+    setDepositLoading(true); setDepositError("");
+    try {
+      const payment = await customerFetch(`/api/v1/orders/${quoteOrder.id}/deposit`) as DepositPayment;
+      setDeposit(payment);
+      await loadWorkspace();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "We couldn't refresh payment status.";
+      if (message === "DEPOSIT_PAYMENT_NOT_FOUND") setDeposit(null);
+      else setDepositError(message);
+    } finally { setDepositLoading(false); }
   }
 
   async function confirmCancel() {
@@ -370,6 +429,7 @@ export default function CustomerPage() {
                 <div className="customer-order-actions">
                   {order.status === "DRAFT" && <button className="customer-secondary-button compact" type="button" onClick={() => startEdit(order)}>Edit draft</button>}
                   {order.status === "QUOTATION_SENT" && <button className="customer-secondary-button compact" type="button" onClick={() => void openQuotation(order)}>View bill</button>}
+                  {["APPROVED", "READY_TO_SHIP", "IN_PROGRESS", "DELIVERED"].includes(order.status) && <button className="customer-secondary-button compact" type="button" onClick={() => setDocumentOrder(order)}>Manage documents</button>}
                   {["DRAFT", "SUBMITTED", "QUOTATION_SENT"].includes(order.status) && <button className="customer-text-button compact" type="button" onClick={() => { setCancelOrder(order); setCancelError(""); }}>Cancel order</button>}
                   {order.status !== "DRAFT" && <span className="customer-locked-label">Editing locked</span>}
                 </div>
@@ -408,7 +468,24 @@ export default function CustomerPage() {
 
         {cancelOrder && <div className="customer-dialog-backdrop warning-backdrop"><section className="customer-warning" role="alertdialog" aria-modal="true" aria-labelledby="cancel-warning-title" aria-describedby="cancel-warning-copy"><div className="warning-symbol" aria-hidden="true">!</div><h2 id="cancel-warning-title">Cancel {cancelOrder.orderCode}?</h2><p id="cancel-warning-copy">This will cancel the order. A cancelled order cannot be reopened.</p>{cancelError && <p className="customer-form-error" role="alert">{cancelError}</p>}<div className="customer-form-actions"><button type="button" className="customer-secondary-button" disabled={cancelBusy} onClick={() => setCancelOrder(null)}>Keep order</button><button type="button" className="customer-primary-button danger-button" disabled={cancelBusy} onClick={() => void confirmCancel()}>{cancelBusy ? "Cancelling…" : "Cancel order"}</button></div></section></div>}
 
-        {quoteOrder && <div className="customer-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setQuoteOrder(null); }}><section className="customer-dialog quotation-dialog" role="dialog" aria-modal="true" aria-labelledby="quotation-title"><div className="customer-dialog-header"><div><p className="customer-eyebrow">ORDER {quoteOrder.orderCode}</p><h2 id="quotation-title">Transport bill</h2><p>Quotation sent by the transport team</p></div><button type="button" className="customer-dialog-close" aria-label="Close quotation" onClick={() => setQuoteOrder(null)}>×</button></div><div className="quotation-content">{quotationBusy ? <p role="status">Loading quotation…</p> : quotationError ? <p className="customer-form-error" role="alert">{quotationError}</p> : quotation && <><div className="quotation-line-list">{[...quotation.lineItems].sort((a, b) => a.sequenceNo - b.sequenceNo).map((item) => <div className="quotation-line" key={item.id}><span>{item.description}</span><strong>{formatMoney(item.amount, quotation.currency)}</strong></div>)}</div><div className="quotation-total"><span>Total</span><strong>{formatMoney(quotation.totalAmount, quotation.currency)}</strong></div><div className="quotation-payment-row"><span>Deposit due</span><strong>{formatMoney(quotation.depositAmount, quotation.currency)}</strong></div><div className="quotation-payment-row"><span>Remaining balance</span><strong>{formatMoney(quotation.remainingAmount, quotation.currency)}</strong></div>{quotation.notes && <div className="quotation-notes"><strong>Notes from the transport team</strong><p>{quotation.notes}</p></div>}{quotation.sentAt && <p className="quotation-sent-at">Sent {new Date(quotation.sentAt).toLocaleString()}</p>}</>}</div></section></div>}
+        {quoteOrder && <div className="customer-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setQuoteOrder(null); }}><section className="customer-dialog quotation-dialog" role="dialog" aria-modal="true" aria-labelledby="quotation-title"><div className="customer-dialog-header"><div><p className="customer-eyebrow">ORDER {quoteOrder.orderCode}</p><h2 id="quotation-title">Transport bill</h2><p>Quotation sent by the transport team</p></div><button type="button" className="customer-dialog-close" aria-label="Close quotation" onClick={() => setQuoteOrder(null)}>×</button></div><div className="quotation-content">{quotationBusy ? <p role="status">Loading quotation…</p> : quotationError ? <p className="customer-form-error" role="alert">{quotationError}</p> : quotation && <><div className="quotation-line-list">{[...quotation.lineItems].sort((a, b) => a.sequenceNo - b.sequenceNo).map((item) => <div className="quotation-line" key={item.id}><span>{item.description}</span><strong>{formatMoney(item.amount, quotation.currency)}</strong></div>)}</div><div className="quotation-total"><span>Total</span><strong>{formatMoney(quotation.totalAmount, quotation.currency)}</strong></div><div className="quotation-payment-row"><span>Deposit due</span><strong>{formatMoney(quotation.depositAmount, quotation.currency)}</strong></div><div className="quotation-payment-row"><span>Remaining balance</span><strong>{formatMoney(quotation.remainingAmount, quotation.currency)}</strong></div>{quotation.notes && <div className="quotation-notes"><strong>Notes from the transport team</strong><p>{quotation.notes}</p></div>}{quotation.sentAt && <p className="quotation-sent-at">Sent {new Date(quotation.sentAt).toLocaleString()}</p>}</>}
+            {!preview && quoteOrder.status === "QUOTATION_SENT" && <div className="deposit-checkout-panel" aria-live="polite">
+              <div className="deposit-panel-heading"><div><strong>Deposit payment</strong><span>{depositLoading ? "Checking payment status…" : deposit?.status === "PAID" ? "Payment received" : deposit?.latestAttempt?.providerStatus === "CANCELLED" || deposit?.latestAttempt?.providerStatus === "EXPIRED" ? "Checkout was not completed" : deposit?.status === "PENDING" ? "Payment is awaiting confirmation" : "Pay the deposit to confirm this quotation"}</span></div>{deposit && <span className={`deposit-state ${deposit.status.toLowerCase()}`}>{deposit.status}</span>}</div>
+              {depositError && <p className="customer-form-error" role="alert">{depositError}</p>}
+              <div className="deposit-actions">
+                {deposit && <button type="button" className="customer-secondary-button" disabled={depositLoading || depositBusy} onClick={() => void refreshDepositStatus()}>{depositLoading ? "Checking…" : "Refresh status"}</button>}
+                {deposit?.status !== "PAID" && <button type="button" className="customer-primary-button" disabled={depositBusy || depositLoading} onClick={() => void startDepositCheckout()}>{depositBusy ? "Opening checkout…" : deposit?.latestAttempt?.providerStatus === "CANCELLED" || deposit?.latestAttempt?.providerStatus === "EXPIRED" ? "Retry deposit payment" : "Pay deposit"}</button>}
+              </div>
+              {deposit?.status === "PAID" && <p className="deposit-confirmation">The payment provider has confirmed your deposit. The order will update automatically.</p>}
+            </div>}
+            {preview && <div className="deposit-checkout-panel preview-payment"><strong>Deposit checkout preview</strong><p>Preview mode does not contact the payment service or open a checkout session.</p></div>}
+          </div></section></div>}
+        {documentOrder && <DocumentWorkspace
+          orderCode={documentOrder.orderCode}
+          horses={documentOrder.horseIds.map((id) => horses.find((horse) => horse.id === id)).filter((horse): horse is Horse => Boolean(horse)).map((horse) => ({ id: horse.id, name: horse.name }))}
+          preview={preview}
+          onClose={() => setDocumentOrder(null)}
+        />}
       </div>
     </main>
   );

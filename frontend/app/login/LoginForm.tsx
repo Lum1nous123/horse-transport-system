@@ -48,6 +48,8 @@ export default function LoginForm() {
       const currentUser = await getCurrentUser();
       if (currentUser.role === "LOGISTICS_MANAGER") {
         router.replace("/logistics");
+      } else if (currentUser.role === "TRANSPORT_SPECIALIST") {
+        router.replace("/transport-specialist/review");
       } else if (currentUser.role === "CUSTOMER") {
         router.replace("/customer");
       } else {
