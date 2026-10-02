@@ -117,7 +117,7 @@ The status-audit entity scope is exactly:
 The following architecture-hardening follow-ups are **NON-BLOCKING**:
 
 1. Make DRAFT versus SENT quotation arithmetic and nullability semantics explicit.
-2. Review the semantics of `order_staff_assignments.assigned_by` so it does not accidentally introduce an unapproved TS/FRC assignment workflow.
+2. `order_staff_assignments.assigned_by` records the Logistics Manager who performs the approved mandatory Order-level assignment of exactly one active TS and one active FRC.
 3. Clarify the final status-audit comment so LM RoutePlan return is not incorrectly implied to be part of the FR-020 audit scope.
 4. Remove or redefine the legacy `vehicle_status.ASSIGNED` value in a future
    architecture review so it cannot be mistaken for schedule availability.
