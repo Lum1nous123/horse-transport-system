@@ -70,6 +70,7 @@ class DocumentVersionServiceTest {
 		when(documentRepository.findOwnedByIdForUpdate(DOCUMENT_ID, CUSTOMER_ID))
 				.thenReturn(Optional.of(document));
 		when(document.getId()).thenReturn(DOCUMENT_ID);
+		when(document.getDocumentType()).thenReturn(DocumentType.HORSE_PASSPORT_OR_IDENTIFICATION);
 		when(document.getTransportOrderHorseId()).thenReturn(ORDER_HORSE_ID);
 		when(document.getTransportOrderHorse()).thenReturn(orderHorse);
 		when(orderHorse.getId()).thenReturn(ORDER_HORSE_ID);
@@ -92,6 +93,7 @@ class DocumentVersionServiceTest {
 		assertThat(response.status()).isEqualTo(DocumentVersionStatus.DRAFT);
 		assertThat(response.isCurrent()).isTrue();
 		assertThat(response.expiryDate()).isEqualTo(LocalDate.of(2027, 1, 1));
+		assertThat(response.displayName()).isEqualTo("horse-passport.pdf");
 		verify(storage).upload(any(), eq("application/pdf"), eq(PUBLIC_ID), eq(false));
 		verify(documentRepository, never()).save(any());
 	}

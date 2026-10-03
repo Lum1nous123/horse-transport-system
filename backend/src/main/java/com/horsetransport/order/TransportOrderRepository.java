@@ -30,4 +30,7 @@ public interface TransportOrderRepository extends JpaRepository<TransportOrder, 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select o from TransportOrder o where o.id = :id")
 	Optional<TransportOrder> findByIdForUpdate(@Param("id") UUID id);
+
+	@Query(value = "select nextval('transport_order_code_seq')", nativeQuery = true)
+	long nextOrderCodeValue();
 }

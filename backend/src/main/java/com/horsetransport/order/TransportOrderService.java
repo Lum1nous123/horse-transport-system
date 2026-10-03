@@ -1,12 +1,11 @@
 package com.horsetransport.order;
 
-import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
@@ -223,9 +222,6 @@ public class TransportOrderService {
 	}
 
 	private String generateOrderCode() {
-		UUID uuid = UUID.randomUUID();
-		byte[] bytes = ByteBuffer.allocate(16).putLong(uuid.getMostSignificantBits())
-				.putLong(uuid.getLeastSignificantBits()).array();
-		return "ORD-" + Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+		return String.format(Locale.ROOT, "ORD-%06d", orderRepository.nextOrderCodeValue());
 	}
 }

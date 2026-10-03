@@ -57,12 +57,13 @@ class TransportOrderServiceTest {
 
 	@Test
 	void createsIncompleteDraftWithBackendGeneratedOrderCode() {
+		when(orderRepository.nextOrderCodeValue()).thenReturn(1L);
 		when(orderRepository.save(any(TransportOrder.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		OrderResponse response = service.create(emptyRequest());
 
 		assertThat(response.status()).isEqualTo(OrderStatus.DRAFT);
-		assertThat(response.orderCode()).startsWith("ORD-").hasSizeLessThanOrEqualTo(30);
+		assertThat(response.orderCode()).isEqualTo("ORD-000001");
 		assertThat(response.horseIds()).isEmpty();
 		assertThat(response.originAddress()).isNull();
 	}

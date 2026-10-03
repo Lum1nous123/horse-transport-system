@@ -58,6 +58,7 @@ class DocumentReviewServiceTest {
 		when(currentUserProvider.getCurrentUserId()).thenReturn(TS_ID);
 		when(documentRepository.findByIdForUpdate(DOCUMENT_ID)).thenReturn(Optional.of(document));
 		when(document.getId()).thenReturn(DOCUMENT_ID);
+		when(document.getDocumentType()).thenReturn(DocumentType.HORSE_PASSPORT_OR_IDENTIFICATION);
 		when(document.getTransportOrderHorse()).thenReturn(orderHorse);
 		when(orderHorse.getId()).thenReturn(ORDER_HORSE_ID);
 		when(orderHorse.getTransportOrder()).thenReturn(order);
