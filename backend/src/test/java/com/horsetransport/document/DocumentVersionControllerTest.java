@@ -57,7 +57,8 @@ class DocumentVersionControllerTest {
 		mockMvc.perform(post("/api/v1/documents/{documentId}/versions/{versionId}/submit",
 				DOCUMENT_ID, VERSION_ID)).andExpect(status().isOk());
 		mockMvc.perform(get("/api/v1/documents/{documentId}/versions", DOCUMENT_ID))
-				.andExpect(status().isOk()).andExpect(jsonPath("$[0].id").value(VERSION_ID.toString()));
+				.andExpect(status().isOk()).andExpect(jsonPath("$[0].id").value(VERSION_ID.toString()))
+				.andExpect(jsonPath("$[0].displayName").value("horse-passport.pdf"));
 	}
 
 	@Test
@@ -77,7 +78,7 @@ class DocumentVersionControllerTest {
 
 	private DocumentVersionResponse response() {
 		return new DocumentVersionResponse(VERSION_ID, DOCUMENT_ID, 1, DocumentVersionStatus.DRAFT, true,
-				"https://res.cloudinary.com/test/document.pdf", LocalDate.of(2027, 1, 1),
+				"https://res.cloudinary.com/test/document.pdf", "horse-passport.pdf", LocalDate.of(2027, 1, 1),
 				LocalDateTime.of(2026, 9, 29, 12, 0), null, null, null);
 	}
 }
