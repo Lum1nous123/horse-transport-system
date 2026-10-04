@@ -94,6 +94,17 @@ public class Payment {
 		}
 	}
 
+	void markRefunded(LocalDateTime refundedAt) {
+		if (status == PaymentStatus.REFUNDED) return;
+		if (status != PaymentStatus.PAID) throw new DepositPaymentConflictException("Only a paid Deposit can be refunded");
+		status = PaymentStatus.REFUNDED;
+		this.refundedAt = refundedAt;
+	}
+
+	void restorePaidAfterRefundFailure() {
+		if (status == PaymentStatus.REFUNDED) { status = PaymentStatus.PAID; refundedAt = null; }
+	}
+
 	public UUID getId() { return id; }
 	public UUID getTransportOrderId() { return transportOrderId; }
 	public PaymentType getPaymentType() { return paymentType; }

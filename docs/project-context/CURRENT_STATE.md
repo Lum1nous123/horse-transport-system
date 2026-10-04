@@ -162,6 +162,34 @@ version history, Cloudinary storage compensation, and status audit behavior.
 BE-08 Transport Specialist document review is merged through PR #57. BE-09
 transactional status-audit hardening is merged through PR #58.
 
+BE-10 Logistics Manager Order Staff Assignment is committed and pushed on
+`feature/be-10-lm-order-staff-assignment`; it is not yet recorded as merged to
+`main`. BE-11 Assigned TS Document Phase and Final Confirm is implemented on
+`feature/be-11-assigned-ts-final-confirm`. BE-11 assigned-only inbox,
+ownership checks for TS detail/review/deadline actions, permanent Final Confirm
+lock, and actor/time fields are in the local diff. The existing V1 migration
+already contains the Final Confirm columns, so no additional migration is
+needed. BE-12 deadline evaluation is also in this uncommitted diff: a scheduled,
+clock-controlled scan cancels due Orders with missing, DRAFT, or REJECTED
+mandatory documents; PENDING_REVIEW and all-approved awaiting Final Confirm do
+not cancel. Human clarification confirmed that a still-REJECTED document at
+the deadline does cancel. Cancellation, system audit, and a unique
+`deposit_refunds` intent are saved in one transaction. Customer document writes
+are blocked at or after the deadline. BE-13 local work now adds Stripe
+full-deposit refunds with idempotency and retry scheduling, refund webhook
+handling, Payment refund readback, and Customer Order-scoped in-app refund
+notifications. It adds V2 retry metadata columns to the existing
+`deposit_refunds` table. A focused BE-10–13 backend run on JDK 21 passed 125
+tests (0 failures/errors). The local profile connected to PostgreSQL 17.6;
+Flyway validated both migrations and reported the schema up to date, and
+Hibernate initialized JPA successfully. The deadline and refund scheduled
+queries did not report SQL errors in the captured startup log after the
+deadline query was aligned with the PostgreSQL enum schema. This is startup and
+query evidence, not full PostgreSQL-backed transaction/concurrency coverage;
+that integration verification remains outstanding. BE-11/12/13 are being
+carried on `feature/be-11-assigned-ts-final-confirm` and are not merged to
+`main`.
+
 FE-04 Customer document workspace preview is merged through PR #54. FE-05 TS
 document review workspace preview is merged through PR #55.
 
@@ -214,7 +242,8 @@ workspaces. Browser-connected QA remains outstanding.
 ### NEXT
 
 1. Complete Human Review for FE-02 Logistics Manager workspace in PR #59.
-2. Complete browser-connected validation and QA for the merged frontend flows.
+2. Run PostgreSQL-backed transaction and concurrency checks for BE-10–13.
+3. Complete browser-connected validation and QA for the merged frontend flows.
 
 ### NOT STARTED
 

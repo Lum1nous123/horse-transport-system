@@ -1,0 +1,12 @@
+package com.horsetransport.notification;
+
+public enum NotificationType {
+	TRIP_STARTED,
+	CHECKPOINT_REACHED,
+	WELFARE_UPDATED,
+	ROUTE_LEG_COMPLETED,
+	FINAL_DESTINATION_REACHED,
+	ORDER_DELIVERED,
+	PAYMENT_RESULT,
+	REFUND_RESULT
+}

@@ -5,9 +5,12 @@ import com.horsetransport.document.HorseDocumentRepository;
 import com.horsetransport.document.HorseDocumentVersionRepository;
 import com.horsetransport.audit.StatusAuditLogRepository;
 import com.horsetransport.order.TransportOrderRepository;
+import com.horsetransport.order.OrderStaffAssignmentRepository;
 import com.horsetransport.payment.PaymentAttemptRepository;
+import com.horsetransport.payment.DepositRefundRepository;
 import com.horsetransport.payment.PaymentProviderEventRepository;
 import com.horsetransport.payment.PaymentRepository;
+import com.horsetransport.notification.NotificationRepository;
 import com.horsetransport.quotation.QuotationRepository;
 import com.horsetransport.user.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -37,6 +40,9 @@ class BackendApplicationTests {
 	private TransportOrderRepository transportOrderRepository;
 
 	@MockitoBean
+	private OrderStaffAssignmentRepository orderStaffAssignmentRepository;
+
+	@MockitoBean
 	private StatusAuditLogRepository statusAuditLogRepository;
 
 	@MockitoBean
@@ -49,7 +55,13 @@ class BackendApplicationTests {
 	private PaymentAttemptRepository paymentAttemptRepository;
 
 	@MockitoBean
+	private DepositRefundRepository depositRefundRepository;
+
+	@MockitoBean
 	private PaymentProviderEventRepository paymentProviderEventRepository;
+
+	@MockitoBean
+	private NotificationRepository notificationRepository;
 
 	@MockitoBean
 	private UserRepository userRepository;
