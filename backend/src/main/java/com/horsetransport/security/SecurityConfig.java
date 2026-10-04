@@ -55,6 +55,12 @@ public class SecurityConfig {
 								.hasRole("LOGISTICS_MANAGER")
 						.requestMatchers(HttpMethod.GET, "/api/v1/orders/document-inbox")
 								.hasRole("TRANSPORT_SPECIALIST")
+						.requestMatchers(HttpMethod.GET, "/api/v1/orders/assignment-inbox",
+								"/api/v1/orders/*/assignment-candidates",
+								"/api/v1/orders/*/staff-assignments")
+								.hasRole("LOGISTICS_MANAGER")
+						.requestMatchers(HttpMethod.POST, "/api/v1/orders/*/staff-assignments")
+								.hasRole("LOGISTICS_MANAGER")
 						.requestMatchers(HttpMethod.POST,
 								"/api/v1/documents/{documentId}/versions/{versionId}/approve",
 								"/api/v1/documents/{documentId}/versions/{versionId}/reject")
