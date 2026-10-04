@@ -25,13 +25,16 @@ public class TransportOrderService {
 			OrderStatus.SUBMITTED, OrderStatus.QUOTATION_SENT);
 
 	private final TransportOrderRepository orderRepository;
+	private final OrderStaffAssignmentRepository assignmentRepository;
 	private final HorseRepository horseRepository;
 	private final StatusAuditLogRepository auditLogRepository;
 	private final CurrentUserProvider currentUserProvider;
 
-	public TransportOrderService(TransportOrderRepository orderRepository, HorseRepository horseRepository,
+	public TransportOrderService(TransportOrderRepository orderRepository,
+			OrderStaffAssignmentRepository assignmentRepository, HorseRepository horseRepository,
 			StatusAuditLogRepository auditLogRepository, CurrentUserProvider currentUserProvider) {
 		this.orderRepository = orderRepository;
+		this.assignmentRepository = assignmentRepository;
 		this.horseRepository = horseRepository;
 		this.auditLogRepository = auditLogRepository;
 		this.currentUserProvider = currentUserProvider;
@@ -68,8 +71,8 @@ public class TransportOrderService {
 
 	@Transactional(readOnly = true)
 	public List<DocumentInboxResponse> findTransportSpecialistDocumentInbox() {
-		return orderRepository.findAllByStatusOrderByCreatedAtDesc(OrderStatus.APPROVED).stream()
-				.filter(order -> order.getStatus() == OrderStatus.APPROVED)
+		return assignmentRepository.findActionableDocumentsByStatusAndAssignedTransportSpecialist(
+				OrderStatus.APPROVED, currentUserProvider.getCurrentUserId()).stream()
 				.map(DocumentInboxResponse::from)
 				.toList();
 	}

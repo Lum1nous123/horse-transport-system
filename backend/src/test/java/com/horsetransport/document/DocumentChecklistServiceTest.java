@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -20,6 +21,7 @@ import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderHorse;
 import com.horsetransport.order.TransportOrderRepository;
+import com.horsetransport.order.TransportSpecialistAssignmentGuard;
 import com.horsetransport.security.CurrentUserProvider;
 import com.horsetransport.user.UserRole;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,12 +41,16 @@ class DocumentChecklistServiceTest {
 
 	@Mock private TransportOrderRepository orderRepository;
 	@Mock private HorseDocumentRepository documentRepository;
+	@Mock private HorseDocumentVersionRepository versionRepository;
+	@Mock private TransportSpecialistAssignmentGuard assignmentGuard;
 	@Mock private CurrentUserProvider currentUserProvider;
 	private DocumentChecklistService service;
+	private final List<HorseDocument> checklistDocuments = new ArrayList<>();
 
 	@BeforeEach
 	void setUp() {
-		service = new DocumentChecklistService(orderRepository, documentRepository, currentUserProvider);
+		service = new DocumentChecklistService(orderRepository, documentRepository, versionRepository,
+				assignmentGuard, currentUserProvider);
 	}
 
 	@Test
@@ -177,6 +183,51 @@ class DocumentChecklistServiceTest {
 		when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
 
 		assertThat(service.getChecklist(ORDER_ID).orderId()).isEqualTo(ORDER_ID);
+		verify(assignmentGuard).requireAssignedToCurrentTransportSpecialist(ORDER_ID);
+	}
+
+	@Test
+	void unassignedTransportSpecialistCannotReadDocumentPhaseDetail() {
+		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.TRANSPORT_SPECIALIST);
+		doThrow(new com.horsetransport.order.UnassignedTransportSpecialistException())
+				.when(assignmentGuard).requireAssignedToCurrentTransportSpecialist(ORDER_ID);
+
+		assertThatThrownBy(() -> service.getChecklist(ORDER_ID))
+				.isInstanceOf(com.horsetransport.order.UnassignedTransportSpecialistException.class);
+		verify(orderRepository, never()).findById(ORDER_ID);
+	}
+
+	@Test
+	void finalConfirmPersistsActorAndPermanentLockOnlyWhenAllCurrentDocumentsAreApproved() {
+		TransportOrder order = completeApprovedOrder(1);
+		List<HorseDocumentVersion> versions = approvedVersions(checklistDocuments);
+		when(currentUserProvider.getCurrentUserId()).thenReturn(TS_ID);
+		when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
+		when(versionRepository.findCurrentByHorseDocumentIds(any())).thenReturn(versions);
+
+		DocumentChecklistResponse response = service.finalConfirm(ORDER_ID);
+
+		assertThat(response.documentsFinalConfirmedBy()).isEqualTo(TS_ID);
+		assertThat(response.documentsFinalConfirmedAt()).isNotNull();
+		assertThat(response.documentsLockedAt()).isEqualTo(response.documentsFinalConfirmedAt());
+		assertThat(response.canFinalConfirm()).isFalse();
+		assertThat(order.getDocumentsFinalConfirmedBy()).isEqualTo(TS_ID);
+		verify(orderRepository).saveAndFlush(order);
+
+		assertThatThrownBy(() -> service.finalConfirm(ORDER_ID))
+				.isInstanceOf(DocumentChecklistConflictException.class).hasMessageContaining("already");
+	}
+
+	@Test
+	void finalConfirmRejectsUnapprovedOrMissingCurrentVersionsWithoutLocking() {
+		TransportOrder order = completeApprovedOrder(1);
+		when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
+		when(versionRepository.findCurrentByHorseDocumentIds(any())).thenReturn(List.of());
+
+		assertThatThrownBy(() -> service.finalConfirm(ORDER_ID))
+				.isInstanceOf(DocumentChecklistConflictException.class).hasMessageContaining("APPROVED");
+		assertThat(order.getDocumentsLockedAt()).isNull();
+		verify(orderRepository, never()).saveAndFlush(any());
 	}
 
 	private void assertGeneratedCount(int horseCount, int expectedDocuments) {
@@ -196,12 +247,22 @@ class DocumentChecklistServiceTest {
 
 	private TransportOrder completeApprovedOrder(int horseCount) {
 		TransportOrder order = order(OrderStatus.APPROVED, horseCount);
-		List<HorseDocument> stored = new ArrayList<>();
+		checklistDocuments.clear();
 		for (TransportOrderHorse horse : order.getHorses()) {
-			for (DocumentType type : DocumentType.values()) stored.add(new HorseDocument(horse, type));
+			for (DocumentType type : DocumentType.values()) checklistDocuments.add(new HorseDocument(horse, type));
 		}
-		when(documentRepository.findAllByOrderHorseIds(any())).thenReturn(stored);
+		when(documentRepository.findAllByOrderHorseIds(any())).thenReturn(checklistDocuments);
 		return order;
+	}
+
+	private List<HorseDocumentVersion> approvedVersions(List<HorseDocument> documents) {
+		return documents.stream().map(document -> {
+			HorseDocumentVersion version = new HorseDocumentVersion(document, 1,
+					"https://example.test/document.pdf", null, CUSTOMER_ID);
+			version.submit();
+			version.approve(TS_ID);
+			return version;
+		}).toList();
 	}
 
 	@SuppressWarnings("unchecked")

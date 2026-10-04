@@ -88,6 +88,12 @@ public class TransportOrder {
 	@Column(name = "document_deadline_set_at")
 	private LocalDateTime documentDeadlineSetAt;
 
+	@Column(name = "documents_final_confirmed_by")
+	private UUID documentsFinalConfirmedBy;
+
+	@Column(name = "documents_final_confirmed_at")
+	private LocalDateTime documentsFinalConfirmedAt;
+
 	@Column(name = "documents_locked_at")
 	private LocalDateTime documentsLockedAt;
 
@@ -164,6 +170,12 @@ public class TransportOrder {
 		cancelledAt = LocalDateTime.now();
 	}
 
+	public void cancelForDocumentDeadline(LocalDateTime cancelledAt) {
+		status = OrderStatus.CANCELLED;
+		cancellationReason = null;
+		this.cancelledAt = cancelledAt;
+	}
+
 	void reject(String reason) {
 		status = OrderStatus.REJECTED;
 		rejectionReason = reason.trim();
@@ -203,6 +215,13 @@ public class TransportOrder {
 		documentDeadlineSetAt = LocalDateTime.now();
 	}
 
+	public void finalConfirmDocuments(UUID actorUserId) {
+		LocalDateTime confirmedAt = LocalDateTime.now();
+		documentsFinalConfirmedBy = actorUserId;
+		documentsFinalConfirmedAt = confirmedAt;
+		documentsLockedAt = confirmedAt;
+	}
+
 	void restoreDraft() {
 		status = OrderStatus.DRAFT;
 	}
@@ -239,6 +258,8 @@ public class TransportOrder {
 	public LocalDateTime getDocumentCompletionDeadlineAt() { return documentCompletionDeadlineAt; }
 	public UUID getDocumentDeadlineSetBy() { return documentDeadlineSetBy; }
 	public LocalDateTime getDocumentDeadlineSetAt() { return documentDeadlineSetAt; }
+	public UUID getDocumentsFinalConfirmedBy() { return documentsFinalConfirmedBy; }
+	public LocalDateTime getDocumentsFinalConfirmedAt() { return documentsFinalConfirmedAt; }
 	public LocalDateTime getDocumentsLockedAt() { return documentsLockedAt; }
 	public OrderStatus getStatus() { return status; }
 	public LocalDateTime getCreatedAt() { return createdAt; }

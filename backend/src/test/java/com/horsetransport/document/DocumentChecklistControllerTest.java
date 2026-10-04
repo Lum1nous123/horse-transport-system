@@ -3,6 +3,7 @@ package com.horsetransport.document;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -34,8 +35,11 @@ class DocumentChecklistControllerTest {
 	@Test
 	void exposesChecklistAndDeadlineEndpoints() throws Exception {
 		LocalDateTime deadline = LocalDateTime.of(2026, 10, 15, 17, 0);
-		when(service.getChecklist(ORDER_ID)).thenReturn(new DocumentChecklistResponse(ORDER_ID, null, null, List.of()));
+		when(service.getChecklist(ORDER_ID)).thenReturn(new DocumentChecklistResponse(
+				ORDER_ID, null, null, false, null, null, null, List.of()));
 		when(service.setDeadline(any(), any())).thenReturn(new DocumentDeadlineResponse(ORDER_ID, deadline, deadline));
+		when(service.finalConfirm(ORDER_ID)).thenReturn(new DocumentChecklistResponse(
+				ORDER_ID, null, null, false, UUID.randomUUID(), deadline, deadline, List.of()));
 
 		mockMvc.perform(get("/api/v1/orders/{id}/documents/checklist", ORDER_ID))
 				.andExpect(status().isOk()).andExpect(jsonPath("$.orderId").value(ORDER_ID.toString()));
@@ -44,6 +48,9 @@ class DocumentChecklistControllerTest {
 				.content("{\"documentCompletionDeadlineAt\":\"2026-10-15T17:00:00\"}"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.documentCompletionDeadlineAt").value("2026-10-15T17:00:00"));
+		mockMvc.perform(post("/api/v1/orders/{id}/documents/final-confirm", ORDER_ID))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.documentsFinalConfirmedAt").value("2026-10-15T17:00:00"));
 	}
 
 	@Test

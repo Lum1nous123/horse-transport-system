@@ -13,6 +13,17 @@ public interface OrderStaffAssignmentRepository extends JpaRepository<OrderStaff
 
 	boolean existsByTransportOrderId(UUID transportOrderId);
 
+	boolean existsByTransportOrderIdAndAssignmentRoleAndUserId(UUID transportOrderId,
+			OrderStaffRole assignmentRole, UUID userId);
+
+	@Query("select o from TransportOrder o where o.status = :status and o.documentsLockedAt is null "
+			+ "and exists (select a.id from OrderStaffAssignment a where a.transportOrderId = o.id "
+			+ "and a.assignmentRole = com.horsetransport.order.OrderStaffRole.TRANSPORT_SPECIALIST "
+			+ "and a.userId = :userId) order by o.createdAt desc, o.id asc")
+	@EntityGraph(attributePaths = "horses")
+	List<TransportOrder> findActionableDocumentsByStatusAndAssignedTransportSpecialist(
+			@Param("status") OrderStatus status, @Param("userId") UUID userId);
+
 	@Query("select o from TransportOrder o where o.status = :status "
 			+ "and not exists (select a.id from OrderStaffAssignment a where a.transportOrderId = o.id) "
 			+ "order by o.approvedAt asc, o.id asc")

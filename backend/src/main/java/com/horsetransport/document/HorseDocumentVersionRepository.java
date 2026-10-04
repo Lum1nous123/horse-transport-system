@@ -1,6 +1,7 @@
 package com.horsetransport.document;
 
 import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,4 +22,8 @@ public interface HorseDocumentVersionRepository extends JpaRepository<HorseDocum
 	@Query("select version from HorseDocumentVersion version "
 			+ "where version.horseDocument.transportOrderHorse.id = :orderHorseId and version.current = true")
 	List<HorseDocumentVersion> findCurrentByOrderHorseId(@Param("orderHorseId") UUID orderHorseId);
+
+	@Query("select version from HorseDocumentVersion version "
+			+ "where version.horseDocument.id in :documentIds and version.current = true")
+	List<HorseDocumentVersion> findCurrentByHorseDocumentIds(@Param("documentIds") Collection<UUID> documentIds);
 }

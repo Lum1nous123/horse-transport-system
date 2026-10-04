@@ -14,6 +14,7 @@ import java.util.UUID;
 
 import com.horsetransport.order.OrderNotFoundException;
 import com.horsetransport.order.OrderStatus;
+import com.horsetransport.order.TransportSpecialistAssignmentGuard;
 import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderHorse;
 import com.horsetransport.order.TransportOrderRepository;
@@ -31,12 +32,17 @@ public class DocumentChecklistService implements DocumentPhaseStarter {
 
 	private final TransportOrderRepository orderRepository;
 	private final HorseDocumentRepository documentRepository;
+	private final HorseDocumentVersionRepository versionRepository;
+	private final TransportSpecialistAssignmentGuard assignmentGuard;
 	private final CurrentUserProvider currentUserProvider;
 
 	public DocumentChecklistService(TransportOrderRepository orderRepository,
-			HorseDocumentRepository documentRepository, CurrentUserProvider currentUserProvider) {
+			HorseDocumentRepository documentRepository, HorseDocumentVersionRepository versionRepository,
+			TransportSpecialistAssignmentGuard assignmentGuard, CurrentUserProvider currentUserProvider) {
 		this.orderRepository = orderRepository;
 		this.documentRepository = documentRepository;
+		this.versionRepository = versionRepository;
+		this.assignmentGuard = assignmentGuard;
 		this.currentUserProvider = currentUserProvider;
 	}
 
@@ -77,8 +83,12 @@ public class DocumentChecklistService implements DocumentPhaseStarter {
 	@Transactional
 	public DocumentDeadlineResponse setDeadline(UUID orderId, SetDocumentDeadlineRequest request) {
 		TransportOrder order = orderRepository.findByIdForUpdate(orderId).orElseThrow(OrderNotFoundException::new);
+		assignmentGuard.requireAssignedToCurrentTransportSpecialist(orderId);
 		if (order.getStatus() != OrderStatus.APPROVED) {
 			throw new DocumentChecklistConflictException("Order must be APPROVED to set its document deadline");
+		}
+		if (order.getDocumentsLockedAt() != null) {
+			throw new DocumentChecklistConflictException("Document Phase is permanently locked");
 		}
 		List<TransportOrderHorse> orderHorses = order.getHorses();
 		ensureComplete(orderHorses, findDocuments(orderHorses));
@@ -96,11 +106,35 @@ public class DocumentChecklistService implements DocumentPhaseStarter {
 				order.getDocumentDeadlineSetAt());
 	}
 
+	@Transactional
+	public DocumentChecklistResponse finalConfirm(UUID orderId) {
+		TransportOrder order = orderRepository.findByIdForUpdate(orderId).orElseThrow(OrderNotFoundException::new);
+		assignmentGuard.requireAssignedToCurrentTransportSpecialist(orderId);
+		if (order.getStatus() != OrderStatus.APPROVED) {
+			throw new DocumentChecklistConflictException("Order must be APPROVED to Final Confirm documents");
+		}
+		if (order.getDocumentsLockedAt() != null || order.getDocumentsFinalConfirmedAt() != null) {
+			throw new DocumentChecklistConflictException("Document Phase has already been permanently locked");
+		}
+
+		List<TransportOrderHorse> orderHorses = order.getHorses();
+		List<HorseDocument> documents = findDocuments(orderHorses);
+		ensureComplete(orderHorses, documents);
+		if (!allMandatoryDocumentsApproved(documents)) {
+			throw new DocumentChecklistConflictException("All mandatory current documents must be APPROVED");
+		}
+
+		order.finalConfirmDocuments(currentUserProvider.getCurrentUserId());
+		orderRepository.saveAndFlush(order);
+		return toResponse(order, orderHorses, documents);
+	}
+
 	private TransportOrder findVisibleOrder(UUID orderId) {
 		if (currentUserProvider.getCurrentUserRole() == UserRole.CUSTOMER) {
 			return orderRepository.findByIdAndCustomerId(orderId, currentUserProvider.getCurrentUserId())
 					.orElseThrow(OrderNotFoundException::new);
 		}
+		assignmentGuard.requireAssignedToCurrentTransportSpecialist(orderId);
 		return orderRepository.findById(orderId).orElseThrow(OrderNotFoundException::new);
 	}
 
@@ -126,6 +160,14 @@ public class DocumentChecklistService implements DocumentPhaseStarter {
 				&& documents.size() == orderHorses.size() * MANDATORY_TYPES.size();
 	}
 
+	private boolean allMandatoryDocumentsApproved(List<HorseDocument> documents) {
+		if (documents.isEmpty()) return false;
+		List<HorseDocumentVersion> currentVersions = versionRepository.findCurrentByHorseDocumentIds(
+				documents.stream().map(HorseDocument::getId).toList());
+		return currentVersions.size() == documents.size()
+				&& currentVersions.stream().allMatch(version -> version.getStatus() == DocumentVersionStatus.APPROVED);
+	}
+
 	private void ensureComplete(List<TransportOrderHorse> orderHorses, List<HorseDocument> documents) {
 		if (!isComplete(orderHorses, documents)) {
 			throw new DocumentChecklistConflictException("Document checklist is incomplete");
@@ -147,8 +189,12 @@ public class DocumentChecklistService implements DocumentPhaseStarter {
 										document.getDocumentType(), true))
 								.toList()))
 				.toList();
+		boolean locked = order.getDocumentsLockedAt() != null;
+		boolean canFinalConfirm = order.getStatus() == OrderStatus.APPROVED && !locked
+				&& allMandatoryDocumentsApproved(documents);
 		return new DocumentChecklistResponse(order.getId(), order.getDocumentCompletionDeadlineAt(),
-				order.getDocumentDeadlineSetAt(), horses);
+				order.getDocumentDeadlineSetAt(), canFinalConfirm, order.getDocumentsFinalConfirmedBy(),
+				order.getDocumentsFinalConfirmedAt(), order.getDocumentsLockedAt(), horses);
 	}
 
 	private LocalDateTime normalize(LocalDateTime timestamp) {

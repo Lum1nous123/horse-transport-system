@@ -17,6 +17,7 @@ import com.horsetransport.order.InvalidOrderHorsesException;
 import com.horsetransport.order.InvalidOrderStaffAssignmentException;
 import com.horsetransport.order.InvalidOrderTransitionException;
 import com.horsetransport.order.OrderStaffAssignmentConflictException;
+import com.horsetransport.order.UnassignedTransportSpecialistException;
 import com.horsetransport.order.InvalidRejectionReasonException;
 import com.horsetransport.order.OrderNotEditableException;
 import com.horsetransport.order.OrderNotFoundException;
@@ -161,6 +162,12 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ApiError> handleInvalidOrderStaffAssignment(
 			InvalidOrderStaffAssignmentException exception) {
 		return error(HttpStatus.BAD_REQUEST, "INVALID_ORDER_STAFF_ASSIGNMENT", exception.getMessage());
+	}
+
+	@ExceptionHandler(UnassignedTransportSpecialistException.class)
+	public ResponseEntity<ApiError> handleUnassignedTransportSpecialist(
+			UnassignedTransportSpecialistException exception) {
+		return error(HttpStatus.FORBIDDEN, "UNASSIGNED_TRANSPORT_SPECIALIST", exception.getMessage());
 	}
 
 	@ExceptionHandler({InvalidOrderHorsesException.class, InvalidRejectionReasonException.class,

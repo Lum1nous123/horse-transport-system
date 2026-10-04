@@ -44,6 +44,7 @@ class TransportOrderServiceTest {
 	private static final UUID LM_ID = UUID.fromString("44444444-4444-4444-4444-444444444444");
 
 	@Mock private TransportOrderRepository orderRepository;
+	@Mock private OrderStaffAssignmentRepository assignmentRepository;
 	@Mock private HorseRepository horseRepository;
 	@Mock private StatusAuditLogRepository auditLogRepository;
 	@Mock private CurrentUserProvider currentUserProvider;
@@ -214,11 +215,8 @@ class TransportOrderServiceTest {
 		LocalDateTime deadline = LocalDateTime.of(2026, 10, 15, 17, 0);
 		TransportOrder approved = order(OrderStatus.APPROVED);
 		approved.setDocumentCompletionDeadline(deadline, UUID.randomUUID());
-		List<TransportOrder> orders = List.of(
-				order(OrderStatus.DRAFT), order(OrderStatus.SUBMITTED), order(OrderStatus.QUOTATION_SENT),
-				approved, order(OrderStatus.READY_TO_SHIP), order(OrderStatus.IN_PROGRESS),
-				order(OrderStatus.DELIVERED), order(OrderStatus.CANCELLED), order(OrderStatus.REJECTED));
-		when(orderRepository.findAllByStatusOrderByCreatedAtDesc(OrderStatus.APPROVED)).thenReturn(orders);
+		when(assignmentRepository.findActionableDocumentsByStatusAndAssignedTransportSpecialist(
+				OrderStatus.APPROVED, CUSTOMER_ID)).thenReturn(List.of(approved));
 
 		List<DocumentInboxResponse> result = service.findTransportSpecialistDocumentInbox();
 
@@ -226,7 +224,8 @@ class TransportOrderServiceTest {
 		assertThat(result.getFirst().status()).isEqualTo(OrderStatus.APPROVED);
 		assertThat(result.getFirst().documentCompletionDeadlineAt()).isEqualTo(deadline);
 		assertThat(result.getFirst().documentDeadlineSetAt()).isNotNull();
-		verify(orderRepository).findAllByStatusOrderByCreatedAtDesc(OrderStatus.APPROVED);
+		verify(assignmentRepository).findActionableDocumentsByStatusAndAssignedTransportSpecialist(
+				OrderStatus.APPROVED, CUSTOMER_ID);
 		verify(auditLogRepository, never()).saveAndFlush(any());
 	}
 
