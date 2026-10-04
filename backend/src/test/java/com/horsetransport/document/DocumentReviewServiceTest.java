@@ -21,6 +21,7 @@ import com.horsetransport.order.OrderHorseDocumentStatus;
 import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderHorse;
+import com.horsetransport.order.TransportSpecialistAssignmentGuard;
 import com.horsetransport.security.CurrentUserProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 class DocumentReviewServiceTest {
 
 	private static final UUID TS_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
+	private static final UUID ORDER_ID = UUID.fromString("99999999-9999-9999-9999-999999999999");
 	private static final UUID DOCUMENT_ID = UUID.fromString("22222222-2222-2222-2222-222222222222");
 	private static final UUID ORDER_HORSE_ID = UUID.fromString("33333333-3333-3333-3333-333333333333");
 	private static final UUID OTHER_DOCUMENT_ID = UUID.fromString("44444444-4444-4444-4444-444444444444");
@@ -45,6 +47,8 @@ class DocumentReviewServiceTest {
 	@Mock private HorseDocumentVersionRepository versionRepository;
 	@Mock private StatusAuditLogRepository auditRepository;
 	@Mock private CurrentUserProvider currentUserProvider;
+	@Mock private TransportSpecialistAssignmentGuard assignmentGuard;
+	@Mock private DocumentDeadlineService deadlineService;
 	@Mock private HorseDocument document;
 	@Mock private TransportOrderHorse orderHorse;
 	@Mock private TransportOrder order;
@@ -54,13 +58,14 @@ class DocumentReviewServiceTest {
 	@BeforeEach
 	void setUp() {
 		service = new DocumentReviewService(documentRepository, versionRepository, auditRepository,
-				currentUserProvider);
+				assignmentGuard, currentUserProvider, deadlineService);
 		when(currentUserProvider.getCurrentUserId()).thenReturn(TS_ID);
 		when(documentRepository.findByIdForUpdate(DOCUMENT_ID)).thenReturn(Optional.of(document));
 		when(document.getId()).thenReturn(DOCUMENT_ID);
 		when(document.getTransportOrderHorse()).thenReturn(orderHorse);
 		when(orderHorse.getId()).thenReturn(ORDER_HORSE_ID);
 		when(orderHorse.getTransportOrder()).thenReturn(order);
+		when(order.getId()).thenReturn(ORDER_ID);
 		when(orderHorse.getDocumentStatus()).thenReturn(OrderHorseDocumentStatus.UNDER_REVIEW);
 		when(order.getStatus()).thenReturn(OrderStatus.APPROVED);
 		when(versionRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -76,6 +81,7 @@ class DocumentReviewServiceTest {
 		DocumentVersionResponse response = service.approve(DOCUMENT_ID, pending.getId());
 
 		assertThat(response.status()).isEqualTo(DocumentVersionStatus.APPROVED);
+		verify(assignmentGuard).requireAssignedToCurrentTransportSpecialist(ORDER_ID);
 		assertThat(pending.getReviewedBy()).isEqualTo(TS_ID);
 		assertThat(pending.getReviewedAt()).isNotNull();
 		assertThat(pending.getRejectionReason()).isNull();
@@ -102,6 +108,7 @@ class DocumentReviewServiceTest {
 
 		assertThat(response.status()).isEqualTo(DocumentVersionStatus.REJECTED);
 		assertThat(response.rejectionReason()).isEqualTo("Expired certificate");
+		verify(deadlineService).handlePostDeadlineRejection(ORDER_ID);
 		assertThat(pending.getReviewedBy()).isEqualTo(TS_ID);
 		verify(orderHorse).markDocumentsNeedingRevision();
 		ArgumentCaptor<StatusAuditLog> audits = ArgumentCaptor.forClass(StatusAuditLog.class);

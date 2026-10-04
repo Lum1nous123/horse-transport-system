@@ -1,7 +1,9 @@
 package com.horsetransport.document;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -13,6 +15,7 @@ import com.horsetransport.order.OrderHorseDocumentStatus;
 import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderHorse;
+import com.horsetransport.order.TransportSpecialistAssignmentGuard;
 import com.horsetransport.security.CurrentUserProvider;
 import com.horsetransport.user.UserRole;
 import org.slf4j.Logger;
@@ -35,16 +38,21 @@ public class DocumentVersionService {
 	private final HorseDocumentVersionRepository versionRepository;
 	private final StatusAuditLogRepository auditRepository;
 	private final CurrentUserProvider currentUserProvider;
+	private final TransportSpecialistAssignmentGuard assignmentGuard;
 	private final DocumentStorage storage;
+	private final Clock clock;
 
 	public DocumentVersionService(HorseDocumentRepository documentRepository,
 			HorseDocumentVersionRepository versionRepository, StatusAuditLogRepository auditRepository,
-			CurrentUserProvider currentUserProvider, DocumentStorage storage) {
+			CurrentUserProvider currentUserProvider, TransportSpecialistAssignmentGuard assignmentGuard,
+			DocumentStorage storage, Clock clock) {
 		this.documentRepository = documentRepository;
 		this.versionRepository = versionRepository;
 		this.auditRepository = auditRepository;
 		this.currentUserProvider = currentUserProvider;
+		this.assignmentGuard = assignmentGuard;
 		this.storage = storage;
+		this.clock = clock;
 	}
 
 	@Transactional
@@ -177,6 +185,8 @@ public class DocumentVersionService {
 		if (transportSpecialist) {
 			HorseDocument document = documentRepository.findById(documentId)
 					.orElseThrow(HorseDocumentNotFoundException::new);
+			assignmentGuard.requireAssignedToCurrentTransportSpecialist(
+					document.getTransportOrderHorse().getTransportOrder().getId());
 			ensureActiveDocumentPhase(document);
 		}
 		else {
@@ -204,6 +214,11 @@ public class DocumentVersionService {
 		TransportOrder order = document.getTransportOrderHorse().getTransportOrder();
 		if (order.getStatus() != OrderStatus.APPROVED || order.getDocumentsLockedAt() != null) {
 			throw new DocumentVersionConflictException("Order is not in an active document phase");
+		}
+		LocalDateTime deadline = order.getDocumentCompletionDeadlineAt();
+		if (currentUserProvider.getCurrentUserRole() == UserRole.CUSTOMER && deadline != null
+				&& !LocalDateTime.now(clock).isBefore(deadline)) {
+			throw new DocumentVersionConflictException("Document submission deadline has passed");
 		}
 	}
 
