@@ -414,7 +414,7 @@ export default function LogisticsPage() {
         <Link className="customer-brand" href="/" aria-label="Horse Transport System home">
           <span className="customer-brand-mark" aria-hidden="true">HT</span><span>Horse Transport System</span>
         </Link>
-        <div className="customer-topbar-actions"><span>Logistics workspace</span><button type="button" className="customer-link-button" onClick={signOut}>Sign out</button></div>
+        <div className="customer-topbar-actions"><span>Logistics workspace</span><Link className="logistics-workspace-link" href={preview ? "/logistics/assignments?preview=1" : "/logistics/assignments"}>Staff Assignment</Link><button type="button" className="customer-link-button" onClick={signOut}>Sign out</button></div>
       </header>
       <div className="customer-content logistics-content">
         {preview && <div className="customer-preview-banner" role="status"><strong>Preview mode</strong><span>Sample data only. Changes stay in this tab and are not sent to the backend.</span></div>}
