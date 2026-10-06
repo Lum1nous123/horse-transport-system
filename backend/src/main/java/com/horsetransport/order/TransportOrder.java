@@ -49,6 +49,9 @@ public class TransportOrder {
 
 	@Column(name = "requested_departure_at")
 	private LocalDateTime requestedDepartureAt;
+	
+	@Column(name = "frc_eligible", nullable = false)
+    private boolean frcEligible = false;
 
 	@Enumerated(EnumType.STRING)
 	@JdbcTypeCode(SqlTypes.NAMED_ENUM)
@@ -203,6 +206,10 @@ public class TransportOrder {
 		documentDeadlineSetAt = LocalDateTime.now();
 	}
 
+	public void openFrcEligibility() {
+	frcEligible = true;
+   }
+
 	void restoreDraft() {
 		status = OrderStatus.DRAFT;
 	}
@@ -240,6 +247,7 @@ public class TransportOrder {
 	public UUID getDocumentDeadlineSetBy() { return documentDeadlineSetBy; }
 	public LocalDateTime getDocumentDeadlineSetAt() { return documentDeadlineSetAt; }
 	public LocalDateTime getDocumentsLockedAt() { return documentsLockedAt; }
+	public boolean isFrcEligible() { return frcEligible; }
 	public OrderStatus getStatus() { return status; }
 	public LocalDateTime getCreatedAt() { return createdAt; }
 	public LocalDateTime getUpdatedAt() { return updatedAt; }
