@@ -1,154 +1,212 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
-import type { FormEvent } from "react";
-import { clearAccessToken, getAccessToken } from "@/lib/auth";
-import { apiFetch, setDocumentDeadline } from "@/lib/api";
-import type { DocumentDeadlineResponse } from "@/lib/api";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import TransportSpecialistWorkspaceFrame from "@/components/TransportSpecialistWorkspaceFrame";
+import {
+  transportSpecialistWorkspaceService,
+  type AssignedSpecialistOrderSummary,
+} from "@/lib/transport-specialist-workspace/service";
+import { useTransportSpecialistAccess } from "@/lib/transport-specialist-workspace/use-specialist-access";
 
-type DocumentOrder = {
-  id: string;
-  orderCode: string;
-  status: "APPROVED";
-  originAddress?: string | null;
-  originCountry?: string | null;
-  destinationAddress?: string | null;
-  destinationCountry?: string | null;
-  requestedDepartureAt?: string | null;
-  horseCount: number;
-  documentCompletionDeadlineAt?: string | null;
-  documentDeadlineSetAt?: string | null;
-  createdAt?: string | null;
-};
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
 
 export default function TransportSpecialistPage() {
-  const router = useRouter();
-  const [orders, setOrders] = useState<DocumentOrder[]>([]);
+  const {
+    state: accessState,
+    preview,
+    previewSpecialistId,
+    previewSpecialistName,
+    message: accessMessage,
+  } = useTransportSpecialistAccess();
+  const [actionRequired, setActionRequired] = useState<AssignedSpecialistOrderSummary[]>([]);
+  const [finalConfirmed, setFinalConfirmed] = useState<AssignedSpecialistOrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-  const [selectedOrder, setSelectedOrder] = useState<DocumentOrder | null>(null);
-  const [deadline, setDeadline] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState("");
-  const [feedback, setFeedback] = useState("");
+  const [error, setError] = useState("");
 
-  const loadOrders = useCallback(async () => {
-    const token = getAccessToken();
-    if (!token) {
-      router.replace("/login?next=/transport-specialist");
-      return;
-    }
-    setLoading(true); setLoadError("");
+  const loadQueue = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
-      const response = await apiFetch("/api/v1/orders/document-inbox", {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      });
-      if (response.status === 401) {
-        clearAccessToken();
-        router.replace("/login?next=/transport-specialist");
-        return;
-      }
-      if (!response.ok) throw new Error("We couldn't load the document work queue. Check that you signed in with a Transport Specialist account.");
-      setOrders(await response.json() as DocumentOrder[]);
-    } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "We couldn't load the document work queue.");
-    } finally { setLoading(false); }
-  }, [router]);
+      const queues = await transportSpecialistWorkspaceService.listAssignedOrders();
+      setActionRequired(queues.actionRequired);
+      setFinalConfirmed(queues.finalConfirmed);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "We couldn't load your assigned Orders.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => { void loadOrders(); }, 0);
+    if (accessState !== "allowed") return;
+    const timer = window.setTimeout(() => { void loadQueue(); }, 0);
     return () => window.clearTimeout(timer);
-  }, [loadOrders]);
+  }, [accessState, loadQueue]);
 
-  function openDeadlineEditor(order: DocumentOrder) {
-    setSelectedOrder(order);
-    setDeadline("");
-    setFormError("");
-    setFeedback("");
+  const awaitingReview = useMemo(
+    () => actionRequired.reduce((total, order) => total + order.progress.pendingReview, 0),
+    [actionRequired],
+  );
+
+  if (accessState === "checking") {
+    return <main className="customer-page assignment-access-state"><p role="status">Checking Transport Specialist access…</p></main>;
   }
 
-  async function saveDeadline(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selectedOrder || !deadline) return;
-    setSaving(true); setFormError(""); setFeedback("");
-    try {
-      const token = getAccessToken();
-      if (!token) throw new Error("Your session has expired. Please sign in again.");
-      const response = await setDocumentDeadline(selectedOrder.id, `${deadline}:00`, token);
-      if (response.status === 401) {
-        clearAccessToken(); router.replace("/login?next=/transport-specialist"); return;
-      }
-      if (!response.ok) {
-        let message = "We couldn't set this deadline. Please refresh the work queue and try again.";
-        try {
-          const error = await response.json() as { message?: string };
-          if (error.message) message = error.message;
-        } catch { /* Keep the useful default message. */ }
-        throw new Error(message);
-      }
-      const result = await response.json() as DocumentDeadlineResponse;
-      setOrders((current) => current.map((order) => order.id === selectedOrder.id
-        ? { ...order, documentCompletionDeadlineAt: result.documentCompletionDeadlineAt, documentDeadlineSetAt: result.documentDeadlineSetAt }
-        : order));
-      setSelectedOrder((current) => current ? {
-        ...current,
-        documentCompletionDeadlineAt: result.documentCompletionDeadlineAt,
-        documentDeadlineSetAt: result.documentDeadlineSetAt,
-      } : null);
-      setFeedback("Document deadline set.");
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : "We couldn't set the document deadline.");
-    } finally { setSaving(false); }
+  if (accessState === "forbidden" || accessState === "failed") {
+    return (
+      <main className="customer-page assignment-access-state">
+        <section className="assignment-access-card" role={accessState === "forbidden" ? "alert" : undefined}>
+          <p className="customer-eyebrow">WORKSPACE UNAVAILABLE</p>
+          <h1>{accessState === "forbidden" ? "Access denied" : "We couldn't verify access"}</h1>
+          <p>{accessMessage}</p>
+          <Link className="customer-primary-button" href="/login">Return to sign in</Link>
+        </section>
+      </main>
+    );
   }
 
-  function signOut() { clearAccessToken(); router.replace("/login"); }
+  const hasOrders = actionRequired.length > 0 || finalConfirmed.length > 0;
 
   return (
-    <main className="customer-page specialist-page">
-      <header className="customer-topbar">
-        <Link className="customer-brand" href="/" aria-label="Horse Transport System home">
-          <span className="customer-brand-mark" aria-hidden="true">HT</span><span>Horse Transport System</span>
-        </Link>
-        <div className="customer-topbar-actions"><span>Transport Specialist</span><button type="button" className="customer-link-button" onClick={signOut}>Sign out</button></div>
+    <TransportSpecialistWorkspaceFrame preview={preview} previewSpecialistId={previewSpecialistId} previewSpecialistName={previewSpecialistName}>
+      <header className="ts-heading-row ts-queue-heading">
+        <div>
+          <p className="customer-eyebrow">DOCUMENT PHASE</p>
+          <h1>Assigned Orders</h1>
+          <p className="customer-intro">Review only the Orders assigned to you and carry each document phase through Final Confirm.</p>
+        </div>
+        <button className="customer-secondary-button ts-refresh-button" type="button" disabled={loading} onClick={() => void loadQueue()}>
+          <span aria-hidden="true">↻</span>
+          {loading ? "Refreshing…" : "Refresh queue"}
+        </button>
       </header>
 
-      <div className="customer-content">
-        <div className="customer-heading-row specialist-heading">
-          <div><p className="customer-eyebrow">DOCUMENT PHASE</p><h1>Document deadlines</h1><p className="customer-intro">Set one completion deadline for each approved transport order.</p></div>
-          <button className="customer-secondary-button" type="button" onClick={() => void loadOrders()} disabled={loading}>{loading ? "Refreshing…" : "Refresh queue"}</button>
+      {error && (
+        <div className="customer-alert" role="alert">
+          <span>{error}</span>
+          <button type="button" onClick={() => void loadQueue()}>Try again</button>
         </div>
+      )}
 
-        {feedback && <p className="customer-feedback" role="status">{feedback}</p>}
-        {loadError && <div className="customer-alert" role="alert"><span>{loadError}</span><button type="button" onClick={() => void loadOrders()}>Try again</button></div>}
-        {loading ? <div className="customer-loading" role="status">Loading document work queue…</div> : !loadError && orders.length === 0 ? <div className="customer-empty"><div className="customer-empty-icon" aria-hidden="true">✓</div><div><h3>No approved orders need a deadline</h3><p>Orders will appear here after their deposit has been confirmed.</p></div></div> : !loadError && <section className="customer-section" aria-labelledby="specialist-orders-heading">
-          <div className="customer-section-heading"><div><h2 id="specialist-orders-heading">Approved orders</h2><p>Each order has one deadline shared by all horses in that order.</p></div><span className="customer-count">{orders.length} {orders.length === 1 ? "order" : "orders"}</span></div>
-          <div className="customer-order-list specialist-order-list">
-            {orders.map((order) => <article className="customer-order-row specialist-order-row" key={order.id}>
-              <div className="order-route-icon" aria-hidden="true">✓</div>
-              <div className="customer-order-main"><div className="customer-order-title"><h3>{order.orderCode}</h3><span className="order-status status-approved">APPROVED</span></div>
-                <p>{[order.originAddress || order.originCountry || "Origin", order.destinationAddress || order.destinationCountry || "Destination"].join(" → ")}</p>
-                <span className="customer-order-subline">{order.horseCount} {order.horseCount === 1 ? "horse" : "horses"}{order.requestedDepartureAt ? ` · Departure ${new Date(order.requestedDepartureAt).toLocaleString()}` : ""}</span>
-              </div>
-              <div className="specialist-deadline-action">
-                {order.documentCompletionDeadlineAt ? <div className="specialist-deadline-value"><small>Deadline set</small><strong>{new Date(order.documentCompletionDeadlineAt).toLocaleString()}</strong></div> : <span className="deadline-missing">Deadline not set</span>}
-                <button className={order.documentCompletionDeadlineAt ? "customer-secondary-button compact" : "customer-primary-button compact"} type="button" disabled={Boolean(order.documentCompletionDeadlineAt)} onClick={() => openDeadlineEditor(order)}>
-                  {order.documentCompletionDeadlineAt ? "Set once only" : "Set deadline"}
-                </button>
-              </div>
-            </article>)}
-          </div>
-        </section>}
+      {loading ? (
+        <div className="ts-queue-skeleton" role="status" aria-label="Loading assigned Orders">
+          <span /><span /><span />
+        </div>
+      ) : !error && !hasOrders ? (
+        <div className="customer-empty ts-empty-state">
+          <div className="customer-empty-icon" aria-hidden="true">✓</div>
+          <div><h2>No assigned Orders</h2><p>Orders will appear here after a Logistics Manager assigns them to you.</p></div>
+        </div>
+      ) : !error && (
+        <div className="ts-triage-dashboard">
+          <dl className="ts-queue-summary" aria-label="Assigned Order summary">
+            <div className="is-attention"><dt>Action required</dt><dd>{actionRequired.length}</dd></div>
+            <div><dt>Awaiting review</dt><dd>{awaitingReview}</dd></div>
+            <div><dt>Final confirmed</dt><dd>{finalConfirmed.length}</dd></div>
+          </dl>
 
-        {selectedOrder && <div className="customer-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) setSelectedOrder(null); }}><section className="customer-dialog deadline-dialog" role="dialog" aria-modal="true" aria-labelledby="deadline-title"><div className="customer-dialog-header"><div><p className="customer-eyebrow">ORDER {selectedOrder.orderCode}</p><h2 id="deadline-title">Set document deadline</h2><p>One deadline applies to all {selectedOrder.horseCount} {selectedOrder.horseCount === 1 ? "horse" : "horses"} in this order. It cannot be changed after saving.</p></div><button type="button" className="customer-dialog-close" aria-label="Close deadline form" disabled={saving} onClick={() => setSelectedOrder(null)}>×</button></div>
-            {selectedOrder.documentCompletionDeadlineAt ? <div className="deadline-confirmed"><strong>Deadline set</strong><span>{new Date(selectedOrder.documentCompletionDeadlineAt).toLocaleString()}</span><button type="button" className="customer-secondary-button" onClick={() => setSelectedOrder(null)}>Done</button></div> : <form className="customer-form deadline-form" onSubmit={(event) => void saveDeadline(event)}>
-              <label className="customer-field"><span>Document completion deadline <b aria-hidden="true">*</b></span><input type="datetime-local" required value={deadline} onChange={(event) => setDeadline(event.target.value)} /></label>
-              {formError && <p className="customer-form-error" role="alert">{formError}</p>}
-              <div className="customer-form-actions"><button type="button" className="customer-text-button" disabled={saving} onClick={() => setSelectedOrder(null)}>Cancel</button><button type="submit" className="customer-primary-button" disabled={saving || !deadline}>{saving ? "Saving deadline…" : "Set deadline"}</button></div>
-            </form>}
-          </section></div>}
+          <section className="ts-attention-section" aria-labelledby="ts-attention-heading">
+            <div className="ts-dashboard-section-heading">
+              <div>
+                <h2 id="ts-attention-heading">Needs your attention</h2>
+                <p>Continue the deadline, document review, or Final Confirm work for these assigned Orders.</p>
+              </div>
+              <span>{actionRequired.length} {actionRequired.length === 1 ? "Order" : "Orders"}</span>
+            </div>
+            {actionRequired.length === 0 ? (
+              <div className="ts-dashboard-empty"><strong>You&apos;re all caught up.</strong><span>No assigned Orders currently need action.</span></div>
+            ) : (
+              <div className="ts-attention-list">
+                {actionRequired.map((order) => <ActionOrderCard key={order.id} order={order} preview={preview} previewSpecialistId={previewSpecialistId} />)}
+              </div>
+            )}
+          </section>
+
+          <section className="ts-completed-section" aria-labelledby="ts-completed-heading">
+            <div className="ts-dashboard-section-heading">
+              <div>
+                <h2 id="ts-completed-heading">Recently completed</h2>
+                <p>Final Confirmed document phases remain available as locked, read-only records.</p>
+              </div>
+              <span>{finalConfirmed.length} {finalConfirmed.length === 1 ? "Record" : "Records"}</span>
+            </div>
+            {finalConfirmed.length === 0 ? (
+              <div className="ts-dashboard-empty"><strong>No completed records yet.</strong><span>Final Confirmed Orders will remain available here.</span></div>
+            ) : (
+              <CompletedOrdersTable orders={finalConfirmed} preview={preview} previewSpecialistId={previewSpecialistId} />
+            )}
+          </section>
+        </div>
+      )}
+    </TransportSpecialistWorkspaceFrame>
+  );
+}
+
+function ActionOrderCard({ order, preview, previewSpecialistId }: { order: AssignedSpecialistOrderSummary; preview: boolean; previewSpecialistId: string }) {
+  const previewSuffix = preview ? `?preview=1&specialistId=${encodeURIComponent(previewSpecialistId)}` : "";
+  const progressPercent = order.progress.total === 0 ? 0 : Math.round((order.progress.approved / order.progress.total) * 100);
+  const stateLabel = order.finalConfirmationStatus === "ELIGIBLE"
+    ? "Ready for Final Confirm"
+    : order.progress.pendingReview > 0
+      ? `${order.progress.pendingReview} awaiting review`
+      : "Documents in progress";
+
+  return (
+    <article className="ts-attention-card">
+      <div className="ts-attention-card-topline">
+        <div className="ts-order-code-line">
+          <h3>{order.orderCode}</h3>
+          <span className={`ts-state-badge ${order.finalConfirmationStatus === "ELIGIBLE" ? "is-eligible" : ""}`}>{stateLabel}</span>
+        </div>
+        <Link className="customer-primary-button ts-open-order-button" href={`/transport-specialist/orders/${order.id}${previewSuffix}`}>Open Order <span aria-hidden="true">→</span></Link>
       </div>
-    </main>
+      <div className="ts-attention-card-body">
+        <div className="ts-attention-route">
+          <span>Route</span>
+          <strong>{order.origin} <b aria-hidden="true">→</b> {order.destination}</strong>
+          <small>{order.horseCount} {order.horseCount === 1 ? "horse" : "horses"} · {order.transportMode} · Departure {formatDateTime(order.requestedDepartureAt)}</small>
+        </div>
+        <div className="ts-attention-progress">
+          <div><span>Documents approved</span><strong>{order.progress.approved}/{order.progress.total}</strong></div>
+          <progress value={order.progress.approved} max={order.progress.total || 1} aria-label={`${progressPercent}% of required documents approved`} />
+          <small>{order.documentCompletionDeadlineAt ? `Deadline ${formatDateTime(order.documentCompletionDeadlineAt)}` : "Deadline not set"}</small>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function CompletedOrdersTable({ orders, preview, previewSpecialistId }: { orders: AssignedSpecialistOrderSummary[]; preview: boolean; previewSpecialistId: string }) {
+  const previewSuffix = preview ? `?preview=1&specialistId=${encodeURIComponent(previewSpecialistId)}` : "";
+
+  return (
+    <div className="ts-completed-table-wrap">
+      <table className="ts-completed-table">
+        <thead>
+          <tr><th scope="col">Order</th><th scope="col">Route</th><th scope="col">Deadline</th><th scope="col">Completed</th><th scope="col">Status</th><th scope="col"><span className="sr-only">Action</span></th></tr>
+        </thead>
+        <tbody>
+          {orders.map((order) => (
+            <tr key={order.id}>
+              <td data-label="Order"><strong>{order.orderCode}</strong></td>
+              <td data-label="Route"><strong>{order.origin} <b aria-hidden="true">→</b> {order.destination}</strong><small>{order.horseCount} {order.horseCount === 1 ? "horse" : "horses"} · {order.transportMode} · Departure {formatDateTime(order.requestedDepartureAt)}</small></td>
+              <td data-label="Deadline">{order.documentCompletionDeadlineAt ? formatDateTime(order.documentCompletionDeadlineAt) : "Not set"}</td>
+              <td data-label="Completed">{order.finalConfirmedAt ? formatDateTime(order.finalConfirmedAt) : "—"}</td>
+              <td data-label="Status"><span className="ts-state-badge is-locked">Final confirmed</span></td>
+              <td data-label="Action"><Link href={`/transport-specialist/orders/${order.id}${previewSuffix}`}>View record <span aria-hidden="true">→</span></Link></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

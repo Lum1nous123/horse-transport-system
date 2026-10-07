@@ -7,8 +7,9 @@ import {
   type AssignStaffInput,
   type StaffAssignmentService,
 } from "./types";
+import { PREVIEW_ASSIGNMENTS_STORAGE_KEY } from "@/lib/preview-workflow/assignment-bridge";
 
-const STORAGE_KEY = "horse-transport-staff-assignments-v1";
+const STORAGE_KEY = PREVIEW_ASSIGNMENTS_STORAGE_KEY;
 
 const transportSpecialists: AssignmentCandidate[] = [
   { id: "ts-alex-carter", fullName: "Alex Carter", email: "alex.carter@hts.example", role: "TRANSPORT_SPECIALIST", activeOrderCount: 2 },
