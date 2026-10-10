@@ -7097,3 +7097,155 @@ button.ts-workflow-step-header:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .refund-detail-skeleton span { animation: none; }
 }
+
+/* Customer Remaining Balance checkout and persisted result. */
+.balance-page { min-height: 100vh; background: #f5f8fa; }
+.balance-content { width: min(100% - 48px, 1180px); padding-top: 30px; padding-bottom: 72px; }
+.balance-topbar { position: relative; }
+.balance-topbar-nav { display: flex; align-self: stretch; align-items: stretch; }
+.balance-topbar-nav a { display: inline-flex; align-items: center; border-bottom: 3px solid var(--color-primary); padding: 0 18px; color: var(--color-primary-hover); font-size: .875rem; font-weight: 650; }
+.balance-preview-banner { margin-bottom: 20px; }
+.balance-breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-bottom: 20px; color: var(--color-muted); font-size: .82rem; }
+.balance-breadcrumb a { color: var(--color-primary-hover); text-decoration: underline; text-underline-offset: 3px; }
+.balance-page-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 28px; margin-bottom: 28px; }
+.balance-page-heading > div { min-width: 0; }
+.balance-heading-label { display: block; margin-bottom: 6px; color: var(--color-primary-hover); font-size: .82rem; font-weight: 700; }
+.balance-page-heading h1 { max-width: 18ch; margin: 0; color: var(--color-navy); font-size: 2.35rem; line-height: 1.13; letter-spacing: -.035em; text-wrap: balance; }
+.balance-page-heading p { margin: 10px 0 0; color: var(--color-ink); font-size: 1.05rem; font-weight: 600; }
+.balance-page-heading small { display: block; margin-top: 6px; color: var(--color-muted); font-size: .78rem; line-height: 1.5; }
+.balance-page-heading > a { flex: 0 0 auto; text-decoration: none; }
+.balance-feedback,.balance-inline-error { margin-bottom: 18px; }
+
+.balance-journey { margin-bottom: 22px; border: 1px solid var(--color-border); border-radius: 10px; padding: 22px 24px 24px; background: #fff; }
+.balance-journey-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.balance-journey-heading h2 { margin: 0; color: var(--color-navy); font-size: 1.1rem; }
+.balance-journey-heading p { margin: 4px 0 0; color: var(--color-body); font-size: .82rem; }
+.balance-status-pill { display: inline-flex; min-height: 30px; align-items: center; border-radius: 99px; padding: 5px 11px; background: #e8f2f9; color: #1f64aa; font-size: .74rem; font-weight: 750; white-space: nowrap; }
+.balance-status-pill.is-paid { background: #e2f3e9; color: #12653c; }
+.balance-status-pill.is-pending { background: #fff0c7; color: #76520a; }
+.balance-status-pill.is-cancelled,.balance-status-pill.is-ineligible { background: #f2f0ee; color: #675b52; }
+.balance-journey ol { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); margin: 24px 0 0; padding: 0; list-style: none; }
+.balance-journey li { position: relative; display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 10px; padding-right: 18px; }
+.balance-journey li:not(:last-child)::after { position: absolute; top: 16px; right: 8px; left: 42px; height: 1px; background: #cad8e2; content: ""; }
+.balance-journey-marker { position: relative; z-index: 1; display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid #b8cad7; border-radius: 50%; background: #fff; color: var(--color-muted); font-size: .74rem; font-weight: 750; }
+.balance-journey li.is-complete .balance-journey-marker { border-color: #88c6a3; background: #e5f4eb; color: #12653c; }
+.balance-journey li.is-current .balance-journey-marker { border-color: var(--color-primary); background: var(--color-primary); color: #fff; }
+.balance-journey li > div:last-child { min-width: 0; padding-top: 1px; }
+.balance-journey li strong,.balance-journey li > div:last-child span { display: block; }
+.balance-journey li strong { color: var(--color-navy); font-size: .82rem; line-height: 1.35; }
+.balance-journey li > div:last-child span { margin-top: 3px; color: var(--color-muted); font-size: .72rem; line-height: 1.4; }
+
+.balance-main-grid { display: grid; grid-template-columns: minmax(0,1.12fr) minmax(350px,.88fr); align-items: start; gap: 22px; }
+.balance-progress,.balance-summary { border: 1px solid var(--color-border); border-radius: 10px; background: #fff; }
+.balance-progress { padding: 26px; }
+.balance-confirmed-callout { display: grid; grid-template-columns: 48px minmax(0,1fr); gap: 16px; border-bottom: 1px solid #e4ebf0; padding-bottom: 24px; }
+.balance-state-symbol { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 50%; font-weight: 750; }
+.balance-state-symbol.is-confirmed { background: #e3f4ea; color: #16794b; }
+.balance-state-symbol.is-error { margin: 0 auto 18px; background: #fff0ee; color: #a52a20; }
+.balance-confirmed-callout > div > span { color: #16794b; font-size: .78rem; font-weight: 750; }
+.balance-confirmed-callout h2 { margin: 4px 0 7px; color: var(--color-navy); font-size: 1.45rem; line-height: 1.25; }
+.balance-confirmed-callout p { max-width: 58ch; margin: 0; color: var(--color-body); font-size: .88rem; line-height: 1.6; }
+.balance-progress-list { padding-top: 22px; }
+.balance-progress-list h3 { margin: 0 0 18px; color: var(--color-navy); font-size: .95rem; }
+.balance-progress-list ol { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.balance-progress-list li { position: relative; display: grid; grid-template-columns: 30px minmax(0,1fr); gap: 13px; min-height: 94px; }
+.balance-progress-list li:not(:last-child)::after { position: absolute; top: 29px; bottom: 0; left: 14px; width: 1px; background: #c6d7e2; content: ""; }
+.balance-progress-check { position: relative; z-index: 1; display: grid; width: 30px; height: 30px; place-items: center; border-radius: 50%; background: #eaf3f9; color: var(--color-primary-hover); font-size: .72rem; font-weight: 750; }
+.balance-progress-list strong { display: block; color: var(--color-navy); font-size: .85rem; }
+.balance-progress-list p { margin: 4px 0 3px; color: var(--color-body); font-size: .78rem; line-height: 1.45; }
+.balance-progress-list time { color: var(--color-muted); font-size: .71rem; }
+
+.balance-summary { padding: 24px; }
+.balance-summary.is-paid { border-color: #a9d7bd; }
+.balance-summary-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.balance-summary-heading > div > span { color: var(--color-muted); font-size: .75rem; font-weight: 650; }
+.balance-summary-heading h2 { margin: 2px 0 0; color: var(--color-navy); font-size: 1.05rem; }
+.balance-amount { display: flex; align-items: baseline; gap: 9px; margin: 22px 0; }
+.balance-amount strong { color: var(--color-navy); font-size: 2.35rem; font-variant-numeric: tabular-nums; letter-spacing: -.04em; line-height: 1; }
+.balance-amount span { color: var(--color-muted); font-size: .78rem; font-weight: 700; }
+.balance-breakdown { margin: 0 0 20px; border-top: 1px solid #e3ebf0; border-bottom: 1px solid #e3ebf0; padding: 8px 0; }
+.balance-breakdown > div { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; padding: 9px 0; }
+.balance-breakdown dt { color: var(--color-body); font-size: .82rem; }
+.balance-breakdown dd { margin: 0; color: var(--color-ink); font-size: .84rem; font-weight: 650; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.balance-breakdown > div:last-child dt,.balance-breakdown > div:last-child dd { color: var(--color-navy); font-weight: 750; }
+.balance-paid-result { display: grid; grid-template-columns: 42px minmax(0,1fr); gap: 12px; border-radius: 8px; padding: 14px; background: #edf8f1; }
+.balance-paid-result .balance-state-symbol { width: 42px; height: 42px; }
+.balance-paid-result strong,.balance-pending-note strong,.balance-ineligible-note strong,.balance-cancelled-note strong { display: block; color: var(--color-navy); font-size: .84rem; }
+.balance-paid-result p,.balance-pending-note p,.balance-ineligible-note p,.balance-cancelled-note p { margin: 3px 0 0; color: var(--color-body); font-size: .75rem; line-height: 1.5; }
+.balance-pending-note,.balance-ineligible-note,.balance-cancelled-note { margin-bottom: 12px; border-radius: 8px; padding: 13px 14px; background: #fff7e3; }
+.balance-ineligible-note,.balance-cancelled-note { background: #f5f3f1; }
+.balance-checkout-button { width: 100%; justify-content: center; }
+.balance-security-note { display: flex; gap: 8px; margin: 14px 0 0; color: var(--color-body); font-size: .75rem; line-height: 1.5; }
+.balance-security-note span { color: var(--color-primary-hover); font-weight: 750; }
+.balance-last-checked { margin: 9px 0 0; color: var(--color-muted); font-size: .7rem; text-align: center; }
+
+.balance-next-steps { display: grid; grid-template-columns: minmax(220px,.7fr) minmax(0,1.3fr); gap: 42px; margin-top: 22px; border-top: 1px solid var(--color-border); padding: 30px 4px 0; }
+.balance-next-steps h2 { margin: 0; color: var(--color-navy); font-size: 1.05rem; }
+.balance-next-steps > div > p { margin: 5px 0 0; color: var(--color-body); font-size: .8rem; line-height: 1.55; }
+.balance-next-steps ol { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 22px; margin: 0; padding: 0; list-style: none; }
+.balance-next-steps li { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: 10px; }
+.balance-next-steps li > span { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: #eaf3f9; color: var(--color-primary-hover); font-size: .72rem; font-weight: 750; }
+.balance-next-steps strong { display: block; color: var(--color-navy); font-size: .78rem; }
+.balance-next-steps li p { margin: 4px 0 0; color: var(--color-muted); font-size: .72rem; line-height: 1.45; }
+
+.balance-access-state { display: grid; min-height: 100vh; place-items: center; padding: 24px; }
+.balance-access-card,.balance-unavailable { width: min(100%,620px); border: 1px solid var(--color-border); border-radius: 12px; padding: 34px; background: #fff; text-align: center; }
+.balance-access-card h1,.balance-unavailable h1 { margin: 0; color: var(--color-navy); font-size: 1.65rem; }
+.balance-access-card > p,.balance-unavailable > p { margin: 10px auto 22px; color: var(--color-body); line-height: 1.6; }
+.balance-access-card a,.balance-unavailable a { text-decoration: none; }
+.balance-unavailable { margin: 50px auto; }
+.balance-unavailable > div { display: flex; justify-content: center; gap: 10px; }
+.balance-detail-skeleton { display: grid; gap: 18px; }
+.balance-detail-skeleton span { display: block; border-radius: 10px; background: #e7eef3; animation: balance-skeleton-pulse 1.4s ease-in-out infinite alternate; }
+.balance-detail-skeleton span:first-child { width: 58%; height: 104px; }
+.balance-detail-skeleton span:nth-child(2) { height: 150px; }
+.balance-detail-skeleton span:last-child { height: 430px; }
+@keyframes balance-skeleton-pulse { to { background: #f1f5f8; } }
+
+.balance-checkout-backdrop { position: fixed; z-index: 40; inset: 0; display: grid; place-items: center; overflow-y: auto; padding: 24px; background: #102b3e9e; }
+.balance-checkout-preview { position: relative; width: min(100%,540px); border: 1px solid #cbdce7; border-radius: 12px; padding: 34px; background: #fff; box-shadow: 0 24px 70px #0b263848; }
+.balance-checkout-close { position: absolute; top: 14px; right: 14px; display: grid; width: 44px; height: 44px; place-items: center; border: 0; border-radius: 50%; background: #edf3f7; color: var(--color-navy); font-size: 1.4rem; cursor: pointer; }
+.balance-preview-chip { display: inline-flex; border-radius: 99px; padding: 5px 10px; background: #e9f3fa; color: var(--color-primary-hover); font-size: .72rem; font-weight: 750; }
+.balance-checkout-preview h2 { margin: 16px 0 8px; color: var(--color-navy); font-size: 1.55rem; }
+.balance-checkout-preview > p { max-width: 60ch; margin: 0; color: var(--color-body); font-size: .88rem; line-height: 1.65; }
+.balance-checkout-preview-amount { display: grid; gap: 3px; margin: 22px 0; border-radius: 8px; padding: 16px; background: #f1f7fb; }
+.balance-checkout-preview-amount span { color: var(--color-muted); font-size: .76rem; }
+.balance-checkout-preview-amount strong { color: var(--color-navy); font-size: 1.45rem; font-variant-numeric: tabular-nums; }
+.balance-checkout-preview-actions { display: grid; gap: 10px; }
+.balance-checkout-preview-actions button { width: 100%; justify-content: center; }
+.balance-checkout-preview > small { display: block; margin-top: 14px; color: var(--color-muted); font-size: .7rem; line-height: 1.5; }
+
+@media (max-width: 900px) {
+  .balance-main-grid { grid-template-columns: minmax(0,1fr); }
+  .balance-summary { grid-row: 1; }
+  .balance-topbar-nav { display: none; }
+  .balance-next-steps { grid-template-columns: minmax(0,1fr); gap: 20px; }
+}
+
+@media (max-width: 680px) {
+  .balance-content { width: min(100% - 28px,1180px); padding-top: 22px; padding-bottom: 48px; }
+  .balance-topbar .customer-topbar-actions > span { display: none; }
+  .balance-page-heading { align-items: stretch; flex-direction: column; gap: 18px; }
+  .balance-page-heading h1 { max-width: none; font-size: 1.85rem; }
+  .balance-page-heading > a { width: 100%; justify-content: center; }
+  .balance-journey { padding: 19px 17px; }
+  .balance-journey-heading { align-items: flex-start; flex-direction: column; gap: 12px; }
+  .balance-journey ol { grid-template-columns: minmax(0,1fr); gap: 0; }
+  .balance-journey li { min-height: 74px; padding-right: 0; }
+  .balance-journey li:not(:last-child)::after { top: 34px; right: auto; bottom: 0; left: 16px; width: 1px; height: auto; }
+  .balance-progress,.balance-summary { padding: 19px 17px; }
+  .balance-confirmed-callout { grid-template-columns: 40px minmax(0,1fr); }
+  .balance-confirmed-callout .balance-state-symbol { width: 40px; height: 40px; }
+  .balance-confirmed-callout h2 { font-size: 1.25rem; }
+  .balance-summary-heading { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .balance-amount strong { font-size: 2rem; }
+  .balance-next-steps ol { grid-template-columns: minmax(0,1fr); }
+  .balance-unavailable { margin: 24px auto; padding: 25px 18px; }
+  .balance-unavailable > div { flex-direction: column; }
+  .balance-unavailable > div > * { width: 100%; }
+  .balance-checkout-preview { padding: 27px 20px 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .balance-detail-skeleton span { animation: none; }
+}
