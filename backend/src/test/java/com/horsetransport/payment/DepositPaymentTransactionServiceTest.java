@@ -384,11 +384,11 @@ class DepositPaymentTransactionServiceTest {
 	}
 
 	private Payment payment() {
-		return new Payment(ORDER_ID, new BigDecimal("250.00"), "USD");
+		return Payment.deposit(ORDER_ID, new BigDecimal("250.00"), "USD");
 	}
 
 	private PaymentAttempt attempt(Payment payment) {
-		return new PaymentAttempt(payment.getId(), 1);
+		return new PaymentAttempt(payment.getId(), PaymentType.DEPOSIT, 1);
 	}
 
 	private Quotation sentQuotation() {

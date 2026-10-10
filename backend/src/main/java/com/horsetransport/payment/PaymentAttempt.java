@@ -55,12 +55,12 @@ public class PaymentAttempt {
 	protected PaymentAttempt() {
 	}
 
-	PaymentAttempt(UUID paymentId, int attemptNo) {
+	PaymentAttempt(UUID paymentId, PaymentType paymentType, int attemptNo) {
 		this.id = UUID.randomUUID();
 		this.paymentId = paymentId;
 		this.attemptNo = attemptNo;
 		this.providerName = PROVIDER_STRIPE;
-		this.idempotencyKey = "deposit-checkout-" + paymentId + "-" + attemptNo;
+		this.idempotencyKey = paymentType.name().toLowerCase() + "-checkout-" + paymentId + "-" + attemptNo;
 		this.providerStatus = PaymentAttemptStatus.PENDING;
 		this.initiatedAt = LocalDateTime.now();
 	}

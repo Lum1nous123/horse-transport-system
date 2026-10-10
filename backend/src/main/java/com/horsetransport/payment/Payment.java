@@ -57,15 +57,22 @@ public class Payment {
 	protected Payment() {
 	}
 
-	Payment(UUID transportOrderId, BigDecimal amount, String currency) {
-		this.id = UUID.randomUUID();
-		this.transportOrderId = transportOrderId;
-		this.paymentType = PaymentType.DEPOSIT;
-		this.amount = amount;
-		this.currency = currency;
-		this.status = PaymentStatus.PENDING;
-		this.createdAt = LocalDateTime.now();
-	}
+	Payment(UUID transportOrderId, PaymentType paymentType, BigDecimal amount, String currency) {
+	this.id = UUID.randomUUID();
+	this.transportOrderId = transportOrderId;
+	this.paymentType = paymentType;
+	this.amount = amount;
+	this.currency = currency;
+	this.status = PaymentStatus.PENDING;
+	this.createdAt = LocalDateTime.now();
+    }
+    static Payment deposit(UUID transportOrderId, BigDecimal amount, String currency) {
+	return new Payment(transportOrderId, PaymentType.DEPOSIT, amount, currency);
+    }
+
+    static Payment remainingBalance(UUID transportOrderId, BigDecimal amount, String currency) {
+	return new Payment(transportOrderId, PaymentType.REMAINING_BALANCE, amount, currency);
+    }
 
 	@PrePersist
 	void prePersist() {
@@ -81,7 +88,7 @@ public class Payment {
 
 	void markPaid() {
 		if (status != PaymentStatus.PENDING) {
-			throw new DepositPaymentConflictException("Deposit payment is not pending");
+			throw new DepositPaymentConflictException("Payment is not pending");
 		}
 		status = PaymentStatus.PAID;
 		paidAt = LocalDateTime.now();

@@ -66,7 +66,7 @@ public class DepositPaymentTransactionService {
 
 		Payment payment = paymentRepository.findByTransportOrderIdAndPaymentType(orderId, PaymentType.DEPOSIT)
 				.orElseGet(() -> paymentRepository.saveAndFlush(
-						new Payment(orderId, quotation.getDepositAmount(), quotation.getCurrency())));
+						Payment.deposit(orderId, quotation.getDepositAmount(), quotation.getCurrency())));
 		validatePendingPayment(payment, quotation);
 
 		Optional<PaymentAttempt> latest = attemptRepository.findFirstByPaymentIdOrderByAttemptNoDesc(payment.getId());
@@ -79,7 +79,7 @@ public class DepositPaymentTransactionService {
 				throw new DepositPaymentConflictException("A successful Deposit attempt already exists");
 			}
 			int attemptNo = latest.map(value -> value.getAttemptNo() + 1).orElse(1);
-			attempt = attemptRepository.saveAndFlush(new PaymentAttempt(payment.getId(), attemptNo));
+			attempt = attemptRepository.saveAndFlush(new PaymentAttempt(payment.getId(), PaymentType.DEPOSIT, attemptNo));
 		}
 
 		Map<String, String> metadata = Map.of(

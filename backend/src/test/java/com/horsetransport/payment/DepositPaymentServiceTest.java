@@ -24,8 +24,8 @@ class DepositPaymentServiceTest {
 	@Test
 	void checkoutUsesPreparedServerCommandAndAttachesProviderSession() {
 		UUID orderId = UUID.randomUUID();
-		Payment payment = new Payment(orderId, new BigDecimal("250.00"), "USD");
-		PaymentAttempt attempt = new PaymentAttempt(payment.getId(), 1);
+		Payment payment = Payment.deposit(orderId, new BigDecimal("250.00"), "USD");
+		PaymentAttempt attempt = new PaymentAttempt(payment.getId(), PaymentType.DEPOSIT, 1);
 		StripeCheckoutCommand command = new StripeCheckoutCommand(orderId, payment.getAmount(), payment.getCurrency(),
 				attempt.getIdempotencyKey(), Map.of("paymentId", payment.getId().toString()));
 		PreparedDepositCheckout prepared = new PreparedDepositCheckout(payment, attempt, command);
