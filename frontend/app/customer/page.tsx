@@ -72,6 +72,12 @@ const previewHorses: Horse[] = [
 
 const previewOrders: Order[] = [
   {
+    id: "preview-balance-order", orderCode: "ORD-2061", originAddress: "Saumur, France",
+    destinationAddress: "Amsterdam, Netherlands", requestedDepartureAt: "2026-10-22T08:30:00+07:00",
+    transportMode: "ROAD", recipientName: "Camille Laurent", recipientPhone: "+31 20 555 2061",
+    recipientEmail: null, horseIds: ["preview-horse-1"], status: "READY_TO_SHIP",
+  },
+  {
     id: "preview-refund-order", orderCode: "ORD-2058", originAddress: "Lexington, United States",
     destinationAddress: "Brussels, Belgium", requestedDepartureAt: "2026-10-19T09:00:00+07:00",
     transportMode: "COMBINED", recipientName: "Morgan Taylor", recipientPhone: "+32 2 555 2058",
@@ -433,6 +439,7 @@ export default function CustomerPage() {
                 <div className="order-route-icon" aria-hidden="true">↗</div>
                 <div className="customer-order-main"><div className="customer-order-title"><h3>{order.orderCode}</h3><span className={`order-status status-${order.status.toLowerCase()}`}>{order.status.replaceAll("_", " ")}</span></div><p>{[order.originAddress || order.originCountry || "Origin pending", order.destinationAddress || order.destinationCountry || "Destination pending"].join("  →  ")}</p><span className="customer-order-subline">{order.horseIds.length} {order.horseIds.length === 1 ? "horse" : "horses"}{order.requestedDepartureAt ? ` · ${new Date(order.requestedDepartureAt).toLocaleString()}` : " · Departure not set"}</span></div>
                 <div className="customer-order-actions">
+                  {preview && order.id === "preview-balance-order" && <Link className="customer-primary-button compact" href={`/customer/orders/${order.id}/remaining-balance?preview=1`}>Pay remaining balance</Link>}
                   {preview && order.status === "CANCELLED" && <Link className="customer-secondary-button compact" href={`/customer/orders/${order.id}?preview=1`}>View cancellation &amp; refund</Link>}
                   {order.status === "DRAFT" && <button className="customer-secondary-button compact" type="button" onClick={() => startEdit(order)}>Edit draft</button>}
                   {order.status === "QUOTATION_SENT" && <button className="customer-secondary-button compact" type="button" onClick={() => void openQuotation(order)}>View bill</button>}
