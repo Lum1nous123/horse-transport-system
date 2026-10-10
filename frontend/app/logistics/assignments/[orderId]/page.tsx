@@ -158,7 +158,7 @@ export default function StaffAssignmentDetailPage() {
           </section>
 
           {order.assignedPair ? (
-            <ReadOnlyAssignment order={order} />
+            <ReadOnlyAssignment order={order} preview={preview} />
           ) : (
             <>
               <div className="assignment-candidate-grid">
@@ -263,7 +263,7 @@ function CandidateGroup({
   );
 }
 
-function ReadOnlyAssignment({ order }: { order: AssignmentOrderDetail }) {
+function ReadOnlyAssignment({ order, preview }: { order: AssignmentOrderDetail; preview: boolean }) {
   const pair = order.assignedPair;
   if (!pair) return null;
   return (
@@ -276,6 +276,14 @@ function ReadOnlyAssignment({ order }: { order: AssignmentOrderDetail }) {
         <StaffSummary label="Transport Specialist" candidate={pair.transportSpecialist} />
         <StaffSummary label="Fleet & Route Coordinator" candidate={pair.fleetRouteCoordinator} />
       </div>
+      {preview && (
+        <div className="assignment-preview-handoff">
+          <div><strong>Preview the handoff</strong><span>Open the workspace as {pair.transportSpecialist.fullName} and confirm this Order appears there.</span></div>
+          <Link className="customer-primary-button" href={`/transport-specialist?preview=1&specialistId=${encodeURIComponent(pair.transportSpecialist.id)}`}>
+            Open {pair.transportSpecialist.fullName}&apos;s workspace <span aria-hidden="true">→</span>
+          </Link>
+        </div>
+      )}
     </section>
   );
 }

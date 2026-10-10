@@ -3,14 +3,19 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getAccessToken, getCurrentUser } from "@/lib/auth";
-import { resetPreviewWorkflow } from "@/lib/preview-workflow/assignment-bridge";
+import {
+  DEFAULT_PREVIEW_SPECIALIST_ID,
+  getPreviewSpecialistIdentity,
+} from "@/lib/preview-workflow/assignment-bridge";
 
 type AccessState = "checking" | "allowed" | "forbidden" | "failed";
 
-export function useLogisticsAccess() {
+export function useTransportSpecialistAccess() {
   const router = useRouter();
   const [state, setState] = useState<AccessState>("checking");
   const [preview, setPreview] = useState(false);
+  const [previewSpecialistId, setPreviewSpecialistId] = useState(DEFAULT_PREVIEW_SPECIALIST_ID);
+  const [previewSpecialistName, setPreviewSpecialistName] = useState("Alex Carter");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -18,15 +23,17 @@ export function useLogisticsAccess() {
 
     async function verify() {
       const query = new URLSearchParams(window.location.search);
-      const previewRequested = process.env.NODE_ENV === "development"
-        && query.get("preview") === "1";
+      const previewRequested = process.env.NODE_ENV === "development" && query.get("preview") === "1";
       if (previewRequested) {
-        if (query.get("reset") === "1") {
-          resetPreviewWorkflow();
-          window.history.replaceState(null, "", `${window.location.pathname}?preview=1`);
-        }
-        if (active) {
-          setPreview(true);
+        if (!active) return;
+        const specialist = getPreviewSpecialistIdentity(window.location.search);
+        setPreview(true);
+        setPreviewSpecialistId(specialist.id);
+        setPreviewSpecialistName(specialist.name);
+        if (query.get("scenario") === "forbidden") {
+          setMessage("You don't have permission to use this Transport Specialist workspace.");
+          setState("forbidden");
+        } else {
           setState("allowed");
         }
         return;
@@ -38,10 +45,10 @@ export function useLogisticsAccess() {
       }
 
       try {
-        const currentUser = await getCurrentUser();
+        const user = await getCurrentUser();
         if (!active) return;
-        if (currentUser.role !== "LOGISTICS_MANAGER") {
-          setMessage("You don't have permission to use the Logistics Manager assignment workspace.");
+        if (user.role !== "TRANSPORT_SPECIALIST") {
+          setMessage("You don't have permission to use this Transport Specialist workspace.");
           setState("forbidden");
           return;
         }
@@ -61,5 +68,6 @@ export function useLogisticsAccess() {
     return () => { active = false; };
   }, [router]);
 
-  return { state, preview, message };
+  return { state, preview, previewSpecialistId, previewSpecialistName, message };
 }
+

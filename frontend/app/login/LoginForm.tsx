@@ -49,7 +49,7 @@ export default function LoginForm() {
       if (currentUser.role === "LOGISTICS_MANAGER") {
         router.replace("/logistics");
       } else if (currentUser.role === "TRANSPORT_SPECIALIST") {
-        router.replace("/transport-specialist/review");
+        router.replace("/transport-specialist");
       } else if (currentUser.role === "CUSTOMER") {
         router.replace("/customer");
       } else {
