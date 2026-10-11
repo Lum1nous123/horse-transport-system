@@ -33,4 +33,50 @@ public interface TransportOrderRepository extends JpaRepository<TransportOrder, 
 
 	@Query(value = "select nextval('transport_order_code_seq')", nativeQuery = true)
 	long nextOrderCodeValue();
+
+	@EntityGraph(attributePaths = "horses")
+	@Query(value = """
+			select o.*
+			from transport_orders o
+			join order_staff_assignments osa
+				on osa.transport_order_id = o.id
+			join payments p
+				on p.transport_order_id = o.id
+			left join route_plans rp
+				on rp.transport_order_id = o.id
+			where osa.assignment_role = 'FLEET_ROUTE_COORDINATOR'
+				and osa.user_id = :frcUserId
+				and p.payment_type = 'REMAINING_BALANCE'
+				and p.status = 'PAID'
+				and (
+					rp.id is null
+					or rp.status in ('DRAFT', 'RETURNED')
+				)
+			order by o.created_at desc
+			""", nativeQuery = true)
+	List<TransportOrder> findFrcPlanningQueue(@Param("frcUserId") UUID frcUserId);
+
+		@EntityGraph(attributePaths = "horses")
+	@Query(value = """
+			select o.*
+			from transport_orders o
+			join order_staff_assignments osa
+				on osa.transport_order_id = o.id
+			join payments p
+				on p.transport_order_id = o.id
+			left join route_plans rp
+				on rp.transport_order_id = o.id
+			where o.id = :orderId
+				and osa.assignment_role = 'FLEET_ROUTE_COORDINATOR'
+				and osa.user_id = :frcUserId
+				and p.payment_type = 'REMAINING_BALANCE'
+				and p.status = 'PAID'
+				and (
+					rp.id is null
+					or rp.status in ('DRAFT', 'RETURNED')
+				)
+			""", nativeQuery = true)
+	Optional<TransportOrder> findFrcPlanningContextOrder(
+			@Param("orderId") UUID orderId,
+			@Param("frcUserId") UUID frcUserId);
 }

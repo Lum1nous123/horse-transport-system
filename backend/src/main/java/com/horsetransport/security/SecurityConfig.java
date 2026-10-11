@@ -66,6 +66,10 @@ public class SecurityConfig {
 								.hasAnyRole("CUSTOMER", "LOGISTICS_MANAGER")
 						.requestMatchers("/api/v1/orders/**").hasRole("CUSTOMER")
 						.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+						.requestMatchers(HttpMethod.GET, "/api/v1/frc/planning-queue")
+                                .hasRole("FLEET_ROUTE_COORDINATOR")
+						.requestMatchers(HttpMethod.GET, "/api/v1/frc/orders/*/planning-context")
+                                .hasRole("FLEET_ROUTE_COORDINATOR")
 						.anyRequest().denyAll())
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
