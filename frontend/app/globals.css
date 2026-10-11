@@ -7375,6 +7375,7 @@ button.ts-workflow-step-header:focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
   .frc-planning-table tbody tr,.frc-open-order { transition: none; }
+}
 
 /* Customer Remaining Balance checkout and persisted result. */
 .balance-page { min-height: 100vh; background: #f5f8fa; }
@@ -7531,4 +7532,3 @@ button.ts-workflow-step-header:focus-visible {
   }
 }
 /* Customer Remaining Balance checkout and persisted result. */
-}
