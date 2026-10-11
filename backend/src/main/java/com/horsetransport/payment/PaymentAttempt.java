@@ -56,14 +56,14 @@ public class PaymentAttempt {
 	}
 
 	PaymentAttempt(UUID paymentId, PaymentType paymentType, int attemptNo) {
-		this.id = UUID.randomUUID();
-		this.paymentId = paymentId;
-		this.attemptNo = attemptNo;
-		this.providerName = PROVIDER_STRIPE;
-		this.idempotencyKey = paymentType.name().toLowerCase() + "-checkout-" + paymentId + "-" + attemptNo;
-		this.providerStatus = PaymentAttemptStatus.PENDING;
-		this.initiatedAt = LocalDateTime.now();
-	}
+	this.id = UUID.randomUUID();
+	this.paymentId = paymentId;
+	this.attemptNo = attemptNo;
+	this.providerName = PROVIDER_STRIPE;
+	this.idempotencyKey = paymentType.name().toLowerCase() + "-checkout-" + paymentId + "-" + attemptNo;
+	this.providerStatus = PaymentAttemptStatus.PENDING;
+	this.initiatedAt = LocalDateTime.now();
+    }
 
 	@PrePersist
 	void prePersist() {

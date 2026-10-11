@@ -1,0 +1,2 @@
+ALTER TABLE transport_orders
+ADD COLUMN frc_eligible BOOLEAN NOT NULL DEFAULT FALSE;
