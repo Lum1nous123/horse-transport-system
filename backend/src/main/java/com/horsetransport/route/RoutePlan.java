@@ -78,6 +78,13 @@ public class RoutePlan {
 		return status == RoutePlanStatus.DRAFT || status == RoutePlanStatus.RETURNED;
 	}
 
+		public void submitForReview() {
+		if (!isEditableByFrc()) {
+			throw new RoutePlanNotEditableException();
+		}
+		status = RoutePlanStatus.PENDING_LM_REVIEW;
+	}
+
 	public UUID getId() {
 		return id;
 	}

@@ -14,6 +14,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import com.horsetransport.route.RoutePlanRepository;
+import com.horsetransport.route.RouteLegRepository;
+
 
 @SpringBootTest(properties = {
 		"app.security.jwt.secret=01234567890123456789012345678901",
@@ -52,11 +54,14 @@ class BackendApplicationTests {
 	@MockitoBean
 	private PaymentProviderEventRepository paymentProviderEventRepository;
 
-		@MockitoBean
+	@MockitoBean
 	private RoutePlanRepository routePlanRepository;
 
 	@MockitoBean
 	private UserRepository userRepository;
+
+	@MockitoBean
+	private RouteLegRepository routeLegRepository;
 
 	@Test
 	void contextLoads() {
