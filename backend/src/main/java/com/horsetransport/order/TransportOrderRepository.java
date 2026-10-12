@@ -79,4 +79,22 @@ public interface TransportOrderRepository extends JpaRepository<TransportOrder, 
 	Optional<TransportOrder> findFrcPlanningContextOrder(
 			@Param("orderId") UUID orderId,
 			@Param("frcUserId") UUID frcUserId);
+
+		@EntityGraph(attributePaths = "horses")
+	@Query(value = """
+			select o.*
+			from transport_orders o
+			join order_staff_assignments osa
+				on osa.transport_order_id = o.id
+			join payments p
+				on p.transport_order_id = o.id
+			where o.id = :orderId
+				and osa.assignment_role = 'FLEET_ROUTE_COORDINATOR'
+				and osa.user_id = :frcUserId
+				and p.payment_type = 'REMAINING_BALANCE'
+				and p.status = 'PAID'
+			""", nativeQuery = true)
+	Optional<TransportOrder> findAssignedFrcRoutePlanOrder(
+			@Param("orderId") UUID orderId,
+			@Param("frcUserId") UUID frcUserId);
 }
