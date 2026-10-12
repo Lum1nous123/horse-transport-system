@@ -20,6 +20,12 @@ const contractUnavailableService: FleetRouteCoordinatorService = {
   async moveRouteLeg() { return contractUnavailable(); },
   async validateRoutePlan() { return contractUnavailable(); },
   async submitRoutePlan() { return contractUnavailable(); },
+  async getRoadLegSetup() { return contractUnavailable(); },
+  async saveRoadAllocations() { return contractUnavailable(); },
+  async saveRoadCheckpoint() { return contractUnavailable(); },
+  async deleteRoadCheckpoint() { return contractUnavailable(); },
+  async moveRoadCheckpoint() { return contractUnavailable(); },
+  async validateRoadLegSetup() { return contractUnavailable(); },
 };
 
 // BE-15/16/19/20 do not yet expose usable frontend contracts. Keeping service

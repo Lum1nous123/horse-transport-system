@@ -7167,7 +7167,7 @@ button.ts-workflow-step-header:focus-visible {
 .frc-breadcrumb a { color: var(--color-primary-hover); text-decoration: underline; text-underline-offset: 3px; }
 .frc-detail-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 28px; margin-bottom: 24px; }
 .frc-detail-heading > div:first-child > span { color: var(--color-primary-hover); font-size: .82rem; font-weight: 700; }
-.frc-detail-heading h1 { max-width: 22ch; margin: 5px 0 0; color: var(--color-navy); font-size: 2.15rem; line-height: 1.18; letter-spacing: -.035em; text-wrap: balance; }
+.frc-detail-heading h1 { max-width: none; margin: 5px 0 0; color: var(--color-navy); font-size: 2.15rem; line-height: 1.18; letter-spacing: -.035em; white-space: nowrap; }
 .frc-detail-heading h1 b { color: var(--color-primary); font-weight: 500; }
 .frc-detail-heading p { margin: 7px 0 0; color: var(--color-body); }
 .frc-detail-heading > div:last-child { display: flex; flex: 0 0 auto; gap: 10px; }
@@ -7223,6 +7223,7 @@ button.ts-workflow-step-header:focus-visible {
   .frc-workspace-page .customer-topbar-actions > span { display: none; }
   .frc-page-heading,.frc-detail-heading { align-items: stretch; flex-direction: column; gap: 18px; }
   .frc-page-heading h1,.frc-detail-heading h1 { max-width: none; font-size: 1.8rem; }
+  .frc-detail-heading h1 { white-space: normal; }
   .frc-refresh-button { width: 100%; justify-content: center; }
   .frc-detail-heading > div:last-child { flex-direction: column; }
   .frc-detail-heading > div:last-child > * { width: 100%; justify-content: center; }
@@ -7522,6 +7523,125 @@ button.ts-workflow-step-header:focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
   .route-plan-loading span { animation: none; }
+}
+
+/* FE-12 inline ROAD planning. */
+.road-setup-trigger { min-height: 34px; border: 1px solid #b9cfdd; border-radius: 6px; padding: 6px 9px; background: #fff; color: var(--color-primary-hover); font: inherit; font-size: .68rem; font-weight: 750; white-space: nowrap; cursor: pointer; }
+.road-setup-trigger:hover { border-color: var(--color-primary); background: #f1f7fb; }
+.road-setup-trigger:focus-visible,.road-setup button:focus-visible,.road-setup input:focus-visible,.road-setup select:focus-visible,.road-setup textarea:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.route-plan-table tr.road-setup-row { background: #f8fafb; box-shadow: inset 0 1px #c6dce9, inset 0 -1px #c6dce9; }
+.route-plan-table tr.road-setup-row > td { padding: 0; border-bottom: 0; }
+.road-setup { color: var(--color-body); text-align: left; }
+.road-setup-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 18px 21px 13px; }
+.road-setup-heading h3 { margin: 0; color: var(--color-navy); font-size: 1rem; }
+.road-setup-heading p { margin: 3px 0 0; color: var(--color-muted); font-size: .7rem; }
+.road-setup-summary { display: flex; align-items: center; gap: 8px; }
+.road-setup-summary > span { display: inline-flex; min-height: 26px; align-items: center; border-radius: 99px; padding: 4px 9px; background: #edf3f7; color: #39566a; font-size: .66rem; font-weight: 750; }
+.road-setup-summary > span.is-complete { background: #e4f5eb; color: #16794b; }
+.road-setup-summary > button,.road-checkpoint-form-heading > button { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid #c9d7df; border-radius: 50%; background: #fff; color: var(--color-navy); font-size: 1.1rem; cursor: pointer; }
+.road-setup-tabs { display: flex; gap: 24px; margin: 0 21px; border-bottom: 1px solid #dbe5eb; }
+.road-setup-tabs button { position: relative; min-height: 42px; border: 0; padding: 0 2px; background: transparent; color: var(--color-body); font: inherit; font-size: .74rem; font-weight: 700; cursor: pointer; }
+.road-setup-tabs button[aria-selected="true"] { color: var(--color-primary-hover); }
+.road-setup-tabs button[aria-selected="true"]::after { position: absolute; right: 0; bottom: -1px; left: 0; height: 2px; background: var(--color-primary); content: ""; }
+.road-setup-tabs button span { display: inline-grid; min-width: 20px; min-height: 20px; margin-left: 4px; place-items: center; border-radius: 50%; background: #edf3f7; font-size: .62rem; }
+.road-setup-readonly { margin: 14px 21px 0; border: 1px solid #b9d8c6; border-radius: 7px; padding: 9px 12px; background: #eef8f2; color: #176942; font-size: .72rem; font-weight: 700; }
+.road-setup-message { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 14px 21px 0; border-radius: 7px; padding: 10px 12px; font-size: .72rem; }
+.road-setup-message.is-error { border: 1px solid #ebbbb6; background: #fff2f0; color: #8f2d25; }
+.road-setup-message.is-success { border: 1px solid #b9d8c6; background: #eef8f2; color: #176942; }
+.road-setup-message button { border: 0; background: transparent; color: inherit; font: inherit; font-weight: 800; cursor: pointer; }
+.road-setup-issues { display: grid; gap: 1px; margin: 14px 21px 0; border: 1px solid #e4c47d; border-radius: 7px; padding: 0; overflow: hidden; background: #fffaf0; list-style: none; }
+.road-setup-issues li { display: grid; grid-template-columns: 170px minmax(0,1fr); gap: 12px; min-height: auto; padding: 9px 12px; border-bottom: 1px solid #f0dfb7; color: #69501c; font-size: .7rem; }
+.road-setup-issues li:last-child { border-bottom: 0; }
+.road-setup-issues li::after { display: none; }
+.road-setup-issues strong { color: #704e08; font-size: .64rem; letter-spacing: .03em; }
+
+.road-allocation-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 1px; margin-top: 14px; background: #dbe5eb; }
+.road-allocation-grid > section,.road-checkpoints { min-width: 0; padding: 18px 21px 21px; background: #fff; }
+.road-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 11px; }
+.road-section-heading h4 { margin: 0; color: var(--color-navy); font-size: .82rem; }
+.road-section-heading p { margin: 3px 0 0; color: var(--color-muted); font-size: .68rem; }
+.road-section-heading > span { color: var(--color-muted); font-size: .67rem; font-weight: 700; }
+.road-section-heading > span.is-complete { color: #16794b; }
+.road-table-scroll { overflow-x: auto; border: 1px solid #d9e4ea; border-radius: 7px; background: #fff; }
+.route-plan-table .road-setup-table { width: 100%; min-width: 520px; border-collapse: collapse; }
+.route-plan-table .road-setup-table th { padding: 9px 10px; border-bottom: 1px solid #d9e4ea; background: #f5f8fa; color: var(--color-muted); font-size: .62rem; font-weight: 750; letter-spacing: .04em; text-align: left; text-transform: uppercase; }
+.route-plan-table .road-setup-table td { display: table-cell; padding: 10px; border-bottom: 1px solid #e7edf1; color: var(--color-body); font-size: .7rem; vertical-align: middle; }
+.route-plan-table .road-setup-table tr:last-child td { border-bottom: 0; }
+.route-plan-table .road-setup-table tr.is-selected { background: #f0f7fb; box-shadow: none; }
+.route-plan-table .road-setup-table tr.is-unavailable { background: #fafbfc; }
+.route-plan-table .road-setup-table tr.is-unavailable td { color: #84949f; }
+.route-plan-table .road-setup-table td strong { display: block; color: var(--color-ink); font-size: .72rem; }
+.route-plan-table .road-setup-table td small { display: block; max-width: 34ch; margin-top: 3px; color: var(--color-muted); font-size: .63rem; line-height: 1.35; }
+.road-setup-table input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--color-primary); }
+.road-setup-table select,.road-checkpoint-form input,.road-checkpoint-form select,.road-checkpoint-form textarea { width: 100%; min-height: 40px; border: 1px solid #c6d4dd; border-radius: 6px; padding: 8px 9px; background: #fff; color: var(--color-ink); font: inherit; font-size: .7rem; }
+.road-status { display: inline-flex !important; min-height: 23px; align-items: center; border-radius: 99px; padding: 3px 8px; font-size: .62rem; font-weight: 750; }
+.road-status.is-available { background: #e4f5eb; color: #16794b; }
+.road-status.is-unavailable { background: #fff0ee; color: #9b3128; }
+.road-simple-empty { display: grid; min-height: 112px; place-content: center; justify-items: center; padding: 22px 18px; border: 1px dashed #c8d7e0; border-radius: 7px; text-align: center; }
+.route-plan-table .road-simple-empty strong { display: block; max-width: none; color: var(--color-navy); font-size: .78rem; }
+.road-simple-empty p { max-width: 48ch; margin: 5px auto 0; color: var(--color-muted); font-size: .68rem; line-height: 1.45; text-align: center; }
+
+.road-checkpoints { margin-top: 14px; }
+.road-row-actions { display: grid; grid-template-columns: repeat(2,32px); justify-content: end; gap: 5px; }
+.road-row-actions button { min-height: 30px; border: 1px solid #c7d5de; border-radius: 5px; background: #fff; color: var(--color-primary-hover); font: inherit; font-size: .64rem; font-weight: 750; cursor: pointer; }
+.road-row-actions button:nth-child(n+3) { grid-column: span 2; }
+.road-row-actions button.is-danger { color: #a52a20; }
+.road-row-actions button:disabled { opacity: .4; cursor: not-allowed; }
+.road-checkpoint-form { margin-top: 15px; border-top: 1px solid #dbe5eb; padding-top: 16px; }
+.road-checkpoint-form-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 13px; }
+.road-checkpoint-form-heading h5 { margin: 0; color: var(--color-navy); font-size: .78rem; }
+.road-checkpoint-fields { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+.road-checkpoint-fields label { display: grid; gap: 6px; color: var(--color-ink); font-size: .68rem; font-weight: 700; }
+.road-checkpoint-fields label > span { color: var(--color-muted); font-weight: 500; }
+.road-checkpoint-fields label.is-wide { grid-column: 1 / -1; }
+.road-checkpoint-form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 13px; }
+.road-setup-footer { display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #dbe5eb; padding: 14px 21px; background: #fbfcfd; }
+.road-setup-loading { display: grid; gap: 10px; padding: 22px; }
+.road-setup-loading span { display: block; height: 80px; border-radius: 7px; background: #e7eef3; animation: balance-skeleton-pulse 1.4s ease-in-out infinite alternate; }
+.road-setup-loading span:first-child { width: 42%; height: 24px; }
+.road-setup-unavailable { padding: 24px; text-align: center; }
+.road-setup-unavailable strong { color: var(--color-navy); }
+.road-setup-unavailable p { margin: 5px 0 15px; color: var(--color-body); font-size: .72rem; }
+.road-setup-unavailable > div { display: flex; justify-content: center; gap: 8px; }
+
+@media (max-width: 1050px) {
+  .road-allocation-grid { grid-template-columns: minmax(0,1fr); }
+  .road-checkpoint-fields { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+
+@media (max-width: 760px) {
+  .road-setup-trigger { min-height: 44px; }
+  .route-plan-table tr.road-setup-row { display: block; padding: 0; }
+  .route-plan-table tr.road-setup-row > td { display: block; padding: 0; }
+  .route-plan-table tr.road-setup-row > td::before { display: none; content: none; }
+  .road-setup-heading { align-items: flex-start; flex-direction: column; padding: 16px; }
+  .road-setup-summary { width: 100%; flex-wrap: wrap; }
+  .road-setup-summary > button { width: 44px; height: 44px; margin-left: auto; }
+  .road-setup-tabs { margin: 0 16px; }
+  .road-setup-tabs button { min-height: 44px; font-size: .82rem; }
+  .road-allocation-grid > section,.road-checkpoints { padding: 16px; }
+  .route-plan-table .road-setup-table { display: table; width: 100%; }
+  .route-plan-table .road-setup-table thead { position: static; display: table-header-group; width: auto; height: auto; overflow: visible; clip: auto; }
+  .route-plan-table .road-setup-table tbody { display: table-row-group; }
+  .route-plan-table .road-setup-table tr { display: table-row; width: auto; margin: 0; border: 0; border-radius: 0; padding: 0; }
+  .route-plan-table .road-setup-table th,.route-plan-table .road-setup-table td { display: table-cell; width: auto; }
+  .route-plan-table .road-setup-table td::before { display: none; content: none; }
+  .route-plan-table .road-setup-table th { font-size: .7rem; }
+  .route-plan-table .road-setup-table td,.route-plan-table .road-setup-table td strong { font-size: .78rem; }
+  .route-plan-table .road-setup-table td small,.road-section-heading p,.road-simple-empty p { font-size: .72rem; }
+  .road-setup-table select,.road-checkpoint-form input,.road-checkpoint-form select,.road-checkpoint-form textarea { min-height: 44px; font-size: .8rem; }
+  .road-row-actions { grid-template-columns: repeat(2,44px); }
+  .road-row-actions button { min-height: 44px; }
+  .road-checkpoint-fields { grid-template-columns: minmax(0,1fr); }
+  .road-checkpoint-fields label.is-wide { grid-column: auto; }
+  .road-checkpoint-form-actions,.road-setup-footer { display: grid; grid-template-columns: minmax(0,1fr); }
+  .road-checkpoint-form-actions button,.road-setup-footer button { width: 100%; justify-content: center; }
+  .road-setup-message,.road-setup-issues,.road-setup-readonly { margin-right: 16px; margin-left: 16px; }
+  .road-setup-issues li { grid-template-columns: minmax(0,1fr); gap: 3px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .road-setup-loading span { animation: none; }
 }
 .balance-page { min-height: 100vh; background: #f5f8fa; }
 .balance-content { width: min(100% - 48px, 1180px); padding-top: 30px; padding-bottom: 72px; }
