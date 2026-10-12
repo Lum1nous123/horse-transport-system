@@ -79,7 +79,7 @@ public class DepositPaymentTransactionService {
 				throw new DepositPaymentConflictException("A successful Deposit attempt already exists");
 			}
 			int attemptNo = latest.map(value -> value.getAttemptNo() + 1).orElse(1);
-			attempt = attemptRepository.saveAndFlush(new PaymentAttempt(payment.getId(), PaymentType.DEPOSIT, attemptNo));;
+			attempt = attemptRepository.saveAndFlush(new PaymentAttempt(payment.getId(), PaymentType.DEPOSIT, attemptNo));
 		}
 
 		Map<String, String> metadata = Map.of(
