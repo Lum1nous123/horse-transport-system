@@ -58,21 +58,22 @@ public class Payment {
 	}
 
 	Payment(UUID transportOrderId, PaymentType paymentType, BigDecimal amount, String currency) {
-	this.id = UUID.randomUUID();
-	this.transportOrderId = transportOrderId;
-	this.paymentType = paymentType;
-	this.amount = amount;
-	this.currency = currency;
-	this.status = PaymentStatus.PENDING;
-	this.createdAt = LocalDateTime.now();
-    }
-    static Payment deposit(UUID transportOrderId, BigDecimal amount, String currency) {
-	return new Payment(transportOrderId, PaymentType.DEPOSIT, amount, currency);
-    }
+		this.id = UUID.randomUUID();
+		this.transportOrderId = transportOrderId;
+		this.paymentType = paymentType;
+		this.amount = amount;
+		this.currency = currency;
+		this.status = PaymentStatus.PENDING;
+		this.createdAt = LocalDateTime.now();
+	}
 
-    static Payment remainingBalance(UUID transportOrderId, BigDecimal amount, String currency) {
-	return new Payment(transportOrderId, PaymentType.REMAINING_BALANCE, amount, currency);
-    }
+	static Payment deposit(UUID transportOrderId, BigDecimal amount, String currency) {
+		return new Payment(transportOrderId, PaymentType.DEPOSIT, amount, currency);
+	}
+
+	static Payment remainingBalance(UUID transportOrderId, BigDecimal amount, String currency) {
+		return new Payment(transportOrderId, PaymentType.REMAINING_BALANCE, amount, currency);
+	}
 
 	@PrePersist
 	void prePersist() {

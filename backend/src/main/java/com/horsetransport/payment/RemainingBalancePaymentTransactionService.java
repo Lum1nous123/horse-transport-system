@@ -16,6 +16,7 @@ import com.horsetransport.quotation.QuotationStatus;
 import com.horsetransport.security.CurrentUserProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 @Service
 public class RemainingBalancePaymentTransactionService {
 
@@ -26,126 +27,116 @@ public class RemainingBalancePaymentTransactionService {
 	private static final String METADATA_PAYMENT_TYPE = "paymentType";
 
 	private final PaymentRepository paymentRepository;
-    private final PaymentAttemptRepository attemptRepository;
-    private final PaymentProviderEventRepository eventRepository;
-    private final TransportOrderRepository orderRepository;
-    private final QuotationRepository quotationRepository;
-    private final CurrentUserProvider currentUserProvider;
+	private final PaymentAttemptRepository attemptRepository;
+	private final PaymentProviderEventRepository eventRepository;
+	private final TransportOrderRepository orderRepository;
+	private final QuotationRepository quotationRepository;
+	private final CurrentUserProvider currentUserProvider;
 
 	public RemainingBalancePaymentTransactionService(PaymentRepository paymentRepository,
-		PaymentAttemptRepository attemptRepository,
-		PaymentProviderEventRepository eventRepository,
-		TransportOrderRepository orderRepository,
-		QuotationRepository quotationRepository,
-		CurrentUserProvider currentUserProvider) {
-	this.paymentRepository = paymentRepository;
-	this.attemptRepository = attemptRepository;
-	this.eventRepository = eventRepository;
-	this.orderRepository = orderRepository;
-	this.quotationRepository = quotationRepository;
-	this.currentUserProvider = currentUserProvider;
-    }
-    @Transactional
-    public WebhookProcessingResult processWebhook(StripeWebhookEvent stripeEvent) {
-	if (stripeEvent.kind() == StripeEventKind.IGNORED) {
-		return new WebhookProcessingResult(false, false, false);
+			PaymentAttemptRepository attemptRepository, PaymentProviderEventRepository eventRepository,
+			TransportOrderRepository orderRepository, QuotationRepository quotationRepository,
+			CurrentUserProvider currentUserProvider) {
+		this.paymentRepository = paymentRepository;
+		this.attemptRepository = attemptRepository;
+		this.eventRepository = eventRepository;
+		this.orderRepository = orderRepository;
+		this.quotationRepository = quotationRepository;
+		this.currentUserProvider = currentUserProvider;
 	}
 
-	UUID paymentId = parseUuid(stripeEvent.metadata().get(METADATA_PAYMENT_ID));
-	UUID attemptId = parseUuid(stripeEvent.metadata().get(METADATA_ATTEMPT_ID));
+	@Transactional
+	public WebhookProcessingResult processWebhook(StripeWebhookEvent stripeEvent) {
+		if (stripeEvent.kind() == StripeEventKind.IGNORED) {
+			return new WebhookProcessingResult(false, false, false);
+		}
 
-	if (paymentId == null || attemptId == null) {
-		return new WebhookProcessingResult(false, false, false);
-	}
+		UUID paymentId = parseUuid(stripeEvent.metadata().get(METADATA_PAYMENT_ID));
+		UUID attemptId = parseUuid(stripeEvent.metadata().get(METADATA_ATTEMPT_ID));
+		if (paymentId == null || attemptId == null) {
+			return new WebhookProcessingResult(false, false, false);
+		}
 
-	Payment payment = paymentRepository.findByIdForUpdate(paymentId).orElse(null);
-	if (payment == null) {
-		return new WebhookProcessingResult(false, false, false);
-	}
+		Payment payment = paymentRepository.findByIdForUpdate(paymentId).orElse(null);
+		if (payment == null) {
+			return new WebhookProcessingResult(false, false, false);
+		}
 
-	if (eventRepository.existsByProviderEventId(stripeEvent.eventId())) {
-		return new WebhookProcessingResult(true, true, false);
-	}
+		if (eventRepository.existsByProviderEventId(stripeEvent.eventId())) {
+			return new WebhookProcessingResult(true, true, false);
+		}
 
-	PaymentAttempt attempt = attemptRepository.findByIdForUpdate(attemptId).orElse(null);
+		PaymentAttempt attempt = attemptRepository.findByIdForUpdate(attemptId).orElse(null);
+		PaymentProviderEvent event = new PaymentProviderEvent(paymentId, attempt == null ? null : attemptId,
+				stripeEvent.eventId(), stripeEvent.eventType());
+		String identityError = validateEventIdentity(stripeEvent, payment, attempt);
+		if (identityError != null) {
+			event.markRejected(identityError);
+			eventRepository.saveAndFlush(event);
+			return new WebhookProcessingResult(true, false, false);
+		}
 
-	PaymentProviderEvent event = new PaymentProviderEvent(
-			paymentId,
-			attempt == null ? null : attemptId,
-			stripeEvent.eventId(),
-			stripeEvent.eventType());
+		if (stripeEvent.kind() == StripeEventKind.FAILED) {
+			event.markProcessed();
+			eventRepository.saveAndFlush(event);
+			return new WebhookProcessingResult(true, false, false);
+		}
 
-	String identityError = validateEventIdentity(stripeEvent, payment, attempt);
-	if (identityError != null) {
-		event.markRejected(identityError);
-		eventRepository.saveAndFlush(event);
-		return new WebhookProcessingResult(true, false, false);
-	}
+		if (stripeEvent.kind() != StripeEventKind.SUCCESS) {
+			if (payment.getStatus() != PaymentStatus.PENDING || !attempt.getProviderStatus().isActive()) {
+				event.markProcessed();
+				eventRepository.saveAndFlush(event);
+				return new WebhookProcessingResult(true, true, false);
+			}
 
-	if (stripeEvent.kind() == StripeEventKind.FAILED) {
-		event.markProcessed();
-		eventRepository.saveAndFlush(event);
-		return new WebhookProcessingResult(true, false, false);
-	}
+			attempt.markTerminal(toAttemptStatus(stripeEvent.kind()), stripeEvent.checkoutSessionId(),
+					stripeEvent.paymentIntentId());
 
-	if (stripeEvent.kind() != StripeEventKind.SUCCESS) {
-		if (payment.getStatus() != PaymentStatus.PENDING || !attempt.getProviderStatus().isActive()) {
+			event.markProcessed();
+			attemptRepository.save(attempt);
+			eventRepository.saveAndFlush(event);
+			return new WebhookProcessingResult(true, false, false);
+		}
+
+		if (payment.getStatus() == PaymentStatus.PAID) {
 			event.markProcessed();
 			eventRepository.saveAndFlush(event);
 			return new WebhookProcessingResult(true, true, false);
 		}
 
-		attempt.markTerminal(toAttemptStatus(stripeEvent.kind()),
-				stripeEvent.checkoutSessionId(),
-				stripeEvent.paymentIntentId());
+		if (!attempt.getProviderStatus().isActive()) {
+			event.markRejected("Payment attempt is no longer active");
+			eventRepository.saveAndFlush(event);
+			return new WebhookProcessingResult(true, false, false);
+		}
 
+		String valueError = validateSuccessValues(stripeEvent, payment);
+		if (valueError != null) {
+			event.markRejected(valueError);
+			eventRepository.saveAndFlush(event);
+			return new WebhookProcessingResult(true, false, false);
+		}
+
+		TransportOrder order = orderRepository.findByIdForUpdate(payment.getTransportOrderId()).orElse(null);
+		Quotation quotation = quotationRepository.findByTransportOrderId(payment.getTransportOrderId()).orElse(null);
+
+		String stateError = validateRemainingBalanceState(stripeEvent, order, quotation, payment);
+		if (stateError != null) {
+			event.markRejected(stateError);
+			eventRepository.saveAndFlush(event);
+			return new WebhookProcessingResult(true, false, false);
+		}
+
+		payment.markPaid();
+		attempt.markSucceeded(stripeEvent.checkoutSessionId(), stripeEvent.paymentIntentId());
 		event.markProcessed();
+
+		paymentRepository.save(payment);
 		attemptRepository.save(attempt);
 		eventRepository.saveAndFlush(event);
+
 		return new WebhookProcessingResult(true, false, false);
 	}
-
-	if (payment.getStatus() == PaymentStatus.PAID) {
-		event.markProcessed();
-		eventRepository.saveAndFlush(event);
-		return new WebhookProcessingResult(true, true, false);
-	}
-
-	if (!attempt.getProviderStatus().isActive()) {
-		event.markRejected("Payment attempt is no longer active");
-		eventRepository.saveAndFlush(event);
-		return new WebhookProcessingResult(true, false, false);
-	}
-
-	String valueError = validateSuccessValues(stripeEvent, payment);
-	if (valueError != null) {
-		event.markRejected(valueError);
-		eventRepository.saveAndFlush(event);
-		return new WebhookProcessingResult(true, false, false);
-	}
-
-	TransportOrder order = orderRepository.findByIdForUpdate(payment.getTransportOrderId()).orElse(null);
-	Quotation quotation = quotationRepository.findByTransportOrderId(payment.getTransportOrderId()).orElse(null);
-
-	String stateError = validateRemainingBalanceState(stripeEvent, order, quotation, payment);
-	if (stateError != null) {
-		event.markRejected(stateError);
-		eventRepository.saveAndFlush(event);
-		return new WebhookProcessingResult(true, false, false);
-	}
-
-	payment.markPaid();
-	attempt.markSucceeded(stripeEvent.checkoutSessionId(), stripeEvent.paymentIntentId());
-	order.openFrcEligibility();
-	event.markProcessed();
-
-	paymentRepository.save(payment);
-	attemptRepository.save(attempt);
-	orderRepository.save(order);
-	eventRepository.saveAndFlush(event);
-
-	return new WebhookProcessingResult(true, false, false);
-}
 
 	@Transactional
 	public PreparedRemainingBalanceCheckout prepareCheckout(UUID orderId) {
@@ -327,86 +318,86 @@ public class RemainingBalancePaymentTransactionService {
 			throw new DepositPaymentConflictException("Remaining Balance payment does not match the sent quotation");
 		}
 	}
-    private String validateEventIdentity(StripeWebhookEvent event, Payment payment, PaymentAttempt attempt) {
-	if (attempt == null || !attempt.getPaymentId().equals(payment.getId())) {
-		return "Payment attempt does not match";
-	}
-	if (payment.getPaymentType() != PaymentType.REMAINING_BALANCE
-			|| !PaymentType.REMAINING_BALANCE.name().equals(event.metadata().get(METADATA_PAYMENT_TYPE))) {
-		return "Payment type does not match";
-	}
-	if (!payment.getTransportOrderId().toString().equals(event.metadata().get(METADATA_ORDER_ID))) {
-		return "Order metadata does not match";
-	}
-	if (attempt.getProviderCheckoutSessionId() != null && event.checkoutSessionId() != null
-			&& !attempt.getProviderCheckoutSessionId().equals(event.checkoutSessionId())) {
-		return "Checkout Session does not match";
-	}
-	if (attempt.getProviderPaymentIntentId() != null && event.paymentIntentId() != null
-			&& !attempt.getProviderPaymentIntentId().equals(event.paymentIntentId())) {
-		return "PaymentIntent does not match";
-	}
-	return null;
-}
 
-private String validateSuccessValues(StripeWebhookEvent event, Payment payment) {
-	long expectedAmount;
-	try {
-		expectedAmount = payment.getAmount().setScale(2, RoundingMode.UNNECESSARY)
-				.movePointRight(2).longValueExact();
-	}
-	catch (ArithmeticException exception) {
-		return "Payment amount cannot be represented in Stripe minor units";
-	}
-
-	if (event.amountMinor() == null || event.amountMinor() != expectedAmount) {
-		return "Payment amount does not match";
-	}
-	if (event.currency() == null || !payment.getCurrency().equalsIgnoreCase(event.currency())) {
-		return "Payment currency does not match";
-	}
-	if (event.checkoutSessionId() == null || event.paymentIntentId() == null) {
-		return "Stripe payment identifiers are missing";
-	}
-	return null;
-}
-
-private String validateRemainingBalanceState(StripeWebhookEvent event, TransportOrder order,
-		Quotation quotation, Payment payment) {
-	if (order == null || !isFinalConfirmed(order)) {
-		return "Order is not Final Confirmed";
-	}
-	if (quotation == null || quotation.getStatus() != QuotationStatus.SENT) {
-		return "Quotation is no longer SENT";
-	}
-	if (!quotation.getId().toString().equals(event.metadata().get(METADATA_QUOTATION_ID))) {
-		return "Quotation metadata does not match";
-	}
-
-	BigDecimal remainingAmount = calculateRemainingAmount(quotation);
-
-	if (remainingAmount.compareTo(payment.getAmount()) != 0
-			|| quotation.getCurrency() == null
-			|| !quotation.getCurrency().equalsIgnoreCase(payment.getCurrency())) {
-		return "Quotation amount or currency does not match the payment";
-	}
-	return null;
-}
-
-private PaymentAttemptStatus toAttemptStatus(StripeEventKind kind) {
-	return switch (kind) {
-		case CANCELLED -> PaymentAttemptStatus.CANCELLED;
-		case EXPIRED -> PaymentAttemptStatus.EXPIRED;
-		default -> throw new IllegalArgumentException("Event kind is not terminal");
-	};
-}
-
-private UUID parseUuid(String value) {
-	try {
-		return value == null ? null : UUID.fromString(value);
-	}
-	catch (IllegalArgumentException exception) {
+	private String validateEventIdentity(StripeWebhookEvent event, Payment payment, PaymentAttempt attempt) {
+		if (attempt == null || !attempt.getPaymentId().equals(payment.getId())) {
+			return "Payment attempt does not match";
+		}
+		if (payment.getPaymentType() != PaymentType.REMAINING_BALANCE
+				|| !PaymentType.REMAINING_BALANCE.name().equals(event.metadata().get(METADATA_PAYMENT_TYPE))) {
+			return "Payment type does not match";
+		}
+		if (!payment.getTransportOrderId().toString().equals(event.metadata().get(METADATA_ORDER_ID))) {
+			return "Order metadata does not match";
+		}
+		if (attempt.getProviderCheckoutSessionId() != null && event.checkoutSessionId() != null
+				&& !attempt.getProviderCheckoutSessionId().equals(event.checkoutSessionId())) {
+			return "Checkout Session does not match";
+		}
+		if (attempt.getProviderPaymentIntentId() != null && event.paymentIntentId() != null
+				&& !attempt.getProviderPaymentIntentId().equals(event.paymentIntentId())) {
+			return "PaymentIntent does not match";
+		}
 		return null;
 	}
-}
+
+	private String validateSuccessValues(StripeWebhookEvent event, Payment payment) {
+		long expectedAmount;
+		try {
+			expectedAmount = payment.getAmount().setScale(2, RoundingMode.UNNECESSARY)
+					.movePointRight(2).longValueExact();
+		}
+		catch (ArithmeticException exception) {
+			return "Payment amount cannot be represented in Stripe minor units";
+		}
+
+		if (event.amountMinor() == null || event.amountMinor() != expectedAmount) {
+			return "Payment amount does not match";
+		}
+		if (event.currency() == null || !payment.getCurrency().equalsIgnoreCase(event.currency())) {
+			return "Payment currency does not match";
+		}
+		if (event.checkoutSessionId() == null || event.paymentIntentId() == null) {
+			return "Stripe payment identifiers are missing";
+		}
+		return null;
+	}
+
+	private String validateRemainingBalanceState(StripeWebhookEvent event, TransportOrder order,
+			Quotation quotation, Payment payment) {
+		if (order == null || !isFinalConfirmed(order)) {
+			return "Order is not Final Confirmed";
+		}
+		if (quotation == null || quotation.getStatus() != QuotationStatus.SENT) {
+			return "Quotation is no longer SENT";
+		}
+		if (!quotation.getId().toString().equals(event.metadata().get(METADATA_QUOTATION_ID))) {
+			return "Quotation metadata does not match";
+		}
+
+		BigDecimal remainingAmount = calculateRemainingAmount(quotation);
+		if (remainingAmount.compareTo(payment.getAmount()) != 0
+				|| quotation.getCurrency() == null
+				|| !quotation.getCurrency().equalsIgnoreCase(payment.getCurrency())) {
+			return "Quotation amount or currency does not match the payment";
+		}
+		return null;
+	}
+
+	private PaymentAttemptStatus toAttemptStatus(StripeEventKind kind) {
+		return switch (kind) {
+			case CANCELLED -> PaymentAttemptStatus.CANCELLED;
+			case EXPIRED -> PaymentAttemptStatus.EXPIRED;
+			default -> throw new IllegalArgumentException("Event kind is not terminal");
+		};
+	}
+
+	private UUID parseUuid(String value) {
+		try {
+			return value == null ? null : UUID.fromString(value);
+		}
+		catch (IllegalArgumentException exception) {
+			return null;
+		}
+	}
 }
