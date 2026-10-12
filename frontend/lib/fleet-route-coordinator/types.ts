@@ -5,6 +5,8 @@ export type RoutePlanStatus =
   | "PENDING_LM_REVIEW"
   | "APPROVED";
 
+export type RouteLegType = "ROAD" | "AIR";
+
 export type PlanningReadinessItem = {
   id: string;
   label: string;
@@ -41,15 +43,60 @@ export type AssignedCoordinatorQueue = {
   orders: AssignedCoordinatorOrderSummary[];
 };
 
+export type RoutePlanLeg = {
+  id: string;
+  sequenceNo: number;
+  legType: RouteLegType;
+  origin: string;
+  destination: string;
+  plannedDepartureAt: string;
+  plannedArrivalAt: string;
+  airProviderName: string | null;
+  airReference: string | null;
+  airCapacityHorses: number | null;
+  equipmentDetails: string | null;
+  notes: string | null;
+};
+
+export type RouteLegInput = Omit<RoutePlanLeg, "id" | "sequenceNo">;
+
+export type RoutePlanValidationIssue = {
+  code: string;
+  message: string;
+  severity: "ERROR" | "WARNING";
+  legId: string | null;
+  field: keyof RouteLegInput | null;
+};
+
+export type RoutePlanDetail = {
+  id: string | null;
+  orderId: string;
+  status: RoutePlanStatus;
+  revision: number;
+  updatedAt: string | null;
+  returnedReason: string | null;
+  readOnly: boolean;
+  legs: RoutePlanLeg[];
+  validationIssues: RoutePlanValidationIssue[];
+};
+
 export type FleetRouteCoordinatorService = {
   listAssignedActionableOrders(): Promise<AssignedCoordinatorQueue>;
   getAssignedPlanningContext(orderId: string): Promise<AssignedCoordinatorOrderDetail>;
+  getRoutePlan(orderId: string): Promise<RoutePlanDetail>;
+  saveRouteLeg(orderId: string, input: RouteLegInput, legId?: string): Promise<RoutePlanDetail>;
+  deleteRouteLeg(orderId: string, legId: string): Promise<RoutePlanDetail>;
+  moveRouteLeg(orderId: string, legId: string, direction: "UP" | "DOWN"): Promise<RoutePlanDetail>;
+  validateRoutePlan(orderId: string): Promise<RoutePlanDetail>;
+  submitRoutePlan(orderId: string): Promise<RoutePlanDetail>;
 };
 
 export type CoordinatorWorkspaceErrorCode =
   | "FORBIDDEN"
   | "NOT_FOUND"
   | "STALE_STATE"
+  | "LOCKED"
+  | "VALIDATION_FAILED"
   | "REQUEST_FAILED"
   | "CONTRACT_UNAVAILABLE";
 

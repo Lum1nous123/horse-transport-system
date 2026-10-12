@@ -4,22 +4,25 @@ import {
   type FleetRouteCoordinatorService,
 } from "./types";
 
+function contractUnavailable(): never {
+  throw new CoordinatorWorkspaceError(
+    "Route Plan services are not available right now. Try again later.",
+    "CONTRACT_UNAVAILABLE",
+  );
+}
+
 const contractUnavailableService: FleetRouteCoordinatorService = {
-  async listAssignedActionableOrders() {
-    throw new CoordinatorWorkspaceError(
-      "Assigned route-planning Orders are not available right now. Try again later.",
-      "CONTRACT_UNAVAILABLE",
-    );
-  },
-  async getAssignedPlanningContext() {
-    throw new CoordinatorWorkspaceError(
-      "Route-planning context is not available right now. Return to the planning queue.",
-      "CONTRACT_UNAVAILABLE",
-    );
-  },
+  async listAssignedActionableOrders() { return contractUnavailable(); },
+  async getAssignedPlanningContext() { return contractUnavailable(); },
+  async getRoutePlan() { return contractUnavailable(); },
+  async saveRouteLeg() { return contractUnavailable(); },
+  async deleteRouteLeg() { return contractUnavailable(); },
+  async moveRouteLeg() { return contractUnavailable(); },
+  async validateRoutePlan() { return contractUnavailable(); },
+  async submitRoutePlan() { return contractUnavailable(); },
 };
 
-// BE-15 does not yet expose a usable frontend contract. Keeping service
+// BE-15/16/19/20 do not yet expose usable frontend contracts. Keeping service
 // selection here prevents guessed endpoints and DTOs from leaking into pages.
 export function getFleetRouteCoordinatorService(preview: boolean): FleetRouteCoordinatorService {
   return preview ? mockFleetRouteCoordinatorService : contractUnavailableService;
