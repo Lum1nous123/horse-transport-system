@@ -30,6 +30,7 @@ public class RoutePlanService {
     private final VehicleRepository vehicleRepository;
     private final RoadLegVehicleRepository roadLegVehicleRepository;
     private final RoadLegVehicleHorseRepository roadLegVehicleHorseRepository;
+    private final CheckpointRepository checkpointRepository;
     private final CurrentUserProvider currentUserProvider;
 
 	public RoutePlanService(TransportOrderRepository orderRepository,
@@ -38,6 +39,7 @@ public class RoutePlanService {
 		VehicleRepository vehicleRepository,
 		RoadLegVehicleRepository roadLegVehicleRepository,
 		RoadLegVehicleHorseRepository roadLegVehicleHorseRepository,
+		CheckpointRepository checkpointRepository,
 		CurrentUserProvider currentUserProvider) {
 	this.orderRepository = orderRepository;
 	this.routePlanRepository = routePlanRepository;
@@ -45,6 +47,7 @@ public class RoutePlanService {
 	this.vehicleRepository = vehicleRepository;
 	this.roadLegVehicleRepository = roadLegVehicleRepository;
 	this.roadLegVehicleHorseRepository = roadLegVehicleHorseRepository;
+	this.checkpointRepository = checkpointRepository;
 	this.currentUserProvider = currentUserProvider;
 }
 
@@ -143,6 +146,58 @@ public RoadAllocationDetailResponse allocateRoadVehicles(UUID orderId, UUID legI
 	return toRoadAllocationDetail(leg);
     }
 
+	@Transactional(readOnly = true)
+public List<CheckpointResponse> getCheckpoints(UUID orderId, UUID legId) {
+	requireFrc();
+
+	UUID frcUserId = currentUserProvider.getCurrentUserId();
+	TransportOrder order = findAccessiblePlanningOrder(orderId, frcUserId);
+	RoutePlan routePlan = routePlanRepository.findByTransportOrderId(order.getId())
+			.orElseThrow(RoutePlanNotFoundException::new);
+	RouteLeg leg = findRoutePlanLeg(routePlan, legId);
+	requireRoadLeg(leg);
+
+	return checkpointRepository.findAllByRouteLegIdOrderBySequenceNoAsc(leg.getId()).stream()
+			.map(CheckpointResponse::from)
+			.toList();
+}
+
+@Transactional
+public List<CheckpointResponse> updateCheckpoints(UUID orderId, UUID legId,
+		UpdateCheckpointsRequest request) {
+	requireFrc();
+
+	UUID frcUserId = currentUserProvider.getCurrentUserId();
+	TransportOrder order = findAccessiblePlanningOrder(orderId, frcUserId);
+	RoutePlan routePlan = routePlanRepository.findByTransportOrderId(order.getId())
+			.orElseThrow(RoutePlanNotFoundException::new);
+	requireEditable(routePlan);
+
+	RouteLeg leg = findRoutePlanLeg(routePlan, legId);
+	requireRoadLeg(leg);
+	validateCheckpointCollection(request);
+
+	checkpointRepository.deleteAllByRouteLegId(leg.getId());
+
+	List<Checkpoint> checkpoints = request.checkpoints().stream()
+			.map(checkpoint -> new Checkpoint(
+					leg.getId(),
+					checkpoint.sequenceNo(),
+					checkpoint.name().trim(),
+					checkpoint.checkpointType(),
+					normalize(checkpoint.countryCode()),
+					checkpoint.minimumRequiredStopMinutes(),
+					checkpoint.plannedStopDurationMinutes(),
+					normalize(checkpoint.notes())))
+			.toList();
+
+	checkpointRepository.saveAll(checkpoints);
+
+	return checkpointRepository.findAllByRouteLegIdOrderBySequenceNoAsc(leg.getId()).stream()
+			.map(CheckpointResponse::from)
+			.toList();
+}
+
 	@Transactional
 	public RouteLegResponse addLeg(UUID orderId, UpsertRouteLegRequest request) {
 		requireFrc();
@@ -236,9 +291,10 @@ public RoadAllocationDetailResponse allocateRoadVehicles(UUID orderId, UUID legI
 				.filter(existingLeg -> existingLeg.getRoutePlanId().equals(routePlan.getId()))
 				.orElseThrow(RoutePlanNotFoundException::new);
 
-		roadLegVehicleHorseRepository.deleteAllByRouteLegId(leg.getId());
-        roadLegVehicleRepository.deleteAllByRouteLegId(leg.getId());
-        routeLegRepository.delete(leg);
+		    roadLegVehicleHorseRepository.deleteAllByRouteLegId(leg.getId());
+            roadLegVehicleRepository.deleteAllByRouteLegId(leg.getId());
+            checkpointRepository.deleteAllByRouteLegId(leg.getId());
+            routeLegRepository.delete(leg);
 	}
 
     	@Transactional
@@ -333,9 +389,19 @@ public RoadAllocationDetailResponse allocateRoadVehicles(UUID orderId, UUID legI
 	}
 
 	private RoutePlanResponse toResponse(RoutePlan routePlan) {
-		List<RouteLeg> legs = routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(routePlan.getId());
-		return RoutePlanResponse.from(routePlan, legs);
-	}
+	List<RouteLeg> legs = routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(routePlan.getId());
+	Map<UUID, List<Checkpoint>> checkpointsByLegId = checkpointRepository
+			.findAllByRouteLegIdIn(legs.stream().map(RouteLeg::getId).toList())
+			.stream()
+			.collect(Collectors.groupingBy(
+					Checkpoint::getRouteLegId,
+					Collectors.collectingAndThen(
+							Collectors.toList(),
+							checkpoints -> checkpoints.stream()
+									.sorted(Comparator.comparing(Checkpoint::getSequenceNo))
+									.toList())));
+	return RoutePlanResponse.from(routePlan, legs, checkpointsByLegId);
+}
 
     private RouteLeg findRoutePlanLeg(RoutePlan routePlan, UUID legId) {
 	return routeLegRepository.findById(legId)
@@ -458,7 +524,37 @@ private RoadAllocationDetailResponse toRoadAllocationDetail(RouteLeg leg) {
 			.toList();
 
 	return new RoadAllocationDetailResponse(leg.getId(), vehicleResponses);
+    }
+
+	private void validateCheckpointCollection(UpdateCheckpointsRequest request) {
+	HashSet<Integer> sequences = new HashSet<>();
+
+	for (UpdateCheckpointsRequest.CheckpointItemRequest checkpoint : request.checkpoints()) {
+		if (checkpoint.sequenceNo() <= 0) {
+			throw new RoutePlanValidationException("Checkpoint sequence number must be positive");
+		}
+		if (!sequences.add(checkpoint.sequenceNo())) {
+			throw new RoutePlanValidationException("Checkpoint sequence number must be unique within the ROAD leg");
+		}
+		if (isBlank(checkpoint.name())) {
+			throw new RoutePlanValidationException("Checkpoint name is required");
+		}
+		if (checkpoint.checkpointType() == CheckpointType.REST_STOP) {
+			if (checkpoint.minimumRequiredStopMinutes() == null
+					|| checkpoint.minimumRequiredStopMinutes() < 0
+					|| checkpoint.plannedStopDurationMinutes() == null
+					|| checkpoint.plannedStopDurationMinutes() < checkpoint.minimumRequiredStopMinutes()) {
+				throw new RoutePlanValidationException(
+						"REST_STOP checkpoints require planned stop duration to meet the minimum");
+			}
+		}
+		else if (checkpoint.minimumRequiredStopMinutes() != null
+				|| checkpoint.plannedStopDurationMinutes() != null) {
+			throw new RoutePlanValidationException("Only REST_STOP checkpoints can include stop duration fields");
+		}
+	}
 }
+
 
 	private void requireEditable(RoutePlan routePlan) {
 		if (!routePlan.isEditableByFrc()) {

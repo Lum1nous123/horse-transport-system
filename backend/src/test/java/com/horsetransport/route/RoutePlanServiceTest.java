@@ -46,6 +46,7 @@ class RoutePlanServiceTest {
 	@Mock private VehicleRepository vehicleRepository;
 	@Mock private RoadLegVehicleRepository roadLegVehicleRepository;
 	@Mock private RoadLegVehicleHorseRepository roadLegVehicleHorseRepository;
+	@Mock private CheckpointRepository checkpointRepository;
 
 	private RoutePlanService service;
 
@@ -53,7 +54,7 @@ class RoutePlanServiceTest {
 	void setUp() {
 		service = new RoutePlanService(orderRepository, routePlanRepository, routeLegRepository,
 				vehicleRepository, roadLegVehicleRepository, roadLegVehicleHorseRepository,
-				currentUserProvider);
+				checkpointRepository, currentUserProvider);
 
 		lenient().when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.FLEET_ROUTE_COORDINATOR);
 		lenient().when(currentUserProvider.getCurrentUserId()).thenReturn(FRC_ID);
@@ -65,6 +66,8 @@ class RoutePlanServiceTest {
 		lenient().when(roadLegVehicleHorseRepository.findAllByRouteLegId(any())).thenReturn(List.of());
 		lenient().when(vehicleRepository.findAllById(any())).thenReturn(List.of());
 		lenient().when(roadLegVehicleRepository.findOverlappingAllocations(any(), any(), any(), any()))
+				.thenReturn(List.of());
+		lenient().when(checkpointRepository.findAllByRouteLegIdOrderBySequenceNoAsc(any()))
 				.thenReturn(List.of());
 	}
 
