@@ -15,6 +15,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import com.horsetransport.route.RoutePlanRepository;
 import com.horsetransport.route.RouteLegRepository;
+import com.horsetransport.route.RoadLegVehicleHorseRepository;
+import com.horsetransport.route.RoadLegVehicleRepository;
+import com.horsetransport.route.VehicleRepository;
 
 
 @SpringBootTest(properties = {
@@ -62,6 +65,15 @@ class BackendApplicationTests {
 
 	@MockitoBean
 	private RouteLegRepository routeLegRepository;
+
+	@MockitoBean
+    private VehicleRepository vehicleRepository;
+
+    @MockitoBean
+    private RoadLegVehicleRepository roadLegVehicleRepository;
+
+    @MockitoBean
+    private RoadLegVehicleHorseRepository roadLegVehicleHorseRepository;
 
 	@Test
 	void contextLoads() {

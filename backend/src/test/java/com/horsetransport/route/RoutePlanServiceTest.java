@@ -8,12 +8,14 @@ import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Constructor;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
+import com.horsetransport.order.TransportOrderHorse;
 import com.horsetransport.order.TransportOrderRepository;
 import com.horsetransport.security.CurrentUserProvider;
 import com.horsetransport.user.UserRole;
@@ -31,24 +33,38 @@ class RoutePlanServiceTest {
 	private static final UUID FRC_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
 	private static final UUID CUSTOMER_ID = UUID.fromString("22222222-2222-2222-2222-222222222222");
 	private static final UUID ORDER_ID = UUID.fromString("33333333-3333-3333-3333-333333333333");
+	private static final UUID ORDER_HORSE_ID = UUID.fromString("44444444-4444-4444-4444-444444444444");
+	private static final UUID SECOND_ORDER_HORSE_ID = UUID.fromString("55555555-5555-5555-5555-555555555555");
+	private static final UUID FOREIGN_ORDER_HORSE_ID = UUID.fromString("66666666-6666-6666-6666-666666666666");
+	private static final UUID VEHICLE_ID = UUID.fromString("77777777-7777-7777-7777-777777777777");
+	private static final UUID SECOND_VEHICLE_ID = UUID.fromString("88888888-8888-8888-8888-888888888888");
 
 	@Mock private TransportOrderRepository orderRepository;
 	@Mock private RoutePlanRepository routePlanRepository;
 	@Mock private RouteLegRepository routeLegRepository;
 	@Mock private CurrentUserProvider currentUserProvider;
+	@Mock private VehicleRepository vehicleRepository;
+	@Mock private RoadLegVehicleRepository roadLegVehicleRepository;
+	@Mock private RoadLegVehicleHorseRepository roadLegVehicleHorseRepository;
 
 	private RoutePlanService service;
 
 	@BeforeEach
 	void setUp() {
 		service = new RoutePlanService(orderRepository, routePlanRepository, routeLegRepository,
+				vehicleRepository, roadLegVehicleRepository, roadLegVehicleHorseRepository,
 				currentUserProvider);
 
 		lenient().when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.FLEET_ROUTE_COORDINATOR);
 		lenient().when(currentUserProvider.getCurrentUserId()).thenReturn(FRC_ID);
 		lenient().when(orderRepository.findAssignedFrcRoutePlanOrder(ORDER_ID, FRC_ID))
-				.thenReturn(Optional.of(order()));
+				.thenReturn(Optional.of(order(ORDER_HORSE_ID, SECOND_ORDER_HORSE_ID)));
 		lenient().when(routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(any()))
+				.thenReturn(List.of());
+		lenient().when(roadLegVehicleRepository.findAllByRouteLegId(any())).thenReturn(List.of());
+		lenient().when(roadLegVehicleHorseRepository.findAllByRouteLegId(any())).thenReturn(List.of());
+		lenient().when(vehicleRepository.findAllById(any())).thenReturn(List.of());
+		lenient().when(roadLegVehicleRepository.findOverlappingAllocations(any(), any(), any(), any()))
 				.thenReturn(List.of());
 	}
 
@@ -109,15 +125,128 @@ class RoutePlanServiceTest {
 	void submitsValidPlanForLmReview() {
 		RoutePlan plan = routePlan();
 		RouteLeg leg = roadLeg(plan.getId(), 1, "Stable A", "Destination Stable");
+		RoadLegVehicle roadVehicle = new RoadLegVehicle(leg.getId(), VEHICLE_ID);
 
 		when(routePlanRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(plan));
 		when(routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(plan.getId()))
 				.thenReturn(List.of(leg));
+		when(roadLegVehicleRepository.findAllByRouteLegId(leg.getId()))
+				.thenReturn(List.of(roadVehicle));
+		when(vehicleRepository.findAllById(List.of(VEHICLE_ID)))
+				.thenReturn(List.of(vehicle(VEHICLE_ID, 2, VehicleStatus.AVAILABLE)));
+		when(roadLegVehicleHorseRepository.findAllByRouteLegId(leg.getId()))
+				.thenReturn(List.of(
+						new RoadLegVehicleHorse(leg.getId(), roadVehicle.getId(), ORDER_HORSE_ID),
+						new RoadLegVehicleHorse(leg.getId(), roadVehicle.getId(), SECOND_ORDER_HORSE_ID)));
 		when(routePlanRepository.save(plan)).thenReturn(plan);
 
 		RoutePlanResponse response = service.submitPlan(ORDER_ID);
 
 		assertThat(response.status()).isEqualTo(RoutePlanStatus.PENDING_LM_REVIEW);
+	}
+
+	@Test
+	void vehicleCandidatesReturnSelectabilityReasons() {
+		RoutePlan plan = routePlan();
+		RouteLeg leg = roadLeg(plan.getId(), 1, "Stable A", "Destination Stable");
+		Vehicle available = vehicle(VEHICLE_ID, 2, VehicleStatus.AVAILABLE);
+		Vehicle maintenance = vehicle(SECOND_VEHICLE_ID, 2, VehicleStatus.MAINTENANCE);
+
+		when(routePlanRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(plan));
+		when(routeLegRepository.findById(leg.getId())).thenReturn(Optional.of(leg));
+		when(vehicleRepository.findAllByOrderByPlateNumberAsc()).thenReturn(List.of(available, maintenance));
+		when(roadLegVehicleRepository.findOverlappingAllocations(
+				List.of(VEHICLE_ID, SECOND_VEHICLE_ID),
+				leg.getId(),
+				leg.getPlannedDepartureAt(),
+				leg.getPlannedArrivalAt()))
+				.thenReturn(List.of(new RoadLegVehicle(UUID.randomUUID(), VEHICLE_ID)));
+
+		List<VehicleCandidateResponse> response = service.listVehicleCandidates(ORDER_ID, leg.getId());
+
+		assertThat(response).hasSize(2);
+		assertThat(response.get(0).selectable()).isFalse();
+		assertThat(response.get(0).reasons()).containsExactly("OVERLAPPING_ROUTE_LEG");
+		assertThat(response.get(1).selectable()).isFalse();
+		assertThat(response.get(1).reasons()).containsExactly("MAINTENANCE");
+	}
+
+	@Test
+	void rejectsDuplicateHorseAllocation() {
+		RoutePlan plan = routePlan();
+		RouteLeg leg = roadLeg(plan.getId(), 1, "Stable A", "Destination Stable");
+
+		when(routePlanRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(plan));
+		when(routeLegRepository.findById(leg.getId())).thenReturn(Optional.of(leg));
+		when(vehicleRepository.findAllById(any()))
+				.thenReturn(List.of(vehicle(VEHICLE_ID, 2, VehicleStatus.AVAILABLE)));
+
+		RoadVehicleAllocationRequest request = new RoadVehicleAllocationRequest(List.of(
+				new RoadVehicleAllocationRequest.VehicleHorseAllocationRequest(
+						VEHICLE_ID, List.of(ORDER_HORSE_ID, ORDER_HORSE_ID))));
+
+		assertThatThrownBy(() -> service.allocateRoadVehicles(ORDER_ID, leg.getId(), request))
+				.isInstanceOf(RoutePlanValidationException.class)
+				.hasMessageContaining("duplicate Horse");
+	}
+
+	@Test
+	void rejectsForeignHorseAllocation() {
+		RoutePlan plan = routePlan();
+		RouteLeg leg = roadLeg(plan.getId(), 1, "Stable A", "Destination Stable");
+
+		when(routePlanRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(plan));
+		when(routeLegRepository.findById(leg.getId())).thenReturn(Optional.of(leg));
+		when(vehicleRepository.findAllById(any()))
+				.thenReturn(List.of(vehicle(VEHICLE_ID, 2, VehicleStatus.AVAILABLE)));
+
+		RoadVehicleAllocationRequest request = new RoadVehicleAllocationRequest(List.of(
+				new RoadVehicleAllocationRequest.VehicleHorseAllocationRequest(
+						VEHICLE_ID, List.of(ORDER_HORSE_ID, FOREIGN_ORDER_HORSE_ID))));
+
+		assertThatThrownBy(() -> service.allocateRoadVehicles(ORDER_ID, leg.getId(), request))
+				.isInstanceOf(RoutePlanValidationException.class)
+				.hasMessageContaining("foreign Horse");
+	}
+
+	@Test
+	void rejectsCapacityExceededAllocation() {
+		RoutePlan plan = routePlan();
+		RouteLeg leg = roadLeg(plan.getId(), 1, "Stable A", "Destination Stable");
+
+		when(routePlanRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(plan));
+		when(routeLegRepository.findById(leg.getId())).thenReturn(Optional.of(leg));
+		when(vehicleRepository.findAllById(any()))
+				.thenReturn(List.of(vehicle(VEHICLE_ID, 1, VehicleStatus.AVAILABLE)));
+
+		RoadVehicleAllocationRequest request = new RoadVehicleAllocationRequest(List.of(
+				new RoadVehicleAllocationRequest.VehicleHorseAllocationRequest(
+						VEHICLE_ID, List.of(ORDER_HORSE_ID, SECOND_ORDER_HORSE_ID))));
+
+		assertThatThrownBy(() -> service.allocateRoadVehicles(ORDER_ID, leg.getId(), request))
+				.isInstanceOf(RoutePlanValidationException.class)
+				.hasMessageContaining("capacity");
+	}
+
+	@Test
+	void rejectsOverlappingVehicleAllocation() {
+		RoutePlan plan = routePlan();
+		RouteLeg leg = roadLeg(plan.getId(), 1, "Stable A", "Destination Stable");
+
+		when(routePlanRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(plan));
+		when(routeLegRepository.findById(leg.getId())).thenReturn(Optional.of(leg));
+		when(vehicleRepository.findAllById(any()))
+				.thenReturn(List.of(vehicle(VEHICLE_ID, 2, VehicleStatus.AVAILABLE)));
+		when(roadLegVehicleRepository.findOverlappingAllocations(any(), any(), any(), any()))
+				.thenReturn(List.of(new RoadLegVehicle(UUID.randomUUID(), VEHICLE_ID)));
+
+		RoadVehicleAllocationRequest request = new RoadVehicleAllocationRequest(List.of(
+				new RoadVehicleAllocationRequest.VehicleHorseAllocationRequest(
+						VEHICLE_ID, List.of(ORDER_HORSE_ID, SECOND_ORDER_HORSE_ID))));
+
+		assertThatThrownBy(() -> service.allocateRoadVehicles(ORDER_ID, leg.getId(), request))
+				.isInstanceOf(RoutePlanValidationException.class)
+				.hasMessageContaining("overlaps");
 	}
 
 	@Test
@@ -163,7 +292,14 @@ class RoutePlanServiceTest {
 				null);
 	}
 
-	private TransportOrder order() {
+	private Vehicle vehicle(UUID vehicleId, int capacity, VehicleStatus status) {
+		Vehicle vehicle = new Vehicle("PLATE-" + vehicleId.toString().substring(0, 4),
+				"Vehicle", "Trailer", capacity, status, null);
+		ReflectionTestUtils.setField(vehicle, "id", vehicleId);
+		return vehicle;
+	}
+
+	private TransportOrder order(UUID... orderHorseIds) {
 		try {
 			Constructor<TransportOrder> constructor = TransportOrder.class
 					.getDeclaredConstructor(UUID.class, String.class);
@@ -173,7 +309,26 @@ class RoutePlanServiceTest {
 			ReflectionTestUtils.setField(order, "status", OrderStatus.APPROVED);
 			ReflectionTestUtils.setField(order, "originAddress", "Stable A");
 			ReflectionTestUtils.setField(order, "destinationAddress", "Destination Stable");
+			List<TransportOrderHorse> horses = new ArrayList<>();
+			for (UUID orderHorseId : orderHorseIds) {
+				horses.add(orderHorse(order, orderHorseId));
+			}
+			ReflectionTestUtils.setField(order, "horses", horses);
 			return order;
+		}
+		catch (ReflectiveOperationException exception) {
+			throw new IllegalStateException(exception);
+		}
+	}
+
+	private TransportOrderHorse orderHorse(TransportOrder order, UUID orderHorseId) {
+		try {
+			Constructor<TransportOrderHorse> constructor = TransportOrderHorse.class
+					.getDeclaredConstructor(TransportOrder.class, UUID.class);
+			constructor.setAccessible(true);
+			TransportOrderHorse orderHorse = constructor.newInstance(order, UUID.randomUUID());
+			ReflectionTestUtils.setField(orderHorse, "id", orderHorseId);
+			return orderHorse;
 		}
 		catch (ReflectiveOperationException exception) {
 			throw new IllegalStateException(exception);
