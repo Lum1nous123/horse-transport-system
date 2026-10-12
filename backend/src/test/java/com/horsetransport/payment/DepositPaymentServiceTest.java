@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class DepositPaymentServiceTest {
 
+	@Mock private RemainingBalancePaymentTransactionService remainingBalanceTransactionService;
 	@Mock private DepositPaymentTransactionService transactionService;
 	@Mock private StripePaymentGateway stripeGateway;
 	@InjectMocks private DepositPaymentService service;
@@ -53,5 +54,22 @@ class DepositPaymentServiceTest {
 
 		assertThat(response.orderApproved()).isTrue();
 		verify(transactionService).processWebhook(event);
+	}
+
+	@Test
+	void webhookRoutesRemainingBalanceEventsToRemainingBalanceTransactionService() {
+		StripeWebhookEvent event = new StripeWebhookEvent("evt_1", "checkout.session.completed",
+				StripeEventKind.SUCCESS, "cs_1", "pi_1", 75000L, "usd",
+				Map.of("paymentType", PaymentType.REMAINING_BALANCE.name()));
+
+		when(stripeGateway.verifyAndParseWebhook("payload", "signature")).thenReturn(event);
+		when(remainingBalanceTransactionService.processWebhook(event))
+				.thenReturn(new WebhookProcessingResult(true, false, false));
+
+		StripeWebhookResponse response = service.handleWebhook("payload", "signature");
+
+		assertThat(response.processed()).isTrue();
+		assertThat(response.orderApproved()).isFalse();
+		verify(remainingBalanceTransactionService).processWebhook(event);
 	}
 }
