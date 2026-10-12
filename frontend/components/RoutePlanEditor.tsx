@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import RoadLegSetup from "@/components/RoadLegSetup";
 import {
   CoordinatorWorkspaceError,
   type FleetRouteCoordinatorService,
@@ -67,6 +68,8 @@ export default function RoutePlanEditor({ orderId, service }: Props) {
   const [initialForm, setInitialForm] = useState<LegForm>(emptyForm);
   const [pendingDelete, setPendingDelete] = useState<RoutePlanLeg | null>(null);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
+  const [roadLegId, setRoadLegId] = useState<string | null>(null);
+  const [roadSetupDirty, setRoadSetupDirty] = useState(false);
 
   const dirty = showForm && JSON.stringify(form) !== JSON.stringify(initialForm);
   const selectedIssues = useMemo(() => plan?.validationIssues.filter((issue) => !issue.legId || issue.legId === editingId) ?? [], [editingId, plan]);
@@ -93,8 +96,10 @@ export default function RoutePlanEditor({ orderId, service }: Props) {
   }, [dirty]);
 
   function canLeaveDraft() { return !dirty || window.confirm("Discard the unsaved changes to this leg?"); }
-  function beginAdd() { if (!canLeaveDraft()) return; setEditingId(null); setForm(emptyForm); setInitialForm(emptyForm); setShowForm(true); setFeedback(""); }
-  function beginEdit(leg: RoutePlanLeg) { if (!canLeaveDraft()) return; const next = formFor(leg); setEditingId(leg.id); setForm(next); setInitialForm(next); setShowForm(true); setFeedback(""); }
+  function canLeaveRoadSetup() { return !roadSetupDirty || window.confirm("Discard unsaved ROAD setup changes?"); }
+  function beginAdd() { if (!canLeaveDraft() || !canLeaveRoadSetup()) return; setRoadLegId(null); setEditingId(null); setForm(emptyForm); setInitialForm(emptyForm); setShowForm(true); setFeedback(""); }
+  function beginEdit(leg: RoutePlanLeg) { if (!canLeaveDraft() || !canLeaveRoadSetup()) return; setRoadLegId(null); const next = formFor(leg); setEditingId(leg.id); setForm(next); setInitialForm(next); setShowForm(true); setFeedback(""); }
+  function toggleRoadSetup(leg: RoutePlanLeg) { if (roadLegId !== leg.id && !canLeaveRoadSetup()) return; if (!canLeaveDraft()) return; closeForm(); setRoadSetupDirty(false); setRoadLegId((current) => current === leg.id ? null : leg.id); }
   function closeForm() { setShowForm(false); setEditingId(null); setForm(emptyForm); setInitialForm(emptyForm); }
   function update<K extends keyof LegForm>(key: K, value: LegForm[K]) { setForm((current) => ({ ...current, [key]: value })); }
   function inputFromForm(): RouteLegInput {
@@ -147,7 +152,7 @@ export default function RoutePlanEditor({ orderId, service }: Props) {
       {plan.validationIssues.length > 0 && (
         <section className="route-plan-validation" aria-labelledby="route-validation-title">
           <div><strong id="route-validation-title">Validation needs attention</strong><span>{plan.validationIssues.length} {plan.validationIssues.length === 1 ? "issue" : "issues"}</span></div>
-          <ul>{plan.validationIssues.map((issue, index) => <li key={`${issue.code}-${issue.legId}-${index}`}><button type="button" onClick={() => { const leg = plan.legs.find((candidate) => candidate.id === issue.legId); if (leg && !plan.readOnly) beginEdit(leg); }} disabled={!issue.legId || plan.readOnly}><span>{issue.code.replaceAll("_", " ")}</span>{issue.message}</button></li>)}</ul>
+          <ul>{plan.validationIssues.map((issue, index) => <li key={`${issue.code}-${issue.legId}-${index}`}><button type="button" onClick={() => { const leg = plan.legs.find((candidate) => candidate.id === issue.legId); if (leg && !plan.readOnly) { if (leg.legType === "ROAD" && issue.code.startsWith("ROAD_SETUP")) toggleRoadSetup(leg); else beginEdit(leg); } }} disabled={!issue.legId || plan.readOnly}><span>{issue.code.replaceAll("_", " ")}</span>{issue.message}</button></li>)}</ul>
         </section>
       )}
 
@@ -159,15 +164,18 @@ export default function RoutePlanEditor({ orderId, service }: Props) {
             <table className="route-plan-table">
               <thead><tr><th scope="col">#</th><th scope="col">Type</th><th scope="col">Route</th><th scope="col">Departure</th><th scope="col">Arrival</th><th scope="col">AIR details</th>{!plan.readOnly && <th scope="col"><span className="sr-only">Actions</span></th>}</tr></thead>
               <tbody>{plan.legs.map((leg, index) => (
-                <tr key={leg.id} className={editingId === leg.id ? "is-selected" : undefined}>
+                <Fragment key={leg.id}>
+                <tr className={editingId === leg.id || roadLegId === leg.id ? "is-selected" : undefined}>
                   <td data-label="Sequence"><span className="route-plan-sequence">{leg.sequenceNo}</span></td>
                   <td data-label="Type"><span className={`route-leg-type is-${leg.legType.toLowerCase()}`}>{leg.legType}</span></td>
                   <td data-label="Route"><strong>{leg.origin}</strong><span aria-hidden="true">&#8594;</span><strong>{leg.destination}</strong></td>
                   <td data-label="Departure"><span>{formatDateTime(leg.plannedDepartureAt)}</span></td>
                   <td data-label="Arrival"><span>{formatDateTime(leg.plannedArrivalAt)}</span></td>
-                  <td data-label="AIR details">{leg.legType === "AIR" ? <><span>{leg.airProviderName || "Not provided"}</span><small>{leg.airReference || "No reference"}{leg.airCapacityHorses ? ` · ${leg.airCapacityHorses} horses` : ""}</small></> : <span className="route-plan-not-applicable">—</span>}</td>
+                  <td data-label={leg.legType === "AIR" ? "AIR details" : "ROAD setup"}>{leg.legType === "AIR" ? <><span>{leg.airProviderName || "Not provided"}</span><small>{leg.airReference || "No reference"}{leg.airCapacityHorses ? ` · ${leg.airCapacityHorses} horses` : ""}</small></> : <button className="road-setup-trigger" type="button" aria-expanded={roadLegId === leg.id} onClick={() => toggleRoadSetup(leg)}>{roadLegId === leg.id ? "Close setup" : plan.readOnly ? "View ROAD" : "Configure ROAD"}</button>}</td>
                   {!plan.readOnly && <td data-label="Actions"><div className="route-plan-row-actions"><button type="button" title="Move leg up" disabled={busy || index === 0} onClick={() => void moveLeg(leg, "UP")}>&#8593;</button><button type="button" title="Move leg down" disabled={busy || index === plan.legs.length - 1} onClick={() => void moveLeg(leg, "DOWN")}>&#8595;</button><button type="button" onClick={() => beginEdit(leg)}>Edit</button><button className="is-danger" type="button" onClick={() => setPendingDelete(leg)}>Delete</button></div></td>}
                 </tr>
+                {roadLegId === leg.id && <tr className="road-setup-row"><td colSpan={plan.readOnly ? 6 : 7}><RoadLegSetup orderId={orderId} leg={leg} service={service} readOnly={plan.readOnly} onDirtyChange={setRoadSetupDirty} onClose={() => { setRoadSetupDirty(false); setRoadLegId(null); }} /></td></tr>}
+                </Fragment>
               ))}</tbody>
             </table>
           )}
