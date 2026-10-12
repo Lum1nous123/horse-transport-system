@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Constructor;
@@ -22,6 +23,7 @@ import com.horsetransport.user.UserRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
@@ -47,6 +49,7 @@ class RoutePlanServiceTest {
 	@Mock private RoadLegVehicleRepository roadLegVehicleRepository;
 	@Mock private RoadLegVehicleHorseRepository roadLegVehicleHorseRepository;
 	@Mock private CheckpointRepository checkpointRepository;
+	@Mock private RoutePlanReviewRepository routePlanReviewRepository;
 
 	private RoutePlanService service;
 
@@ -54,7 +57,7 @@ class RoutePlanServiceTest {
 	void setUp() {
 		service = new RoutePlanService(orderRepository, routePlanRepository, routeLegRepository,
 				vehicleRepository, roadLegVehicleRepository, roadLegVehicleHorseRepository,
-				checkpointRepository, currentUserProvider);
+				checkpointRepository, routePlanReviewRepository, currentUserProvider);
 
 		lenient().when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.FLEET_ROUTE_COORDINATOR);
 		lenient().when(currentUserProvider.getCurrentUserId()).thenReturn(FRC_ID);
@@ -142,11 +145,17 @@ class RoutePlanServiceTest {
 				.thenReturn(List.of(
 						new RoadLegVehicleHorse(leg.getId(), roadVehicle.getId(), ORDER_HORSE_ID),
 						new RoadLegVehicleHorse(leg.getId(), roadVehicle.getId(), SECOND_ORDER_HORSE_ID)));
+		when(routePlanReviewRepository.maxSubmissionNo(plan.getId())).thenReturn(0);
 		when(routePlanRepository.save(plan)).thenReturn(plan);
 
 		RoutePlanResponse response = service.submitPlan(ORDER_ID);
 
 		assertThat(response.status()).isEqualTo(RoutePlanStatus.PENDING_LM_REVIEW);
+		ArgumentCaptor<RoutePlanReview> review = ArgumentCaptor.forClass(RoutePlanReview.class);
+		verify(routePlanReviewRepository).save(review.capture());
+		assertThat(review.getValue().getRoutePlanId()).isEqualTo(plan.getId());
+		assertThat(review.getValue().getSubmissionNo()).isEqualTo(1);
+		assertThat(review.getValue().getDecision()).isEqualTo(RoutePlanReviewDecision.PENDING);
 	}
 
 	@Test
@@ -211,11 +220,87 @@ class RoutePlanServiceTest {
 		when(routePlanRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(plan));
 		when(routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(plan.getId()))
 				.thenReturn(List.of(leg));
+		when(routePlanReviewRepository.maxSubmissionNo(plan.getId())).thenReturn(0);
 		when(routePlanRepository.save(plan)).thenReturn(plan);
 
 		RoutePlanResponse response = service.submitPlan(ORDER_ID);
 
 		assertThat(response.status()).isEqualTo(RoutePlanStatus.PENDING_LM_REVIEW);
+	}
+
+	@Test
+	void lmInboxListsPendingRoutePlanReviews() {
+		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.LOGISTICS_MANAGER);
+		RoutePlan plan = routePlan();
+		plan.submitForReview();
+		RoutePlanReview review = new RoutePlanReview(plan.getId(), 2, FRC_ID);
+
+		when(routePlanReviewRepository.findAllByDecisionOrderBySubmittedAtAsc(RoutePlanReviewDecision.PENDING))
+				.thenReturn(List.of(review));
+		when(routePlanRepository.findAllById(List.of(plan.getId()))).thenReturn(List.of(plan));
+
+		List<LmRoutePlanReviewInboxResponse> response = service.listLmReviewInbox();
+
+		assertThat(response).hasSize(1);
+		assertThat(response.get(0).routePlanId()).isEqualTo(plan.getId());
+		assertThat(response.get(0).transportOrderId()).isEqualTo(ORDER_ID);
+		assertThat(response.get(0).submissionNo()).isEqualTo(2);
+	}
+
+	@Test
+	void lmReturnRequiresReason() {
+		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.LOGISTICS_MANAGER);
+
+		assertThatThrownBy(() -> service.returnRoutePlan(ORDER_ID, new ReturnRoutePlanRequest(" ")))
+				.isInstanceOf(RoutePlanValidationException.class)
+				.hasMessageContaining("reason");
+	}
+
+	@Test
+	void lmReturnsPendingRoutePlanToFrcWithReason() {
+		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.LOGISTICS_MANAGER);
+		RoutePlan plan = routePlan();
+		plan.submitForReview();
+		RoutePlanReview review = new RoutePlanReview(plan.getId(), 1, FRC_ID);
+
+		when(routePlanRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(plan));
+		when(routePlanReviewRepository.findFirstByRoutePlanIdAndDecisionOrderBySubmissionNoDesc(
+				plan.getId(), RoutePlanReviewDecision.PENDING)).thenReturn(Optional.of(review));
+		when(routePlanRepository.save(plan)).thenReturn(plan);
+		when(routePlanReviewRepository.save(review)).thenReturn(review);
+
+		LmRoutePlanReviewDetailResponse response =
+				service.returnRoutePlan(ORDER_ID, new ReturnRoutePlanRequest("Need route correction"));
+
+		assertThat(response.routePlan().status()).isEqualTo(RoutePlanStatus.RETURNED);
+		assertThat(response.review().decision()).isEqualTo(RoutePlanReviewDecision.RETURNED);
+		assertThat(response.review().returnReason()).isEqualTo("Need route correction");
+	}
+
+	@Test
+	void lmConfirmRevalidatesAndLocksRoutePlan() {
+		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.LOGISTICS_MANAGER);
+		RoutePlan plan = routePlan();
+		plan.submitForReview();
+		RoutePlanReview review = new RoutePlanReview(plan.getId(), 1, FRC_ID);
+		RouteLeg leg = airLeg(plan.getId(), 1, "Stable A", "Destination Stable", 2);
+
+		when(orderRepository.findById(ORDER_ID))
+				.thenReturn(Optional.of(order(ORDER_HORSE_ID, SECOND_ORDER_HORSE_ID)));
+		when(routePlanRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(plan));
+		when(routePlanReviewRepository.findFirstByRoutePlanIdAndDecisionOrderBySubmissionNoDesc(
+				plan.getId(), RoutePlanReviewDecision.PENDING)).thenReturn(Optional.of(review));
+		when(routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(plan.getId()))
+				.thenReturn(List.of(leg));
+		when(routePlanRepository.save(plan)).thenReturn(plan);
+		when(routePlanReviewRepository.save(review)).thenReturn(review);
+
+		LmRoutePlanReviewDetailResponse response = service.confirmRoutePlan(ORDER_ID);
+
+		assertThat(response.routePlan().status()).isEqualTo(RoutePlanStatus.APPROVED);
+		assertThat(response.routePlan().lockedAt()).isNotNull();
+		assertThat(response.routePlan().approvedAt()).isNotNull();
+		assertThat(response.review().decision()).isEqualTo(RoutePlanReviewDecision.CONFIRMED);
 	}
 
 	@Test

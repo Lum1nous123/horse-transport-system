@@ -15,6 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import com.horsetransport.route.CheckpointRepository;
 import com.horsetransport.route.RoutePlanRepository;
+import com.horsetransport.route.RoutePlanReviewRepository;
 import com.horsetransport.route.RouteLegRepository;
 import com.horsetransport.route.RoadLegVehicleHorseRepository;
 import com.horsetransport.route.RoadLegVehicleRepository;
@@ -60,6 +61,9 @@ class BackendApplicationTests {
 
 	@MockitoBean
 	private RoutePlanRepository routePlanRepository;
+
+	@MockitoBean
+	private RoutePlanReviewRepository routePlanReviewRepository;
 
 	@MockitoBean
 	private UserRepository userRepository;

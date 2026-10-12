@@ -70,6 +70,10 @@ public class SecurityConfig {
                                 .hasRole("FLEET_ROUTE_COORDINATOR")
 						.requestMatchers(HttpMethod.GET, "/api/v1/frc/orders/*/planning-context")
                                 .hasRole("FLEET_ROUTE_COORDINATOR")
+						.requestMatchers("/api/v1/frc/orders/*/route-plan/**")
+								.hasRole("FLEET_ROUTE_COORDINATOR")
+						.requestMatchers("/api/v1/lm/route-plan-reviews/**")
+								.hasRole("LOGISTICS_MANAGER")
 						.anyRequest().denyAll())
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
