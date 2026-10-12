@@ -1,5 +1,6 @@
 package com.horsetransport.route;
 
+import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+
 
 @RestController
 @RequestMapping("/api/v1/frc/orders/{orderId}/route-plan")
@@ -35,6 +37,25 @@ public class RoutePlanController {
 	public RoutePlanResponse getPlan(@PathVariable UUID orderId) {
 		return routePlanService.getPlan(orderId);
 	}
+
+    @GetMapping("/legs/{legId}/vehicle-candidates")
+public List<VehicleCandidateResponse> listVehicleCandidates(@PathVariable UUID orderId,
+		@PathVariable UUID legId) {
+	return routePlanService.listVehicleCandidates(orderId, legId);
+}
+
+@GetMapping("/legs/{legId}/vehicles")
+public RoadAllocationDetailResponse getRoadAllocation(@PathVariable UUID orderId,
+		@PathVariable UUID legId) {
+	return routePlanService.getRoadAllocation(orderId, legId);
+}
+
+@PutMapping("/legs/{legId}/vehicles")
+public RoadAllocationDetailResponse allocateRoadVehicles(@PathVariable UUID orderId,
+		@PathVariable UUID legId,
+		@Valid @RequestBody RoadVehicleAllocationRequest request) {
+	return routePlanService.allocateRoadVehicles(orderId, legId, request);
+}
 
 	@PostMapping("/legs")
 	@ResponseStatus(HttpStatus.CREATED)

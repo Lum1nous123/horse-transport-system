@@ -1,7 +1,15 @@
 package com.horsetransport.route;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.horsetransport.order.OrderNotFoundException;
 import com.horsetransport.order.TransportOrder;
@@ -11,29 +19,34 @@ import com.horsetransport.user.UserRole;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.ArrayList;
+
 
 @Service
 public class RoutePlanService {
 
-	private final TransportOrderRepository orderRepository;
-	private final RoutePlanRepository routePlanRepository;
-	private final RouteLegRepository routeLegRepository;
-	private final CurrentUserProvider currentUserProvider;
+    private final TransportOrderRepository orderRepository;
+    private final RoutePlanRepository routePlanRepository;
+    private final RouteLegRepository routeLegRepository;
+    private final VehicleRepository vehicleRepository;
+    private final RoadLegVehicleRepository roadLegVehicleRepository;
+    private final RoadLegVehicleHorseRepository roadLegVehicleHorseRepository;
+    private final CurrentUserProvider currentUserProvider;
 
 	public RoutePlanService(TransportOrderRepository orderRepository,
-			RoutePlanRepository routePlanRepository,
-			RouteLegRepository routeLegRepository,
-			CurrentUserProvider currentUserProvider) {
-		this.orderRepository = orderRepository;
-		this.routePlanRepository = routePlanRepository;
-		this.routeLegRepository = routeLegRepository;
-		this.currentUserProvider = currentUserProvider;
-	}
+		RoutePlanRepository routePlanRepository,
+		RouteLegRepository routeLegRepository,
+		VehicleRepository vehicleRepository,
+		RoadLegVehicleRepository roadLegVehicleRepository,
+		RoadLegVehicleHorseRepository roadLegVehicleHorseRepository,
+		CurrentUserProvider currentUserProvider) {
+	this.orderRepository = orderRepository;
+	this.routePlanRepository = routePlanRepository;
+	this.routeLegRepository = routeLegRepository;
+	this.vehicleRepository = vehicleRepository;
+	this.roadLegVehicleRepository = roadLegVehicleRepository;
+	this.roadLegVehicleHorseRepository = roadLegVehicleHorseRepository;
+	this.currentUserProvider = currentUserProvider;
+}
 
 	@Transactional
 	public RoutePlanResponse createPlan(UUID orderId) {
@@ -60,6 +73,75 @@ public class RoutePlanService {
 
 		return toResponse(routePlan);
 	}
+
+    @Transactional(readOnly = true)
+public List<VehicleCandidateResponse> listVehicleCandidates(UUID orderId, UUID legId) {
+	requireFrc();
+
+	UUID frcUserId = currentUserProvider.getCurrentUserId();
+	TransportOrder order = findAccessiblePlanningOrder(orderId, frcUserId);
+	RoutePlan routePlan = routePlanRepository.findByTransportOrderId(order.getId())
+			.orElseThrow(RoutePlanNotFoundException::new);
+	RouteLeg leg = findRoutePlanLeg(routePlan, legId);
+	requireRoadLeg(leg);
+
+	List<Vehicle> vehicles = vehicleRepository.findAllByOrderByPlateNumberAsc();
+	Set<UUID> overlappingVehicleIds = findOverlappingVehicleIds(
+			vehicles.stream().map(Vehicle::getId).toList(), leg);
+
+	return vehicles.stream()
+			.map(vehicle -> VehicleCandidateResponse.from(vehicle,
+					selectabilityReasons(vehicle, overlappingVehicleIds)))
+			.toList();
+}
+
+@Transactional(readOnly = true)
+public RoadAllocationDetailResponse getRoadAllocation(UUID orderId, UUID legId) {
+	requireFrc();
+
+	UUID frcUserId = currentUserProvider.getCurrentUserId();
+	TransportOrder order = findAccessiblePlanningOrder(orderId, frcUserId);
+	RoutePlan routePlan = routePlanRepository.findByTransportOrderId(order.getId())
+			.orElseThrow(RoutePlanNotFoundException::new);
+	RouteLeg leg = findRoutePlanLeg(routePlan, legId);
+	requireRoadLeg(leg);
+
+	return toRoadAllocationDetail(leg);
+}
+
+@Transactional
+public RoadAllocationDetailResponse allocateRoadVehicles(UUID orderId, UUID legId,
+		RoadVehicleAllocationRequest request) {
+	requireFrc();
+
+	UUID frcUserId = currentUserProvider.getCurrentUserId();
+	TransportOrder order = findAccessiblePlanningOrder(orderId, frcUserId);
+	RoutePlan routePlan = routePlanRepository.findByTransportOrderId(order.getId())
+			.orElseThrow(RoutePlanNotFoundException::new);
+	requireEditable(routePlan);
+	RouteLeg leg = findRoutePlanLeg(routePlan, legId);
+	requireRoadLeg(leg);
+
+	Map<UUID, Vehicle> vehiclesById = loadRequestedVehicles(request.vehicles().stream()
+			.map(RoadVehicleAllocationRequest.VehicleHorseAllocationRequest::vehicleId)
+			.toList());
+	validateRoadAllocationRequest(order, leg, request, vehiclesById);
+
+	roadLegVehicleHorseRepository.deleteAllByRouteLegId(leg.getId());
+	roadLegVehicleRepository.deleteAllByRouteLegId(leg.getId());
+
+	for (RoadVehicleAllocationRequest.VehicleHorseAllocationRequest requestedVehicle : request.vehicles()) {
+		RoadLegVehicle roadLegVehicle = roadLegVehicleRepository.save(
+				new RoadLegVehicle(leg.getId(), requestedVehicle.vehicleId()));
+		List<RoadLegVehicleHorse> assignedHorses = requestedVehicle.orderHorseIds().stream()
+				.map(orderHorseId -> new RoadLegVehicleHorse(
+						leg.getId(), roadLegVehicle.getId(), orderHorseId))
+				.toList();
+		roadLegVehicleHorseRepository.saveAll(assignedHorses);
+	}
+
+	return toRoadAllocationDetail(leg);
+    }
 
 	@Transactional
 	public RouteLegResponse addLeg(UUID orderId, UpsertRouteLegRequest request) {
@@ -154,7 +236,9 @@ public class RoutePlanService {
 				.filter(existingLeg -> existingLeg.getRoutePlanId().equals(routePlan.getId()))
 				.orElseThrow(RoutePlanNotFoundException::new);
 
-		routeLegRepository.delete(leg);
+		roadLegVehicleHorseRepository.deleteAllByRouteLegId(leg.getId());
+        roadLegVehicleRepository.deleteAllByRouteLegId(leg.getId());
+        routeLegRepository.delete(leg);
 	}
 
     	@Transactional
@@ -253,6 +337,129 @@ public class RoutePlanService {
 		return RoutePlanResponse.from(routePlan, legs);
 	}
 
+    private RouteLeg findRoutePlanLeg(RoutePlan routePlan, UUID legId) {
+	return routeLegRepository.findById(legId)
+			.filter(existingLeg -> existingLeg.getRoutePlanId().equals(routePlan.getId()))
+			.orElseThrow(RoutePlanNotFoundException::new);
+}
+
+private void requireRoadLeg(RouteLeg leg) {
+	if (leg.getLegType() != RouteLegType.ROAD) {
+		throw new RoutePlanValidationException("Vehicle allocation is only available for ROAD route legs");
+	}
+}
+
+private Map<UUID, Vehicle> loadRequestedVehicles(Collection<UUID> vehicleIds) {
+	HashSet<UUID> uniqueVehicleIds = new HashSet<>(vehicleIds);
+	if (uniqueVehicleIds.size() != vehicleIds.size()) {
+		throw new RoutePlanValidationException("Vehicle allocation request contains duplicate vehicles");
+	}
+
+	Map<UUID, Vehicle> vehiclesById = vehicleRepository.findAllById(uniqueVehicleIds).stream()
+			.collect(Collectors.toMap(Vehicle::getId, Function.identity()));
+	if (vehiclesById.size() != uniqueVehicleIds.size()) {
+		throw new RoutePlanValidationException("Vehicle allocation request contains unknown vehicles");
+	}
+	return vehiclesById;
+}
+
+private void validateRoadAllocationRequest(TransportOrder order, RouteLeg leg,
+		RoadVehicleAllocationRequest request, Map<UUID, Vehicle> vehiclesById) {
+	Set<UUID> orderHorseIds = order.getHorses().stream()
+			.map(com.horsetransport.order.TransportOrderHorse::getId)
+			.collect(Collectors.toSet());
+	HashSet<UUID> requestedHorseIds = new HashSet<>();
+
+	for (RoadVehicleAllocationRequest.VehicleHorseAllocationRequest requestedVehicle : request.vehicles()) {
+		Vehicle vehicle = vehiclesById.get(requestedVehicle.vehicleId());
+		if (vehicle.getStatus() == VehicleStatus.MAINTENANCE || vehicle.getStatus() == VehicleStatus.INACTIVE) {
+			throw new RoutePlanValidationException("Vehicle is not selectable because it is " + vehicle.getStatus());
+		}
+		if (requestedVehicle.orderHorseIds().size() > vehicle.getHorseCapacity()) {
+			throw new RoutePlanValidationException("Vehicle horse allocation exceeds vehicle capacity");
+		}
+		for (UUID orderHorseId : requestedVehicle.orderHorseIds()) {
+			if (!orderHorseIds.contains(orderHorseId)) {
+				throw new RoutePlanValidationException("Vehicle allocation request contains foreign Horse");
+			}
+			if (!requestedHorseIds.add(orderHorseId)) {
+				throw new RoutePlanValidationException("Vehicle allocation request contains duplicate Horse");
+			}
+		}
+	}
+
+	if (!requestedHorseIds.equals(orderHorseIds)) {
+		throw new RoutePlanValidationException("Every Horse in the Order must be allocated exactly once");
+	}
+
+	if (!findOverlappingVehicleIds(vehiclesById.keySet(), leg).isEmpty()) {
+		throw new RoutePlanValidationException("Vehicle allocation overlaps an existing ROAD route leg");
+	}
+}
+
+private Set<UUID> findOverlappingVehicleIds(Collection<UUID> vehicleIds, RouteLeg leg) {
+	if (vehicleIds.isEmpty()) {
+		return Set.of();
+	}
+	return roadLegVehicleRepository.findOverlappingAllocations(
+					vehicleIds,
+					leg.getId(),
+					leg.getPlannedDepartureAt(),
+					leg.getPlannedArrivalAt())
+			.stream()
+			.map(RoadLegVehicle::getVehicleId)
+			.collect(Collectors.toSet());
+}
+
+private List<String> selectabilityReasons(Vehicle vehicle, Set<UUID> overlappingVehicleIds) {
+	List<String> reasons = new ArrayList<>();
+	if (vehicle.getStatus() == VehicleStatus.MAINTENANCE) {
+		reasons.add("MAINTENANCE");
+	}
+	if (vehicle.getStatus() == VehicleStatus.INACTIVE) {
+		reasons.add("INACTIVE");
+	}
+	if (vehicle.getHorseCapacity() == null || vehicle.getHorseCapacity() <= 0) {
+		reasons.add("INVALID_CAPACITY");
+	}
+	if (overlappingVehicleIds.contains(vehicle.getId())) {
+		reasons.add("OVERLAPPING_ROUTE_LEG");
+	}
+	return reasons;
+}
+
+private RoadAllocationDetailResponse toRoadAllocationDetail(RouteLeg leg) {
+	List<RoadLegVehicle> roadVehicles = roadLegVehicleRepository.findAllByRouteLegId(leg.getId());
+	List<RoadLegVehicleHorse> roadVehicleHorses = roadLegVehicleHorseRepository.findAllByRouteLegId(leg.getId());
+	Map<UUID, Vehicle> vehiclesById = vehicleRepository.findAllById(
+					roadVehicles.stream().map(RoadLegVehicle::getVehicleId).toList())
+			.stream()
+			.collect(Collectors.toMap(Vehicle::getId, Function.identity()));
+	Map<UUID, List<UUID>> horseIdsByRoadVehicleId = roadVehicleHorses.stream()
+			.collect(Collectors.groupingBy(
+					RoadLegVehicleHorse::getRoadLegVehicleId,
+					Collectors.mapping(RoadLegVehicleHorse::getTransportOrderHorseId, Collectors.toList())));
+
+	List<RoadAllocationDetailResponse.RoadVehicleAllocationResponse> vehicleResponses = roadVehicles.stream()
+			.sorted(Comparator.comparing(roadVehicle -> vehiclesById.get(roadVehicle.getVehicleId()).getPlateNumber()))
+			.map(roadVehicle -> {
+				Vehicle vehicle = vehiclesById.get(roadVehicle.getVehicleId());
+				return new RoadAllocationDetailResponse.RoadVehicleAllocationResponse(
+						roadVehicle.getId(),
+						vehicle.getId(),
+						vehicle.getPlateNumber(),
+						vehicle.getVehicleName(),
+						vehicle.getVehicleType(),
+						vehicle.getHorseCapacity(),
+						vehicle.getStatus(),
+						horseIdsByRoadVehicleId.getOrDefault(roadVehicle.getId(), List.of()),
+						roadVehicle.getAssignedAt());
+			})
+			.toList();
+
+	return new RoadAllocationDetailResponse(leg.getId(), vehicleResponses);
+}
+
 	private void requireEditable(RoutePlan routePlan) {
 		if (!routePlan.isEditableByFrc()) {
 			throw new RoutePlanNotEditableException();
@@ -307,6 +514,9 @@ public class RoutePlanService {
 						leg.getId(),
 						leg.getSequenceNo()));
 			}
+            if (leg.getLegType() == RouteLegType.ROAD) {
+	        issues.addAll(validatePersistedRoadAllocation(order, leg));
+}
 		}
 
 		RouteLeg firstLeg = legs.get(0);
@@ -352,6 +562,72 @@ public class RoutePlanService {
 				? RoutePlanValidationResponse.passed()
 				: RoutePlanValidationResponse.failed(issues);
 	}
+
+    private List<RoutePlanValidationIssueResponse> validatePersistedRoadAllocation(TransportOrder order,
+		RouteLeg leg) {
+	List<RoutePlanValidationIssueResponse> issues = new ArrayList<>();
+	List<RoadLegVehicle> roadVehicles = roadLegVehicleRepository.findAllByRouteLegId(leg.getId());
+	if (roadVehicles.isEmpty()) {
+		issues.add(new RoutePlanValidationIssueResponse(
+				"ROAD_VEHICLE_ALLOCATION_REQUIRED",
+				"Every ROAD route leg must have Vehicle and Horse allocation",
+				leg.getId(),
+				leg.getSequenceNo()));
+		return issues;
+	}
+
+	Map<UUID, Vehicle> vehiclesById = vehicleRepository.findAllById(
+					roadVehicles.stream().map(RoadLegVehicle::getVehicleId).toList())
+			.stream()
+			.collect(Collectors.toMap(Vehicle::getId, Function.identity()));
+	List<RoadLegVehicleHorse> horseAllocations = roadLegVehicleHorseRepository.findAllByRouteLegId(leg.getId());
+	Map<UUID, Long> horseCountByRoadVehicleId = horseAllocations.stream()
+			.collect(Collectors.groupingBy(RoadLegVehicleHorse::getRoadLegVehicleId, Collectors.counting()));
+
+	for (RoadLegVehicle roadVehicle : roadVehicles) {
+		Vehicle vehicle = vehiclesById.get(roadVehicle.getVehicleId());
+		if (vehicle == null || vehicle.getStatus() == VehicleStatus.MAINTENANCE
+				|| vehicle.getStatus() == VehicleStatus.INACTIVE) {
+			issues.add(new RoutePlanValidationIssueResponse(
+					"ROAD_VEHICLE_NOT_SELECTABLE",
+					"ROAD route leg contains a Vehicle that is no longer selectable",
+					leg.getId(),
+					leg.getSequenceNo()));
+		}
+		else if (horseCountByRoadVehicleId.getOrDefault(roadVehicle.getId(), 0L) > vehicle.getHorseCapacity()) {
+			issues.add(new RoutePlanValidationIssueResponse(
+					"ROAD_VEHICLE_CAPACITY_EXCEEDED",
+					"ROAD route leg Vehicle allocation exceeds capacity",
+					leg.getId(),
+					leg.getSequenceNo()));
+		}
+	}
+
+	Set<UUID> orderHorseIds = order.getHorses().stream()
+			.map(com.horsetransport.order.TransportOrderHorse::getId)
+			.collect(Collectors.toSet());
+	Set<UUID> allocatedHorseIds = horseAllocations.stream()
+			.map(RoadLegVehicleHorse::getTransportOrderHorseId)
+			.collect(Collectors.toSet());
+	if (!allocatedHorseIds.equals(orderHorseIds) || allocatedHorseIds.size() != horseAllocations.size()) {
+		issues.add(new RoutePlanValidationIssueResponse(
+				"ROAD_HORSE_ALLOCATION_INVALID",
+				"Every Horse must be allocated exactly once in each ROAD route leg",
+				leg.getId(),
+				leg.getSequenceNo()));
+	}
+
+	if (!findOverlappingVehicleIds(roadVehicles.stream().map(RoadLegVehicle::getVehicleId).toList(), leg)
+			.isEmpty()) {
+		issues.add(new RoutePlanValidationIssueResponse(
+				"ROAD_VEHICLE_OVERLAP",
+				"ROAD route leg Vehicle allocation overlaps another planned ROAD interval",
+				leg.getId(),
+				leg.getSequenceNo()));
+	}
+
+	return issues;
+   }  
 
 		private boolean sameLocation(String left, String right) {
 		String normalizedLeft = normalize(left);
