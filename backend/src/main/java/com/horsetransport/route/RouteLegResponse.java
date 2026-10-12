@@ -1,6 +1,7 @@
 package com.horsetransport.route;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record RouteLegResponse(
@@ -20,9 +21,14 @@ public record RouteLegResponse(
 		LocalDateTime startedAt,
 		LocalDateTime completedAt,
 		LocalDateTime createdAt,
-		LocalDateTime updatedAt) {
+		LocalDateTime updatedAt,
+		List<CheckpointResponse> checkpoints) {
 
 	public static RouteLegResponse from(RouteLeg leg) {
+		return from(leg, List.of());
+	}
+
+	public static RouteLegResponse from(RouteLeg leg, List<Checkpoint> checkpoints) {
 		return new RouteLegResponse(
 				leg.getId(),
 				leg.getSequenceNo(),
@@ -40,6 +46,9 @@ public record RouteLegResponse(
 				leg.getStartedAt(),
 				leg.getCompletedAt(),
 				leg.getCreatedAt(),
-				leg.getUpdatedAt());
+				leg.getUpdatedAt(),
+				checkpoints.stream()
+						.map(CheckpointResponse::from)
+						.toList());
 	}
 }

@@ -57,6 +57,21 @@ public RoadAllocationDetailResponse allocateRoadVehicles(@PathVariable UUID orde
 	return routePlanService.allocateRoadVehicles(orderId, legId, request);
 }
 
+
+
+@GetMapping("/legs/{legId}/checkpoints")
+public List<CheckpointResponse> getCheckpoints(@PathVariable UUID orderId,
+		@PathVariable UUID legId) {
+	return routePlanService.getCheckpoints(orderId, legId);
+}
+
+@PutMapping("/legs/{legId}/checkpoints")
+public List<CheckpointResponse> updateCheckpoints(@PathVariable UUID orderId,
+		@PathVariable UUID legId,
+		@Valid @RequestBody UpdateCheckpointsRequest request) {
+	return routePlanService.updateCheckpoints(orderId, legId, request);
+}
+
 	@PostMapping("/legs")
 	@ResponseStatus(HttpStatus.CREATED)
 	public RouteLegResponse addLeg(@PathVariable UUID orderId,

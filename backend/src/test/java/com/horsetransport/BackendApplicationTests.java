@@ -13,6 +13,7 @@ import com.horsetransport.user.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.horsetransport.route.CheckpointRepository;
 import com.horsetransport.route.RoutePlanRepository;
 import com.horsetransport.route.RouteLegRepository;
 import com.horsetransport.route.RoadLegVehicleHorseRepository;
@@ -74,6 +75,9 @@ class BackendApplicationTests {
 
     @MockitoBean
     private RoadLegVehicleHorseRepository roadLegVehicleHorseRepository;
+
+	@MockitoBean
+	private CheckpointRepository checkpointRepository;
 
 	@Test
 	void contextLoads() {
