@@ -31,6 +31,7 @@ public class RoutePlanService {
     private final RoadLegVehicleRepository roadLegVehicleRepository;
     private final RoadLegVehicleHorseRepository roadLegVehicleHorseRepository;
     private final CheckpointRepository checkpointRepository;
+    private final RoutePlanReviewRepository routePlanReviewRepository;
     private final CurrentUserProvider currentUserProvider;
 
 	public RoutePlanService(TransportOrderRepository orderRepository,
@@ -40,6 +41,7 @@ public class RoutePlanService {
 		RoadLegVehicleRepository roadLegVehicleRepository,
 		RoadLegVehicleHorseRepository roadLegVehicleHorseRepository,
 		CheckpointRepository checkpointRepository,
+		RoutePlanReviewRepository routePlanReviewRepository,
 		CurrentUserProvider currentUserProvider) {
 	this.orderRepository = orderRepository;
 	this.routePlanRepository = routePlanRepository;
@@ -48,6 +50,7 @@ public class RoutePlanService {
 	this.roadLegVehicleRepository = roadLegVehicleRepository;
 	this.roadLegVehicleHorseRepository = roadLegVehicleHorseRepository;
 	this.checkpointRepository = checkpointRepository;
+	this.routePlanReviewRepository = routePlanReviewRepository;
 	this.currentUserProvider = currentUserProvider;
 }
 
@@ -380,12 +383,105 @@ public List<CheckpointResponse> updateCheckpoints(UUID orderId, UUID legId,
 		}
 
 		routePlan.submitForReview();
-		return toResponse(routePlanRepository.save(routePlan));
+		RoutePlan savedPlan = routePlanRepository.save(routePlan);
+		int submissionNo = routePlanReviewRepository.maxSubmissionNo(savedPlan.getId()) + 1;
+		routePlanReviewRepository.save(new RoutePlanReview(savedPlan.getId(), submissionNo, frcUserId));
+		return toResponse(savedPlan);
+	}
+
+	@Transactional(readOnly = true)
+	public List<LmRoutePlanReviewInboxResponse> listLmReviewInbox() {
+		requireLm();
+
+		List<RoutePlanReview> reviews = routePlanReviewRepository
+				.findAllByDecisionOrderBySubmittedAtAsc(RoutePlanReviewDecision.PENDING);
+		Map<UUID, RoutePlan> routePlansById = routePlanRepository.findAllById(
+						reviews.stream().map(RoutePlanReview::getRoutePlanId).toList())
+				.stream()
+				.collect(Collectors.toMap(RoutePlan::getId, Function.identity()));
+
+		return reviews.stream()
+				.filter(review -> routePlansById.containsKey(review.getRoutePlanId()))
+				.map(review -> LmRoutePlanReviewInboxResponse.from(review, routePlansById.get(review.getRoutePlanId())))
+				.toList();
+	}
+
+	@Transactional(readOnly = true)
+	public LmRoutePlanReviewDetailResponse getLmReviewDetail(UUID orderId) {
+		requireLm();
+
+		RoutePlan routePlan = findPendingLmRoutePlan(orderId);
+		RoutePlanReview review = findPendingReview(routePlan);
+		return new LmRoutePlanReviewDetailResponse(toResponse(routePlan), RoutePlanReviewResponse.from(review));
+	}
+
+	@Transactional
+	public LmRoutePlanReviewDetailResponse returnRoutePlan(UUID orderId, ReturnRoutePlanRequest request) {
+		requireLm();
+		if (isBlank(request.reason())) {
+			throw new RoutePlanValidationException("Route plan return reason is required");
+		}
+
+		UUID lmUserId = currentUserProvider.getCurrentUserId();
+		RoutePlan routePlan = findPendingLmRoutePlan(orderId);
+		RoutePlanReview review = findPendingReview(routePlan);
+
+		routePlan.returnToFrc();
+		review.returnToFrc(lmUserId, request.reason().trim());
+		RoutePlan savedPlan = routePlanRepository.save(routePlan);
+		RoutePlanReview savedReview = routePlanReviewRepository.save(review);
+
+		return new LmRoutePlanReviewDetailResponse(toResponse(savedPlan), RoutePlanReviewResponse.from(savedReview));
+	}
+
+	@Transactional
+	public LmRoutePlanReviewDetailResponse confirmRoutePlan(UUID orderId) {
+		requireLm();
+
+		UUID lmUserId = currentUserProvider.getCurrentUserId();
+		TransportOrder order = orderRepository.findById(orderId)
+				.orElseThrow(OrderNotFoundException::new);
+		RoutePlan routePlan = findPendingLmRoutePlan(orderId);
+		RoutePlanReview review = findPendingReview(routePlan);
+		List<RouteLeg> legs = routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(routePlan.getId());
+
+		RoutePlanValidationResponse validation = validatePlan(order, legs);
+		if (!validation.valid()) {
+			String message = validation.issues().stream()
+					.findFirst()
+					.map(RoutePlanValidationIssueResponse::message)
+					.orElse("Route plan is not valid");
+			throw new RoutePlanValidationException(message);
+		}
+
+		routePlan.approve();
+		review.confirm(lmUserId);
+		RoutePlan savedPlan = routePlanRepository.save(routePlan);
+		RoutePlanReview savedReview = routePlanReviewRepository.save(review);
+
+		return new LmRoutePlanReviewDetailResponse(toResponse(savedPlan), RoutePlanReviewResponse.from(savedReview));
 	}
 
 		private TransportOrder findAccessiblePlanningOrder(UUID orderId, UUID frcUserId) {
 		return orderRepository.findAssignedFrcRoutePlanOrder(orderId, frcUserId)
 				.orElseThrow(OrderNotFoundException::new);
+	}
+
+	private RoutePlan findPendingLmRoutePlan(UUID orderId) {
+		RoutePlan routePlan = routePlanRepository.findByTransportOrderId(orderId)
+				.orElseThrow(RoutePlanNotFoundException::new);
+		if (routePlan.getStatus() != RoutePlanStatus.PENDING_LM_REVIEW) {
+			throw new RoutePlanValidationException("Route plan is not pending Logistics Manager review");
+		}
+		return routePlan;
+	}
+
+	private RoutePlanReview findPendingReview(RoutePlan routePlan) {
+		return routePlanReviewRepository
+				.findFirstByRoutePlanIdAndDecisionOrderBySubmissionNoDesc(
+						routePlan.getId(), RoutePlanReviewDecision.PENDING)
+				.orElseThrow(() -> new RoutePlanValidationException(
+						"Route plan review is no longer pending"));
 	}
 
 	private RoutePlanResponse toResponse(RoutePlan routePlan) {
@@ -762,6 +858,12 @@ private RoadAllocationDetailResponse toRoadAllocationDetail(RouteLeg leg) {
 	private void requireFrc() {
 		if (currentUserProvider.getCurrentUserRole() != UserRole.FLEET_ROUTE_COORDINATOR) {
 			throw new AccessDeniedException("Only assigned Fleet and Route Coordinator can manage route plans");
+		}
+	}
+
+	private void requireLm() {
+		if (currentUserProvider.getCurrentUserRole() != UserRole.LOGISTICS_MANAGER) {
+			throw new AccessDeniedException("Only Logistics Manager can review route plans");
 		}
 	}
 

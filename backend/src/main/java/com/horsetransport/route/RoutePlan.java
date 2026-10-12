@@ -78,11 +78,28 @@ public class RoutePlan {
 		return status == RoutePlanStatus.DRAFT || status == RoutePlanStatus.RETURNED;
 	}
 
-		public void submitForReview() {
+	public void submitForReview() {
 		if (!isEditableByFrc()) {
 			throw new RoutePlanNotEditableException();
 		}
 		status = RoutePlanStatus.PENDING_LM_REVIEW;
+	}
+
+	public void returnToFrc() {
+		if (status != RoutePlanStatus.PENDING_LM_REVIEW) {
+			throw new RoutePlanValidationException("Route plan is not pending Logistics Manager review");
+		}
+		status = RoutePlanStatus.RETURNED;
+	}
+
+	public void approve() {
+		if (status != RoutePlanStatus.PENDING_LM_REVIEW) {
+			throw new RoutePlanValidationException("Route plan is not pending Logistics Manager review");
+		}
+		status = RoutePlanStatus.APPROVED;
+		LocalDateTime now = LocalDateTime.now();
+		lockedAt = now;
+		approvedAt = now;
 	}
 
 	public UUID getId() {
