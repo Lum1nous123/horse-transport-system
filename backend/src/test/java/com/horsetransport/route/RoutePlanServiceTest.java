@@ -69,6 +69,7 @@ class RoutePlanServiceTest {
 				.thenReturn(List.of());
 		lenient().when(checkpointRepository.findAllByRouteLegIdOrderBySequenceNoAsc(any()))
 				.thenReturn(List.of());
+		lenient().when(checkpointRepository.findAllByRouteLegIdIn(any())).thenReturn(List.of());
 	}
 
 	@Test
@@ -141,6 +142,75 @@ class RoutePlanServiceTest {
 				.thenReturn(List.of(
 						new RoadLegVehicleHorse(leg.getId(), roadVehicle.getId(), ORDER_HORSE_ID),
 						new RoadLegVehicleHorse(leg.getId(), roadVehicle.getId(), SECOND_ORDER_HORSE_ID)));
+		when(routePlanRepository.save(plan)).thenReturn(plan);
+
+		RoutePlanResponse response = service.submitPlan(ORDER_ID);
+
+		assertThat(response.status()).isEqualTo(RoutePlanStatus.PENDING_LM_REVIEW);
+	}
+
+	@Test
+	void addsAirLegConfigurationAndReturnsReadBackFields() {
+		RoutePlan plan = routePlan();
+		when(routePlanRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(plan));
+		when(routeLegRepository.save(any(RouteLeg.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		RouteLegResponse response = service.addLeg(ORDER_ID, airLegRequest(1, "Stable A", "Destination Stable", 2));
+
+		assertThat(response.legType()).isEqualTo(RouteLegType.AIR);
+		assertThat(response.airProviderName()).isEqualTo("Demo Air");
+		assertThat(response.airReference()).isEqualTo("DA-1");
+		assertThat(response.airCapacityHorses()).isEqualTo(2);
+	}
+
+	@Test
+	void rejectsAirLegMissingRequiredFieldsOnAdd() {
+		RoutePlan plan = routePlan();
+		when(routePlanRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(plan));
+
+		UpsertRouteLegRequest request = new UpsertRouteLegRequest(
+				1,
+				RouteLegType.AIR,
+				"Stable A",
+				"Destination Stable",
+				LocalDateTime.of(2026, 10, 12, 8, 0),
+				LocalDateTime.of(2026, 10, 12, 10, 0),
+				null,
+				"DA-1",
+				2,
+				null,
+				null);
+
+		assertThatThrownBy(() -> service.addLeg(ORDER_ID, request))
+				.isInstanceOf(RoutePlanValidationException.class)
+				.hasMessageContaining("AIR route legs require");
+	}
+
+	@Test
+	void validationReportsInsufficientAirCapacity() {
+		RoutePlan plan = routePlan();
+		RouteLeg leg = airLeg(plan.getId(), 1, "Stable A", "Destination Stable", 1);
+
+		when(routePlanRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(plan));
+		when(routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(plan.getId()))
+				.thenReturn(List.of(leg));
+
+		RoutePlanValidationResponse response = service.validatePlan(ORDER_ID);
+
+		assertThat(response.valid()).isFalse();
+		assertThat(response.issues())
+				.extracting(RoutePlanValidationIssueResponse::code)
+				.contains("AIR_CAPACITY_INSUFFICIENT");
+	}
+
+	@Test
+	void submitsValidAirPlanForLmReview() {
+		RoutePlan plan = routePlan();
+		RouteLeg leg = airLeg(plan.getId(), 1, "Stable A", "Destination Stable", 2);
+
+		when(routePlanRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(plan));
+		when(routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(plan.getId()))
+				.thenReturn(List.of(leg));
 		when(routePlanRepository.save(plan)).thenReturn(plan);
 
 		RoutePlanResponse response = service.submitPlan(ORDER_ID);
@@ -280,6 +350,22 @@ class RoutePlanServiceTest {
 				null);
 	}
 
+	private RouteLeg airLeg(UUID planId, int sequenceNo, String origin, String destination, int capacity) {
+		return new RouteLeg(
+				planId,
+				sequenceNo,
+				RouteLegType.AIR,
+				origin,
+				destination,
+				LocalDateTime.of(2026, 10, 12, 8 + sequenceNo, 0),
+				LocalDateTime.of(2026, 10, 12, 9 + sequenceNo, 0),
+				"Demo Air",
+				"DA-" + sequenceNo,
+				capacity,
+				null,
+				null);
+	}
+
 	private UpsertRouteLegRequest roadLegRequest(int sequenceNo, String origin, String destination) {
 		return new UpsertRouteLegRequest(
 				sequenceNo,
@@ -291,6 +377,21 @@ class RoutePlanServiceTest {
 				null,
 				null,
 				null,
+				null,
+				null);
+	}
+
+	private UpsertRouteLegRequest airLegRequest(int sequenceNo, String origin, String destination, int capacity) {
+		return new UpsertRouteLegRequest(
+				sequenceNo,
+				RouteLegType.AIR,
+				origin,
+				destination,
+				LocalDateTime.of(2026, 10, 12, 8, 0),
+				LocalDateTime.of(2026, 10, 12, 10, 0),
+				"Demo Air",
+				"DA-" + sequenceNo,
+				capacity,
 				null,
 				null);
 	}
