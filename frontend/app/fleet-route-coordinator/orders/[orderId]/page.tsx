@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import FleetRouteCoordinatorWorkspaceFrame from "@/components/FleetRouteCoordinatorWorkspaceFrame";
+import RoutePlanEditor from "@/components/RoutePlanEditor";
 import {
   CoordinatorWorkspaceError,
   getFleetRouteCoordinatorService,
@@ -27,14 +28,6 @@ function statusLabel(status: RoutePlanStatus) {
   if (status === "PENDING_LM_REVIEW") return "Awaiting LM review";
   if (status === "RETURNED") return "Returned by LM";
   return status.toLowerCase().replaceAll("_", " ").replace(/^./, (character) => character.toUpperCase());
-}
-
-function contextTitle(status: RoutePlanStatus) {
-  if (status === "NOT_STARTED") return "Ready to start route planning";
-  if (status === "DRAFT") return "Continue the draft Route Plan";
-  if (status === "RETURNED") return "Revise the returned Route Plan";
-  if (status === "APPROVED") return "Route Plan approved";
-  return "Route Plan awaiting review";
 }
 
 export default function FleetRouteCoordinatorOrderPage() {
@@ -116,43 +109,25 @@ export default function FleetRouteCoordinatorOrderPage() {
       ) : (
         <>
           <header className="frc-detail-heading">
-            <div><span>{order.orderCode}</span><h1>{order.origin} <b aria-hidden="true">→</b> {order.destination}</h1><p>Planning context for the Order assigned to you.</p></div>
-            <div><Link className="customer-secondary-button" href={queueHref}>Back to queue</Link><button className="customer-primary-button" type="button" disabled={refreshing} onClick={() => void loadOrder(true)}>{refreshing ? "Refreshing..." : "Refresh context"}</button></div>
+            <div><span>{order.orderCode}</span><h1>{order.origin} <b aria-hidden="true">→</b> {order.destination}</h1><p>Construct and validate the ordered journey for this assigned Order.</p></div>
+            <div><Link className="customer-secondary-button" href={queueHref}>Back to queue</Link><button className="customer-secondary-button" type="button" disabled={refreshing} onClick={() => void loadOrder(true)}>{refreshing ? "Refreshing..." : "Refresh"}</button></div>
           </header>
 
           {feedback && <p className="customer-feedback" role="status">{feedback}</p>}
           {error && <div className="customer-alert" role="alert"><span>{error}</span><button type="button" onClick={() => void loadOrder(true)}>Try again</button></div>}
 
-          <section className={`frc-context-banner is-${order.routePlanStatus.toLowerCase()}`} aria-labelledby="frc-context-title">
-            <div><span className={`frc-plan-status is-${order.routePlanStatus.toLowerCase()}`}>{statusLabel(order.routePlanStatus)}</span><h2 id="frc-context-title">{contextTitle(order.routePlanStatus)}</h2><p>{order.readOnly ? "This planning context is read-only because the saved Route Plan state is locked." : "Review the authoritative Order context before working on the Route Plan."}</p></div>
-            {order.readOnly && <span className="frc-read-only-label">Read-only</span>}
+          <section className="frc-plan-overview" aria-label="Order planning summary">
+            <div><span>Status</span><strong className={`frc-plan-status is-${order.routePlanStatus.toLowerCase()}`}>{statusLabel(order.routePlanStatus)}</strong></div>
+            <div><span>Departure</span><strong>{formatDateTime(order.requestedDepartureAt)}</strong></div>
+            <div><span>Transport</span><strong>{order.transportMode}</strong></div>
+            <div><span>Horses</span><strong>{order.horseCount}</strong></div>
+            <div><span>Transport Specialist</span><strong>{order.assignedTransportSpecialistName}</strong></div>
+            <div><span>Payment</span><strong className="is-complete">Paid</strong></div>
           </section>
 
           {order.routePlanStatus === "RETURNED" && order.returnReason && <section className="frc-return-reason" aria-labelledby="frc-return-title"><span aria-hidden="true">↩</span><div><h2 id="frc-return-title">Returned by Logistics Manager</h2><p>{order.returnReason}</p></div></section>}
 
-          <div className="frc-detail-grid">
-            <section className="frc-order-context" aria-labelledby="frc-order-context-title">
-              <div className="frc-section-heading"><h2 id="frc-order-context-title">Order context</h2><span>Remaining Balance paid</span></div>
-              <dl>
-                <div><dt>Departure</dt><dd>{formatDateTime(order.requestedDepartureAt)}</dd></div>
-                <div><dt>Transport mode</dt><dd>{order.transportMode}</dd></div>
-                <div><dt>Horses</dt><dd>{order.horseCount}</dd></div>
-                <div><dt>Customer</dt><dd>{order.customerName}</dd></div>
-                <div><dt>Transport Specialist</dt><dd>{order.assignedTransportSpecialistName}</dd></div>
-                <div><dt>Fleet &amp; Route Coordinator</dt><dd>{order.assignedFleetRouteCoordinatorName}</dd></div>
-                <div><dt>Documents Final Confirmed</dt><dd>{formatDateTime(order.documentFinalConfirmedAt)}</dd></div>
-                <div><dt>Remaining Balance paid</dt><dd>{formatDateTime(order.remainingBalancePaidAt)}</dd></div>
-              </dl>
-            </section>
-
-            <section className="frc-readiness" aria-labelledby="frc-readiness-title">
-              <div className="frc-section-heading"><h2 id="frc-readiness-title">Planning readiness</h2><span>{order.readOnly ? "Locked" : "Ready"}</span></div>
-              <ol>
-                {order.readiness.map((item) => <li className={`is-${item.state}`} key={item.id}><span aria-hidden="true">{item.state === "complete" ? "✓" : item.state === "locked" ? "⌑" : "○"}</span><div><strong>{item.label}</strong><p>{item.description}</p></div></li>)}
-              </ol>
-              <div className="frc-editor-handoff"><strong>{order.readOnly ? "No planning changes are available" : "Planning context is ready"}</strong><p>{order.readOnly ? "Refresh after the Logistics Manager decision changes the persisted state." : "Review these authoritative details before continuing into Route Plan editing and validation."}</p></div>
-            </section>
-          </div>
+          <RoutePlanEditor orderId={order.id} service={service} />
         </>
       )}
     </FleetRouteCoordinatorWorkspaceFrame>
