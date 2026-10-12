@@ -8,9 +8,10 @@ import { clearAccessToken } from "@/lib/auth";
 type AssignmentWorkspaceFrameProps = {
   children: ReactNode;
   preview: boolean;
+  activeSection?: "orders" | "assignments" | "reviews";
 };
 
-export default function AssignmentWorkspaceFrame({ children, preview }: AssignmentWorkspaceFrameProps) {
+export default function AssignmentWorkspaceFrame({ children, preview, activeSection = "assignments" }: AssignmentWorkspaceFrameProps) {
   const router = useRouter();
   const previewSuffix = preview ? "?preview=1" : "";
 
@@ -27,9 +28,12 @@ export default function AssignmentWorkspaceFrame({ children, preview }: Assignme
           <span>Horse Transport System</span>
         </Link>
         <nav className="assignment-topbar-nav" aria-label="Logistics workspace">
-          <Link href={`/logistics${previewSuffix}`}>Submitted orders</Link>
-          <Link className="is-current" href={`/logistics/assignments${previewSuffix}`} aria-current="page">
+          <Link className={activeSection === "orders" ? "is-current" : undefined} href={`/logistics${previewSuffix}`} aria-current={activeSection === "orders" ? "page" : undefined}>Submitted orders</Link>
+          <Link className={activeSection === "assignments" ? "is-current" : undefined} href={`/logistics/assignments${previewSuffix}`} aria-current={activeSection === "assignments" ? "page" : undefined}>
             Staff Assignment
+          </Link>
+          <Link className={activeSection === "reviews" ? "is-current" : undefined} href={`/logistics/route-reviews${previewSuffix}`} aria-current={activeSection === "reviews" ? "page" : undefined}>
+            Route Reviews
           </Link>
         </nav>
         <div className="customer-topbar-actions">
@@ -41,7 +45,7 @@ export default function AssignmentWorkspaceFrame({ children, preview }: Assignme
         {preview && (
           <div className="customer-preview-banner" role="status">
             <strong>Preview mode</strong>
-            <span>Assignment data is mocked and saved only for this browser session.</span>
+            <span>Workspace data is mocked for interface review and is not connected to Backend.</span>
           </div>
         )}
         {children}
