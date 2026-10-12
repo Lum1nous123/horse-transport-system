@@ -610,9 +610,12 @@ private RoadAllocationDetailResponse toRoadAllocationDetail(RouteLeg leg) {
 						leg.getId(),
 						leg.getSequenceNo()));
 			}
-            if (leg.getLegType() == RouteLegType.ROAD) {
-	        issues.addAll(validatePersistedRoadAllocation(order, leg));
-}
+			if (leg.getLegType() == RouteLegType.ROAD) {
+				issues.addAll(validatePersistedRoadAllocation(order, leg));
+			}
+			if (leg.getLegType() == RouteLegType.AIR) {
+				issues.addAll(validatePersistedAirConfiguration(order, leg));
+			}
 		}
 
 		RouteLeg firstLeg = legs.get(0);
@@ -724,6 +727,30 @@ private RoadAllocationDetailResponse toRoadAllocationDetail(RouteLeg leg) {
 
 	return issues;
    }  
+
+	private List<RoutePlanValidationIssueResponse> validatePersistedAirConfiguration(TransportOrder order,
+			RouteLeg leg) {
+		List<RoutePlanValidationIssueResponse> issues = new ArrayList<>();
+		if (isBlank(leg.getAirProviderName()) || isBlank(leg.getAirReference())
+				|| leg.getAirCapacityHorses() == null || leg.getAirCapacityHorses() <= 0) {
+			issues.add(new RoutePlanValidationIssueResponse(
+					"AIR_CONFIGURATION_REQUIRED",
+					"AIR route legs require provider, reference, and positive horse capacity",
+					leg.getId(),
+					leg.getSequenceNo()));
+			return issues;
+		}
+
+		int horseCount = order.getHorses().size();
+		if (leg.getAirCapacityHorses() < horseCount) {
+			issues.add(new RoutePlanValidationIssueResponse(
+					"AIR_CAPACITY_INSUFFICIENT",
+					"AIR route leg capacity must cover every Horse in the Order",
+					leg.getId(),
+					leg.getSequenceNo()));
+		}
+		return issues;
+	}
 
 		private boolean sameLocation(String left, String right) {
 		String normalizedLeft = normalize(left);
