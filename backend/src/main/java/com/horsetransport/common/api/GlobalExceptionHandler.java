@@ -31,6 +31,9 @@ import com.horsetransport.quotation.DuplicateQuotationException;
 import com.horsetransport.quotation.QuotationNotEditableException;
 import com.horsetransport.quotation.QuotationNotFoundException;
 import com.horsetransport.quotation.QuotationValidationException;
+import com.horsetransport.route.RoutePlanNotEditableException;
+import com.horsetransport.route.RoutePlanNotFoundException;
+import com.horsetransport.route.RoutePlanValidationException;
 import com.horsetransport.security.CurrentUserUnavailableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -135,6 +138,21 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(QuotationValidationException.class)
 	public ResponseEntity<ApiError> handleQuotationValidation(QuotationValidationException exception) {
 		return error(HttpStatus.BAD_REQUEST, "QUOTATION_VALIDATION_ERROR", exception.getMessage());
+	}
+
+		@ExceptionHandler(RoutePlanNotFoundException.class)
+	public ResponseEntity<ApiError> handleRoutePlanNotFound(RoutePlanNotFoundException exception) {
+		return error(HttpStatus.NOT_FOUND, "ROUTE_PLAN_NOT_FOUND", exception.getMessage());
+	}
+
+	@ExceptionHandler(RoutePlanNotEditableException.class)
+	public ResponseEntity<ApiError> handleRoutePlanNotEditable(RoutePlanNotEditableException exception) {
+		return error(HttpStatus.CONFLICT, "ROUTE_PLAN_NOT_EDITABLE", exception.getMessage());
+	}
+
+	@ExceptionHandler(RoutePlanValidationException.class)
+	public ResponseEntity<ApiError> handleRoutePlanValidation(RoutePlanValidationException exception) {
+		return error(HttpStatus.BAD_REQUEST, "ROUTE_PLAN_VALIDATION_ERROR", exception.getMessage());
 	}
 
 	@ExceptionHandler(InvalidOrderTransitionException.class)

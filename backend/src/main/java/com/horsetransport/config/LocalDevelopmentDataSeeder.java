@@ -11,6 +11,9 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import com.horsetransport.route.Vehicle;
+import com.horsetransport.route.VehicleRepository;
+import com.horsetransport.route.VehicleStatus;
 
 @Component
 @Profile("local")
@@ -24,27 +27,47 @@ public class LocalDevelopmentDataSeeder implements ApplicationRunner {
 			new SeedUser("Sprint Transport Specialist", "ts@test.local", UserRole.TRANSPORT_SPECIALIST),
 			new SeedUser("Sprint Route Coordinator", "route@test.local", UserRole.FLEET_ROUTE_COORDINATOR),
 			new SeedUser("Sprint Driver", "driver@test.local", UserRole.DRIVER),
-			new SeedUser("Sprint Escort", "escort@test.local", UserRole.ESCORT));
+			new SeedUser("Sprint Escort", "escort@test.local", UserRole.ESCORT)
+		);
+		
+	private static final List<SeedVehicle> VEHICLES = List.of(
+		new SeedVehicle("HTS-ROAD-001", "Local Road Trailer 1", "2-horse road trailer", 2),
+		new SeedVehicle("HTS-ROAD-002", "Local Road Trailer 2", "3-horse road trailer", 3),
+		new SeedVehicle("HTS-ROAD-003", "Long Haul Horsebox", "4-horse road vehicle", 4));
 
 	private final UserRepository userRepository;
-	private final PasswordEncoder passwordEncoder;
+    private final VehicleRepository vehicleRepository;
+    private final PasswordEncoder passwordEncoder;
 
-	public LocalDevelopmentDataSeeder(UserRepository userRepository, PasswordEncoder passwordEncoder) {
-		this.userRepository = userRepository;
-		this.passwordEncoder = passwordEncoder;
+	public LocalDevelopmentDataSeeder(UserRepository userRepository, VehicleRepository vehicleRepository,
+		PasswordEncoder passwordEncoder) {
+	this.userRepository = userRepository;
+	this.vehicleRepository = vehicleRepository;
+	this.passwordEncoder = passwordEncoder;
+}
+
+@Override
+@Transactional
+public void run(ApplicationArguments arguments) {
+	for (SeedUser seedUser : USERS) {
+		if (userRepository.existsByEmailIgnoreCase(seedUser.email())) continue;
+		userRepository.save(UserAccount.createActive(seedUser.fullName(), seedUser.email(), null,
+				passwordEncoder.encode(DEVELOPMENT_PASSWORD), seedUser.role()));
 	}
 
-	@Override
-	@Transactional
-	public void run(ApplicationArguments arguments) {
-		for (SeedUser seedUser : USERS) {
-			if (userRepository.existsByEmailIgnoreCase(seedUser.email())) continue;
-			userRepository.save(UserAccount.createActive(seedUser.fullName(), seedUser.email(), null,
-					passwordEncoder.encode(DEVELOPMENT_PASSWORD), seedUser.role()));
-		}
-		userRepository.flush();
+	for (SeedVehicle seedVehicle : VEHICLES) {
+		if (vehicleRepository.findByPlateNumber(seedVehicle.plateNumber()).isPresent()) continue;
+		vehicleRepository.save(new Vehicle(seedVehicle.plateNumber(), seedVehicle.vehicleName(),
+				seedVehicle.vehicleType(), seedVehicle.horseCapacity(), VehicleStatus.AVAILABLE, null));
 	}
+
+	userRepository.flush();
+	vehicleRepository.flush();
+}
 
 	private record SeedUser(String fullName, String email, UserRole role) {
+	}
+
+	private record SeedVehicle(String plateNumber, String vehicleName, String vehicleType, int horseCapacity) {
 	}
 }

@@ -31,4 +31,6 @@ public interface UserRepository extends JpaRepository<UserAccount, UUID> {
 			+ "group by u.id, u.fullName, u.role order by count(distinct o.id), u.id")
 	List<StaffCandidateResponse> findActiveStaffCandidates(@Param("role") UserRole role,
 			@Param("activeStatuses") List<OrderStatus> activeStatuses);
+
+	List<UserAccount> findAllByRoleAndStatusOrderByIdAsc(UserRole role, UserStatus status);
 }

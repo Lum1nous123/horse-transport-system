@@ -7,7 +7,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Optional;
 
+import com.horsetransport.route.Vehicle;
+import com.horsetransport.route.VehicleRepository;
 import com.horsetransport.user.UserAccount;
 import com.horsetransport.user.UserRepository;
 import com.horsetransport.user.UserRole;
@@ -25,6 +28,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 class LocalDevelopmentDataSeederTest {
 
 	@Mock private UserRepository userRepository;
+	@Mock private VehicleRepository vehicleRepository;
+
 	private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
 	@Test
@@ -38,13 +43,16 @@ class LocalDevelopmentDataSeederTest {
 	@Test
 	void createsOneActiveAccountForEverySupportedRoleWithEncodedPassword() {
 		when(userRepository.existsByEmailIgnoreCase(any())).thenReturn(false);
-		LocalDevelopmentDataSeeder seeder = new LocalDevelopmentDataSeeder(userRepository, passwordEncoder);
+		when(vehicleRepository.findByPlateNumber(any())).thenReturn(Optional.empty());
+		LocalDevelopmentDataSeeder seeder = new LocalDevelopmentDataSeeder(
+				userRepository, vehicleRepository, passwordEncoder);
 
 		seeder.run(null);
 
 		ArgumentCaptor<UserAccount> accounts = ArgumentCaptor.forClass(UserAccount.class);
 		verify(userRepository, org.mockito.Mockito.times(6)).save(accounts.capture());
 		verify(userRepository).flush();
+
 		List<UserAccount> created = accounts.getAllValues();
 		assertThat(created).extracting(UserAccount::getEmail).containsExactly(
 				"customer@test.local", "lm@test.local", "ts@test.local", "route@test.local",
@@ -56,16 +64,28 @@ class LocalDevelopmentDataSeederTest {
 					account.getPasswordHash())).isTrue();
 			assertThat(account.getPasswordHash()).doesNotContain(LocalDevelopmentDataSeeder.DEVELOPMENT_PASSWORD);
 		});
+
+		ArgumentCaptor<Vehicle> vehicles = ArgumentCaptor.forClass(Vehicle.class);
+		verify(vehicleRepository, org.mockito.Mockito.times(3)).save(vehicles.capture());
+		verify(vehicleRepository).flush();
+
+		assertThat(vehicles.getAllValues())
+				.extracting(Vehicle::getPlateNumber)
+				.containsExactly("HTS-ROAD-001", "HTS-ROAD-002", "HTS-ROAD-003");
 	}
 
 	@Test
 	void existingEmailsAreNotOverwrittenOrDuplicated() {
 		when(userRepository.existsByEmailIgnoreCase(any())).thenReturn(true);
-		LocalDevelopmentDataSeeder seeder = new LocalDevelopmentDataSeeder(userRepository, passwordEncoder);
+		when(vehicleRepository.findByPlateNumber(any())).thenReturn(Optional.empty());
+		LocalDevelopmentDataSeeder seeder = new LocalDevelopmentDataSeeder(
+				userRepository, vehicleRepository, passwordEncoder);
 
 		seeder.run(null);
 
 		verify(userRepository, never()).save(any());
 		verify(userRepository).flush();
+		verify(vehicleRepository, org.mockito.Mockito.times(3)).save(any());
+		verify(vehicleRepository).flush();
 	}
 }

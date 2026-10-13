@@ -1,0 +1,4 @@
+Horse Transport System — mock document preview
+
+This development-only file stands in for a submitted horse document while
+the BE-11/12 document contract is unavailable. It contains no customer data.

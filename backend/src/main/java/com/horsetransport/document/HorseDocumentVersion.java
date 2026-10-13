@@ -180,6 +180,7 @@ public class HorseDocumentVersion {
 
 	public UUID getId() { return id; }
 	public UUID getHorseDocumentId() { return horseDocument.getId(); }
+	public DocumentType getDocumentType() { return horseDocument.getDocumentType(); }
 	public int getVersionNo() { return versionNo; }
 	public String getFileUrl() { return fileUrl; }
 	public LocalDate getExpiryDate() { return expiryDate; }

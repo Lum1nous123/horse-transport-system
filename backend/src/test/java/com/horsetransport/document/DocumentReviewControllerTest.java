@@ -68,7 +68,7 @@ class DocumentReviewControllerTest {
 
 	private DocumentVersionResponse response(DocumentVersionStatus status, String reason) {
 		return new DocumentVersionResponse(VERSION_ID, DOCUMENT_ID, 1, status, true,
-				"https://example.test/document.pdf", null, LocalDateTime.of(2026, 9, 29, 12, 0),
+				"https://example.test/document.pdf", "horse-passport.pdf", null, LocalDateTime.of(2026, 9, 29, 12, 0),
 				LocalDateTime.of(2026, 9, 29, 13, 0), LocalDateTime.of(2026, 9, 29, 14, 0), reason);
 	}
 }

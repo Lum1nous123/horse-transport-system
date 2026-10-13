@@ -2,28 +2,29 @@ package com.horsetransport.payment;
 
 import java.util.UUID;
 
-import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 @Service
 public class DepositPaymentService {
 
 	private final DepositPaymentTransactionService transactionService;
+	private final RemainingBalancePaymentTransactionService remainingBalanceTransactionService;
 	private final StripePaymentGateway stripeGateway;
 	private final DepositRefundService refundService;
 
 	@Autowired
 	public DepositPaymentService(DepositPaymentTransactionService transactionService,
+			RemainingBalancePaymentTransactionService remainingBalanceTransactionService,
 			StripePaymentGateway stripeGateway, DepositRefundService refundService) {
 		this.transactionService = transactionService;
+		this.remainingBalanceTransactionService = remainingBalanceTransactionService;
 		this.stripeGateway = stripeGateway;
 		this.refundService = refundService;
 	}
 
 	DepositPaymentService(DepositPaymentTransactionService transactionService, StripePaymentGateway stripeGateway) {
-		this.transactionService = transactionService;
-		this.stripeGateway = stripeGateway;
-		this.refundService = null;
+		this(transactionService, null, stripeGateway, null);
 	}
 
 	public DepositCheckoutResponse createCheckout(UUID orderId) {
@@ -39,11 +40,24 @@ public class DepositPaymentService {
 
 	public StripeWebhookResponse handleWebhook(String payload, String signature) {
 		StripeWebhookEvent event = stripeGateway.verifyAndParseWebhook(payload, signature);
-		WebhookProcessingResult result = switch (event.kind()) {
-			case REFUND_SUCCESS, REFUND_FAILED, REFUND_PENDING -> refundService == null
-					? new WebhookProcessingResult(false, false, false) : refundService.processRefundWebhook(event);
-			default -> transactionService.processWebhook(event);
-		};
+		WebhookProcessingResult result;
+		if (isRefundEvent(event.kind())) {
+			result = refundService == null
+					? new WebhookProcessingResult(false, false, false)
+					: refundService.processRefundWebhook(event);
+		} else if (PaymentType.REMAINING_BALANCE.name().equals(event.metadata().get("paymentType"))) {
+			result = remainingBalanceTransactionService == null
+					? new WebhookProcessingResult(false, false, false)
+					: remainingBalanceTransactionService.processWebhook(event);
+		} else {
+			result = transactionService.processWebhook(event);
+		}
 		return new StripeWebhookResponse(result.processed(), result.duplicate(), result.orderApproved());
+	}
+
+	private boolean isRefundEvent(StripeEventKind kind) {
+		return kind == StripeEventKind.REFUND_SUCCESS
+				|| kind == StripeEventKind.REFUND_FAILED
+				|| kind == StripeEventKind.REFUND_PENDING;
 	}
 }

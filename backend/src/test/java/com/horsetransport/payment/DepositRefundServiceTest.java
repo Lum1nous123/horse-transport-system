@@ -91,13 +91,13 @@ class DepositRefundServiceTest {
 	}
 
 	private Payment paidPayment(UUID orderId) {
-		Payment payment = new Payment(orderId, new BigDecimal("250.00"), "USD");
+		Payment payment = new Payment(orderId, PaymentType.DEPOSIT, new BigDecimal("250.00"), "USD");
 		payment.markPaid();
 		return payment;
 	}
 
 	private PaymentAttempt successfulAttempt(UUID paymentId) {
-		PaymentAttempt attempt = new PaymentAttempt(paymentId, 1);
+		PaymentAttempt attempt = new PaymentAttempt(paymentId, PaymentType.DEPOSIT, 1);
 		attempt.attachCheckoutSession("cs_1", "pi_1");
 		attempt.markSucceeded("cs_1", "pi_1");
 		return attempt;

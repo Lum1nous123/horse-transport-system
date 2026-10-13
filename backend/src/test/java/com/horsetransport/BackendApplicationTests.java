@@ -10,12 +10,22 @@ import com.horsetransport.payment.PaymentAttemptRepository;
 import com.horsetransport.payment.DepositRefundRepository;
 import com.horsetransport.payment.PaymentProviderEventRepository;
 import com.horsetransport.payment.PaymentRepository;
-import com.horsetransport.notification.NotificationRepository;
 import com.horsetransport.quotation.QuotationRepository;
+import com.horsetransport.notification.NotificationRepository;
 import com.horsetransport.user.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.horsetransport.route.CheckpointRepository;
+import com.horsetransport.route.AirLegExecutionRepository;
+import com.horsetransport.route.RoutePlanRepository;
+import com.horsetransport.route.RoutePlanReviewRepository;
+import com.horsetransport.route.RouteLegRepository;
+import com.horsetransport.route.RoadLegVehicleHorseRepository;
+import com.horsetransport.route.RoadLegVehicleRepository;
+import com.horsetransport.route.RoadVehicleExecutionRepository;
+import com.horsetransport.route.VehicleRepository;
+
 
 @SpringBootTest(properties = {
 		"app.security.jwt.secret=01234567890123456789012345678901",
@@ -40,10 +50,10 @@ class BackendApplicationTests {
 	private TransportOrderRepository transportOrderRepository;
 
 	@MockitoBean
-	private OrderStaffAssignmentRepository orderStaffAssignmentRepository;
+	private StatusAuditLogRepository statusAuditLogRepository;
 
 	@MockitoBean
-	private StatusAuditLogRepository statusAuditLogRepository;
+	private OrderStaffAssignmentRepository orderStaffAssignmentRepository;
 
 	@MockitoBean
 	private QuotationRepository quotationRepository;
@@ -55,16 +65,43 @@ class BackendApplicationTests {
 	private PaymentAttemptRepository paymentAttemptRepository;
 
 	@MockitoBean
-	private DepositRefundRepository depositRefundRepository;
+	private PaymentProviderEventRepository paymentProviderEventRepository;
 
 	@MockitoBean
-	private PaymentProviderEventRepository paymentProviderEventRepository;
+	private DepositRefundRepository depositRefundRepository;
 
 	@MockitoBean
 	private NotificationRepository notificationRepository;
 
 	@MockitoBean
+	private RoutePlanRepository routePlanRepository;
+
+	@MockitoBean
+	private RoutePlanReviewRepository routePlanReviewRepository;
+
+	@MockitoBean
 	private UserRepository userRepository;
+
+	@MockitoBean
+	private RouteLegRepository routeLegRepository;
+
+	@MockitoBean
+    private VehicleRepository vehicleRepository;
+
+    @MockitoBean
+    private RoadLegVehicleRepository roadLegVehicleRepository;
+
+    @MockitoBean
+    private RoadLegVehicleHorseRepository roadLegVehicleHorseRepository;
+
+	@MockitoBean
+	private RoadVehicleExecutionRepository roadVehicleExecutionRepository;
+
+	@MockitoBean
+	private AirLegExecutionRepository airLegExecutionRepository;
+
+	@MockitoBean
+	private CheckpointRepository checkpointRepository;
 
 	@Test
 	void contextLoads() {

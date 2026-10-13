@@ -18,6 +18,11 @@ This file is a portable handoff and resume guide for a new Codex conversation or
 - Backend implementation is active. BE-01 through BE-09 and the JWT Authentication foundation are complete and merged into `main`.
 - FE-01, the Customer portion of FE-02, FE-03, FE-04, and FE-05 are merged into `main`. FE-02 Logistics Manager work is in review through PR #59.
 - TS Document Inbox support is complete and merged into `main`.
+- Sprint 2 BA consolidation is complete for Human Review: the approved manual
+  LM assignment of Order-level TS/FRC, assigned-user queues, derived Vehicle
+  availability, and deterministic automatic Driver/Escort selection are now
+  explicit in the authoritative BA documents. Scrum Master publication of
+  Sprint 2 child issues has not started.
 
 ## Authoritative Sources
 
@@ -42,12 +47,33 @@ The Functional Requirements filename still contains `Proposed`, but the document
 
 - TransportOrder lifecycle: `DRAFT → SUBMITTED → QUOTATION_SENT → APPROVED → READY_TO_SHIP → IN_PROGRESS → DELIVERED`, with the approved `REJECTED` and `CANCELLED` exits. `DELIVERED`, `REJECTED`, and `CANCELLED` are terminal.
 - A sent quotation is immutable and non-versioned. Successful Deposit payment is the Customer's quotation acceptance and automatically moves the Order to `APPROVED`.
+- After the signed Deposit webhook moves the Order to `APPROVED`, LM manually
+  assigns exactly one ACTIVE TS and exactly one ACTIVE FRC in one confirmation
+  action. This is mandatory work allocation with no accept/reject, negotiation,
+  automatic TS/FRC selection, or reassignment workflow.
+- TS/FRC candidate lists show identity, full name, role, and informational
+  `activeOrderCount`, ordered by count ascending with a stable identity
+  tie-breaker. LM remains the decision-maker.
+- The assigned TS queue contains only that TS's actionable Document Phase
+  Orders. The assigned FRC queue becomes actionable only after Remaining
+  Balance is PAID and only while the Route Plan is absent, `DRAFT`, or
+  `RETURNED`.
 - Every Horse receives the same fixed checklist: Horse Passport/Identification, Vaccination Certificate, Veterinary Health Certificate, Ownership Certificate, and Export/Import Permit.
 - Only the Customer uploads/submits document versions. The assigned TS reviews them, approves or rejects with a reason, and explicitly performs Final Confirm after all required current versions are approved.
 - One Document Completion Deadline applies to the Order. Missing or DRAFT documents at the deadline cause cancellation and a full Deposit refund; pending TS review does not. A post-deadline rejection causes immediate cancellation and refund.
 - After Remaining Balance payment, the FRC creates an ordered ROAD/AIR Route Plan. The FRC submits it for LM review; LM may Confirm or Return with a reason. Confirmation permanently locks the Route Plan.
 - Each Horse is allocated to exactly one Vehicle in every ROAD RouteLeg. Capacity is validated per Vehicle, and allocations may differ between ROAD legs.
-- After route approval, the System assigns one Driver and one Escort to each ROAD Vehicle and one Escort to each AIR RouteLeg.
+- Vehicle is existing fleet/reference data; Vehicle management is not MVP
+  scope. Schedule availability is derived from ROAD allocations and the strict
+  interval-overlap rule (`newStart < existingEnd && newEnd > existingStart`),
+  not from a mutable busy flag.
+- After route approval, the System assigns one eligible ACTIVE Driver and one
+  eligible ACTIVE Escort to each ROAD Vehicle and one eligible ACTIVE Escort to
+  each AIR RouteLeg. Eligibility excludes overlapping non-completed execution
+  assignments; selection prefers the lowest active execution-assignment count
+  and then a stable user-ID tie-breaker.
+- `READY_TO_SHIP` is reached only after the locked Route Plan has every required
+  ROAD/AIR execution assignment persisted successfully.
 - RouteLegs execute strictly in sequence. ROAD Vehicles within one leg progress independently.
 - ROAD checkpoint definitions belong to the RouteLeg and are shared; each Vehicle records its own checkpoint arrivals against that plan.
 - The assigned Escort records Vehicle-specific ROAD welfare evidence or AIR-leg welfare evidence, including required final-destination evidence.
@@ -68,6 +94,10 @@ The Functional Requirements filename still contains `Proposed`, but the document
 - Document Phase reopening
 - Manual execution-staff assignment
 - Mid-trip staff reassignment
+- TS/FRC assignment acceptance, rejection, workload optimization, shift/leave
+  scheduling, or reassignment
+- Vehicle CRUD, procurement, maintenance calendar, third-party fleet/provider
+  booking, external fleet API, or GPS tracking
 - Recipient account, OTP, or electronic signature
 - Partial refunds
 - Currency conversion
@@ -87,8 +117,12 @@ The status-audit entity scope is exactly:
 The following architecture-hardening follow-ups are **NON-BLOCKING**:
 
 1. Make DRAFT versus SENT quotation arithmetic and nullability semantics explicit.
-2. Review the semantics of `order_staff_assignments.assigned_by` so it does not accidentally introduce an unapproved TS/FRC assignment workflow.
+2. `order_staff_assignments.assigned_by` records the Logistics Manager who performs the approved mandatory Order-level assignment of exactly one active TS and one active FRC.
 3. Clarify the final status-audit comment so LM RoutePlan return is not incorrectly implied to be part of the FR-020 audit scope.
+4. Remove or redefine the legacy `vehicle_status.ASSIGNED` value in a future
+   architecture review so it cannot be mistaken for schedule availability.
+   This is non-blocking because availability is derivable from
+   `road_leg_vehicles` and `route_legs`; no migration was created in the BA task.
 
 These follow-ups do not change approved requirements and must not be used to infer new business behavior.
 
@@ -130,7 +164,7 @@ Authentication, and the LM Order Inbox support; all are merged into `main`.
 PR #47 provides the frontend authentication/landing foundation, while PR #51
 (FE-01), PR #52 (Customer FE-02), PR #54 (FE-04), PR #55 (FE-05), and PR #56
 (FE-03) are also merged. BE-08 and BE-09 are merged through PR #57 and PR #58.
-The latest `main` commit is `7aeb20e`.
+The latest verified `main` commit at this handoff is `82cc318`.
 
 BE-05 implements Stripe Deposit checkout/webhook handling. A successful
 Deposit atomically marks the payment `PAID`, moves the Order from
@@ -150,10 +184,12 @@ LM Order Inbox is available at `GET /api/v1/orders/inbox?status=SUBMITTED`, and
 LM can read Order detail through the existing detail endpoint. Customer list
 and ownership behavior remain unchanged.
 
-The Transport Specialist work queue is available at
+The current Transport Specialist work queue is available at
 `GET /api/v1/orders/document-inbox`. It returns `APPROVED` Orders and includes
-deadline metadata; it does not filter by assignment. Commit `6f45284` is part of
-the current `main` history. No ERD or migration changes were needed.
+deadline metadata; it does not yet filter by assignment. This is an identified
+Sprint 2 implementation gap against the clarified assigned-user queue rule.
+Commit `6f45284` is part of the current `main` history. No ERD or migration
+changes were needed for the BA consolidation.
 
 BE-07 Customer Document Draft and Submission Lifecycle is merged through PR
 #53. It provides Customer-owned upload, DRAFT replacement/deletion, submission,
@@ -161,34 +197,6 @@ version history, Cloudinary storage compensation, and status audit behavior.
 
 BE-08 Transport Specialist document review is merged through PR #57. BE-09
 transactional status-audit hardening is merged through PR #58.
-
-BE-10 Logistics Manager Order Staff Assignment is committed and pushed on
-`feature/be-10-lm-order-staff-assignment`; it is not yet recorded as merged to
-`main`. BE-11 Assigned TS Document Phase and Final Confirm is implemented on
-`feature/be-11-assigned-ts-final-confirm`. BE-11 assigned-only inbox,
-ownership checks for TS detail/review/deadline actions, permanent Final Confirm
-lock, and actor/time fields are in the local diff. The existing V1 migration
-already contains the Final Confirm columns, so no additional migration is
-needed. BE-12 deadline evaluation is also in this uncommitted diff: a scheduled,
-clock-controlled scan cancels due Orders with missing, DRAFT, or REJECTED
-mandatory documents; PENDING_REVIEW and all-approved awaiting Final Confirm do
-not cancel. Human clarification confirmed that a still-REJECTED document at
-the deadline does cancel. Cancellation, system audit, and a unique
-`deposit_refunds` intent are saved in one transaction. Customer document writes
-are blocked at or after the deadline. BE-13 local work now adds Stripe
-full-deposit refunds with idempotency and retry scheduling, refund webhook
-handling, Payment refund readback, and Customer Order-scoped in-app refund
-notifications. It adds V2 retry metadata columns to the existing
-`deposit_refunds` table. A focused BE-10–13 backend run on JDK 21 passed 125
-tests (0 failures/errors). The local profile connected to PostgreSQL 17.6;
-Flyway validated both migrations and reported the schema up to date, and
-Hibernate initialized JPA successfully. The deadline and refund scheduled
-queries did not report SQL errors in the captured startup log after the
-deadline query was aligned with the PostgreSQL enum schema. This is startup and
-query evidence, not full PostgreSQL-backed transaction/concurrency coverage;
-that integration verification remains outstanding. BE-11/12/13 are being
-carried on `feature/be-11-assigned-ts-final-confirm` and are not merged to
-`main`.
 
 FE-04 Customer document workspace preview is merged through PR #54. FE-05 TS
 document review workspace preview is merged through PR #55.
@@ -233,6 +241,15 @@ workspaces. Browser-connected QA remains outstanding.
 - Transport Specialist Document Inbox support
 - BE-08 Transport Specialist document review lifecycle, merged through PR #57
 - BE-09 Transactional Audit hardening, merged through PR #58
+- BE-10 Logistics Manager Order Staff Assignment, BE-11 assigned TS Final Confirm, BE-12 document deadline evaluation, and BE-13 Deposit refunds/notifications, merged through PR #89
+- BE-14 Remaining Balance payment, merged through PR #93
+- BE-15 assigned FRC planning queue, merged through PR #98
+- BE-16 Route Plan and leg lifecycle, merged through PR #103
+- BE-17 ROAD vehicle allocation, merged through PR #104
+- BE-18 ROAD checkpoints, merged through PR #105
+- BE-19 AIR RouteLeg configuration, merged through PR #106
+- BE-20 Route Plan review and lock, merged through PR #107
+- BE-21 execution staff auto-assignment and READY_TO_SHIP gate, merged through PR #108
 - FE-03 Deposit and document deadline views, merged through PR #56
 
 ### DEFERRED / NON-BLOCKING
@@ -241,13 +258,14 @@ workspaces. Browser-connected QA remains outstanding.
 
 ### NEXT
 
-1. Complete Human Review for FE-02 Logistics Manager workspace in PR #59.
-2. Run PostgreSQL-backed transaction and concurrency checks for BE-10–13.
+1. Human Review the Sprint 2 BA consolidation before returning to Scrum Master
+   publication/planning.
+2. Complete Human Review for FE-02 Logistics Manager workspace in PR #59.
 3. Complete browser-connected validation and QA for the merged frontend flows.
 
 ### NOT STARTED
 
-- Later backend vertical slices beyond BE-09
+- Later backend vertical slices beyond BE-21
 - QA execution
 
 ## Resume Protocol
