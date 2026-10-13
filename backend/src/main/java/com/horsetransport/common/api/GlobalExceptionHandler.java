@@ -14,7 +14,10 @@ import com.horsetransport.document.DocumentVersionNotFoundException;
 import com.horsetransport.document.HorseDocumentNotFoundException;
 import com.horsetransport.horse.DuplicateMicrochipException;
 import com.horsetransport.order.InvalidOrderHorsesException;
+import com.horsetransport.order.InvalidOrderStaffAssignmentException;
 import com.horsetransport.order.InvalidOrderTransitionException;
+import com.horsetransport.order.OrderStaffAssignmentConflictException;
+import com.horsetransport.order.UnassignedTransportSpecialistException;
 import com.horsetransport.order.InvalidRejectionReasonException;
 import com.horsetransport.order.OrderNotEditableException;
 import com.horsetransport.order.OrderNotFoundException;
@@ -165,6 +168,24 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(OrderNotEditableException.class)
 	public ResponseEntity<ApiError> handleOrderNotEditable(OrderNotEditableException exception) {
 		return error(HttpStatus.CONFLICT, "ORDER_NOT_EDITABLE", exception.getMessage());
+	}
+
+	@ExceptionHandler(OrderStaffAssignmentConflictException.class)
+	public ResponseEntity<ApiError> handleOrderStaffAssignmentConflict(
+			OrderStaffAssignmentConflictException exception) {
+		return error(HttpStatus.CONFLICT, "ORDER_STAFF_ASSIGNMENT_CONFLICT", exception.getMessage());
+	}
+
+	@ExceptionHandler(InvalidOrderStaffAssignmentException.class)
+	public ResponseEntity<ApiError> handleInvalidOrderStaffAssignment(
+			InvalidOrderStaffAssignmentException exception) {
+		return error(HttpStatus.BAD_REQUEST, "INVALID_ORDER_STAFF_ASSIGNMENT", exception.getMessage());
+	}
+
+	@ExceptionHandler(UnassignedTransportSpecialistException.class)
+	public ResponseEntity<ApiError> handleUnassignedTransportSpecialist(
+			UnassignedTransportSpecialistException exception) {
+		return error(HttpStatus.FORBIDDEN, "UNASSIGNED_TRANSPORT_SPECIALIST", exception.getMessage());
 	}
 
 	@ExceptionHandler({InvalidOrderHorsesException.class, InvalidRejectionReasonException.class,

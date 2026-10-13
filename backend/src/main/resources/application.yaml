@@ -35,11 +35,15 @@ app:
       expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}
 
   payments:
+    refund-scan-interval-ms: ${DEPOSIT_REFUND_SCAN_INTERVAL_MS:30000}
     stripe:
       secret-key: ${STRIPE_SECRET_KEY:}
       webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
       success-url: ${STRIPE_CHECKOUT_SUCCESS_URL:http://localhost:5173/payment/success}
       cancel-url: ${STRIPE_CHECKOUT_CANCEL_URL:http://localhost:5173/payment/cancelled}
+
+  document-deadline:
+    scan-interval-ms: ${DOCUMENT_DEADLINE_SCAN_INTERVAL_MS:60000}
 
   storage:
     cloudinary:

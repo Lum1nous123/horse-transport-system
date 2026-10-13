@@ -4,6 +4,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.Optional;
@@ -49,6 +50,8 @@ class DocumentChecklistAuthorizationTest {
 		mockMvc.perform(get(checklistPath()).header(HttpHeaders.AUTHORIZATION, token)).andExpect(status().isOk());
 		mockMvc.perform(put(deadlinePath()).header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON).content(validBody())).andExpect(status().isForbidden());
+		mockMvc.perform(post(finalConfirmPath()).header(HttpHeaders.AUTHORIZATION, token))
+				.andExpect(status().isForbidden());
 	}
 
 	@Test
@@ -57,6 +60,8 @@ class DocumentChecklistAuthorizationTest {
 		mockMvc.perform(get(checklistPath()).header(HttpHeaders.AUTHORIZATION, token)).andExpect(status().isOk());
 		mockMvc.perform(put(deadlinePath()).header(HttpHeaders.AUTHORIZATION, token)
 				.contentType(MediaType.APPLICATION_JSON).content(validBody())).andExpect(status().isOk());
+		mockMvc.perform(post(finalConfirmPath()).header(HttpHeaders.AUTHORIZATION, token))
+				.andExpect(status().isOk());
 	}
 
 	@Test
@@ -68,6 +73,8 @@ class DocumentChecklistAuthorizationTest {
 			mockMvc.perform(put(deadlinePath()).header(HttpHeaders.AUTHORIZATION, token)
 					.contentType(MediaType.APPLICATION_JSON).content(validBody()))
 					.andExpect(status().isForbidden());
+			mockMvc.perform(post(finalConfirmPath()).header(HttpHeaders.AUTHORIZATION, token))
+					.andExpect(status().isForbidden());
 		}
 	}
 
@@ -76,10 +83,12 @@ class DocumentChecklistAuthorizationTest {
 		mockMvc.perform(get(checklistPath())).andExpect(status().isUnauthorized());
 		mockMvc.perform(put(deadlinePath()).contentType(MediaType.APPLICATION_JSON).content(validBody()))
 				.andExpect(status().isUnauthorized());
+		mockMvc.perform(post(finalConfirmPath())).andExpect(status().isUnauthorized());
 	}
 
 	private String checklistPath() { return "/api/v1/orders/" + ORDER_ID + "/documents/checklist"; }
 	private String deadlinePath() { return "/api/v1/orders/" + ORDER_ID + "/documents/deadline"; }
+	private String finalConfirmPath() { return "/api/v1/orders/" + ORDER_ID + "/documents/final-confirm"; }
 	private String validBody() { return "{\"documentCompletionDeadlineAt\":\"2026-10-15T17:00:00\"}"; }
 
 	private String token(UserRole role) {

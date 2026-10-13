@@ -10,6 +10,7 @@ import com.horsetransport.order.OrderHorseDocumentStatus;
 import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderHorse;
+import com.horsetransport.order.TransportSpecialistAssignmentGuard;
 import com.horsetransport.security.CurrentUserProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,15 +21,20 @@ public class DocumentReviewService {
 	private final HorseDocumentRepository documentRepository;
 	private final HorseDocumentVersionRepository versionRepository;
 	private final StatusAuditLogRepository auditRepository;
+	private final TransportSpecialistAssignmentGuard assignmentGuard;
 	private final CurrentUserProvider currentUserProvider;
+	private final DocumentDeadlineService deadlineService;
 
 	public DocumentReviewService(HorseDocumentRepository documentRepository,
 			HorseDocumentVersionRepository versionRepository, StatusAuditLogRepository auditRepository,
-			CurrentUserProvider currentUserProvider) {
+			TransportSpecialistAssignmentGuard assignmentGuard, CurrentUserProvider currentUserProvider,
+			DocumentDeadlineService deadlineService) {
 		this.documentRepository = documentRepository;
 		this.versionRepository = versionRepository;
 		this.auditRepository = auditRepository;
+		this.assignmentGuard = assignmentGuard;
 		this.currentUserProvider = currentUserProvider;
+		this.deadlineService = deadlineService;
 	}
 
 	@Transactional
@@ -65,6 +71,8 @@ public class DocumentReviewService {
 					DocumentVersionStatus.PENDING_REVIEW.name(), version.getStatus().name(),
 					actorUserId, version.getRejectionReason()));
 			updateHorseStatus(orderHorse, actorUserId);
+			if (!approved) deadlineService.handlePostDeadlineRejection(
+					orderHorse.getTransportOrder().getId());
 			return DocumentVersionResponse.from(version);
 		}
 		catch (RuntimeException exception) {
@@ -82,6 +90,7 @@ public class DocumentReviewService {
 
 	private void ensureActiveDocumentPhase(HorseDocument document) {
 		TransportOrder order = document.getTransportOrderHorse().getTransportOrder();
+		assignmentGuard.requireAssignedToCurrentTransportSpecialist(order.getId());
 		if (order.getStatus() != OrderStatus.APPROVED || order.getDocumentsLockedAt() != null) {
 			throw new DocumentVersionConflictException("Order is not in an active document phase");
 		}

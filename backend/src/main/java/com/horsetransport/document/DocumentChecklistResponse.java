@@ -5,5 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 public record DocumentChecklistResponse(UUID orderId, LocalDateTime documentCompletionDeadlineAt,
-		LocalDateTime documentDeadlineSetAt, List<HorseDocumentChecklistResponse> horses) {
+		LocalDateTime documentDeadlineSetAt, boolean canFinalConfirm, UUID documentsFinalConfirmedBy,
+		LocalDateTime documentsFinalConfirmedAt, LocalDateTime documentsLockedAt,
+		List<HorseDocumentChecklistResponse> horses) {
 }

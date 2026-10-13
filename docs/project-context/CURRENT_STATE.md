@@ -241,6 +241,15 @@ workspaces. Browser-connected QA remains outstanding.
 - Transport Specialist Document Inbox support
 - BE-08 Transport Specialist document review lifecycle, merged through PR #57
 - BE-09 Transactional Audit hardening, merged through PR #58
+- BE-10 Logistics Manager Order Staff Assignment, BE-11 assigned TS Final Confirm, BE-12 document deadline evaluation, and BE-13 Deposit refunds/notifications, merged through PR #89
+- BE-14 Remaining Balance payment, merged through PR #93
+- BE-15 assigned FRC planning queue, merged through PR #98
+- BE-16 Route Plan and leg lifecycle, merged through PR #103
+- BE-17 ROAD vehicle allocation, merged through PR #104
+- BE-18 ROAD checkpoints, merged through PR #105
+- BE-19 AIR RouteLeg configuration, merged through PR #106
+- BE-20 Route Plan review and lock, merged through PR #107
+- BE-21 execution staff auto-assignment and READY_TO_SHIP gate, merged through PR #108
 - FE-03 Deposit and document deadline views, merged through PR #56
 
 ### DEFERRED / NON-BLOCKING
@@ -256,7 +265,7 @@ workspaces. Browser-connected QA remains outstanding.
 
 ### NOT STARTED
 
-- Later backend vertical slices beyond BE-09
+- Later backend vertical slices beyond BE-21
 - QA execution
 
 ## Resume Protocol

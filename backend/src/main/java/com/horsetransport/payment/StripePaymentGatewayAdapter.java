@@ -7,11 +7,13 @@ import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
 import com.stripe.model.PaymentIntent;
+import com.stripe.model.Refund;
 import com.stripe.model.StripeObject;
 import com.stripe.model.checkout.Session;
 import com.stripe.net.RequestOptions;
 import com.stripe.net.Webhook;
 import com.stripe.param.checkout.SessionCreateParams;
+import com.stripe.param.RefundCreateParams;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -71,6 +73,26 @@ public class StripePaymentGatewayAdapter implements StripePaymentGateway {
 	}
 
 	@Override
+	public StripeRefundResult createRefund(StripeRefundCommand command) {
+		requireConfigured(secretKey, "Stripe secret key is not configured");
+		RefundCreateParams params = RefundCreateParams.builder()
+				.setPaymentIntent(command.paymentIntentId())
+				.setAmount(command.amountMinor())
+				.putAllMetadata(command.metadata())
+				.build();
+		RequestOptions options = RequestOptions.builder().setApiKey(secretKey)
+				.setIdempotencyKey(command.idempotencyKey()).build();
+		try {
+			Refund refund = Refund.create(params, options);
+			return new StripeRefundResult(refund.getId(), refund.getPaymentIntent(), refund.getAmount(),
+					refund.getCurrency(), refund.getStatus());
+		}
+		catch (StripeException exception) {
+			throw new StripeRefundException("Stripe refund request failed", exception);
+		}
+	}
+
+	@Override
 	public StripeWebhookEvent verifyAndParseWebhook(String payload, String signature) {
 		requireConfigured(webhookSecret, "Stripe webhook secret is not configured");
 		if (signature == null || signature.isBlank()) {
@@ -90,6 +112,17 @@ public class StripePaymentGatewayAdapter implements StripePaymentGateway {
 	}
 
 	private StripeWebhookEvent mapEvent(Event event, StripeObject object) {
+		if (object instanceof Refund refund) {
+			StripeEventKind kind = switch (event.getType()) {
+				case "refund.created", "refund.updated" -> "succeeded".equals(refund.getStatus())
+						? StripeEventKind.REFUND_SUCCESS : "failed".equals(refund.getStatus())
+						? StripeEventKind.REFUND_FAILED : StripeEventKind.REFUND_PENDING;
+				case "refund.failed" -> StripeEventKind.REFUND_FAILED;
+				default -> StripeEventKind.IGNORED;
+			};
+			return new StripeWebhookEvent(event.getId(), event.getType(), kind, refund.getId(),
+					refund.getPaymentIntent(), refund.getAmount(), refund.getCurrency(), safeMetadata(refund.getMetadata()));
+		}
 		if (object instanceof Session session) {
 			StripeEventKind kind = StripeEventKind.IGNORED;
 			if ("checkout.session.completed".equals(event.getType())

@@ -49,12 +49,22 @@ public class SecurityConfig {
 								.hasRole("LOGISTICS_MANAGER")
 						.requestMatchers(HttpMethod.GET, "/api/v1/orders/{orderId}/documents/checklist")
 								.hasAnyRole("CUSTOMER", "TRANSPORT_SPECIALIST")
+						.requestMatchers(HttpMethod.GET, "/api/v1/orders/{orderId}/notifications")
+								.hasRole("CUSTOMER")
 						.requestMatchers(HttpMethod.PUT, "/api/v1/orders/{orderId}/documents/deadline")
+								.hasRole("TRANSPORT_SPECIALIST")
+						.requestMatchers(HttpMethod.POST, "/api/v1/orders/{orderId}/documents/final-confirm")
 								.hasRole("TRANSPORT_SPECIALIST")
 						.requestMatchers(HttpMethod.GET, "/api/v1/orders/inbox")
 								.hasRole("LOGISTICS_MANAGER")
 						.requestMatchers(HttpMethod.GET, "/api/v1/orders/document-inbox")
 								.hasRole("TRANSPORT_SPECIALIST")
+						.requestMatchers(HttpMethod.GET, "/api/v1/orders/assignment-inbox",
+								"/api/v1/orders/*/assignment-candidates",
+								"/api/v1/orders/*/staff-assignments")
+								.hasRole("LOGISTICS_MANAGER")
+						.requestMatchers(HttpMethod.POST, "/api/v1/orders/*/staff-assignments")
+								.hasRole("LOGISTICS_MANAGER")
 						.requestMatchers(HttpMethod.POST,
 								"/api/v1/documents/{documentId}/versions/{versionId}/approve",
 								"/api/v1/documents/{documentId}/versions/{versionId}/reject")
