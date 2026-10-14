@@ -213,6 +213,25 @@ review, required rejection reasons, and quotation DRAFT create/edit/send. Login
 routes Customers, Logistics Managers, and Transport Specialists to their current
 workspaces. Browser-connected QA remains outstanding.
 
+Sprint 2 demo hardening is implemented locally and awaiting review. Normal
+authenticated LM Staff Assignment, assigned TS document work, and the assigned
+FRC planning queue now use backend APIs; frontend mock staff remains available
+only in explicit preview mode. A review-before-run, idempotent command can add
+four TS and four FRC accounts from an environment-provided password without
+resetting an existing account. The command is fail-closed: Flyway, SQL init,
+scheduling, and web startup are structurally disabled; profile/datasource
+overrides are rejected; database host/name/schema are verified in a read-only
+preflight; and an explicit confirmation flag is required before seeding. The
+shared Supabase database passed the no-confirmation read-only preflight after
+the staff-candidate JPQL entity joins and seed entity scan were corrected. Its
+data and Flyway fingerprint remained unchanged during preflight. The demo staff
+accounts were subsequently seeded through the approved command, and a real
+Sprint 2 happy-path E2E run completed from LM assignment through TS Final
+Confirm, Remaining Balance payment, FRC Route Plan submission, LM approval,
+automatic execution staffing, and Order `READY_TO_SHIP`. Targeted checks and
+frontend production builds have passed, but the full regression suite has not
+yet completed because Docker/Testcontainers remains unavailable.
+
 ### COMPLETED
 
 - Business discovery
@@ -258,10 +277,13 @@ workspaces. Browser-connected QA remains outstanding.
 
 ### NEXT
 
-1. Human Review the Sprint 2 BA consolidation before returning to Scrum Master
+1. Review and approve the Sprint 2 demo staff definitions and seed command
+   before applying them to shared Supabase.
+2. Run the isolated PostgreSQL workflow test in a Docker-capable environment,
+   then perform browser-connected LM assignment and assigned TS/FRC login QA.
+3. Human Review the Sprint 2 BA consolidation before returning to Scrum Master
    publication/planning.
-2. Complete Human Review for FE-02 Logistics Manager workspace in PR #59.
-3. Complete browser-connected validation and QA for the merged frontend flows.
+4. Complete Human Review for FE-02 Logistics Manager workspace in PR #59.
 
 ### NOT STARTED
 

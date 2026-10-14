@@ -17,8 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class OrderStaffAssignmentService {
-	private static final List<OrderStatus> ACTIVE_ORDER_STATUSES = List.of(
-			OrderStatus.APPROVED, OrderStatus.READY_TO_SHIP, OrderStatus.IN_PROGRESS);
+	private static final List<OrderStatus> TERMINAL_ORDER_STATUSES = List.of(
+			OrderStatus.DELIVERED, OrderStatus.REJECTED, OrderStatus.CANCELLED);
 
 	private final OrderStaffAssignmentRepository assignmentRepository;
 	private final TransportOrderRepository orderRepository;
@@ -35,8 +35,15 @@ public class OrderStaffAssignmentService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<OrderAssignmentInboxResponse> findInbox() {
-		return assignmentRepository.findUnassignedOrdersByStatus(OrderStatus.APPROVED).stream()
+	public List<OrderAssignmentInboxResponse> findInbox(OrderAssignmentState state) {
+		if (state == null) {
+			throw new InvalidOrderStaffAssignmentException("An assignment state is required");
+		}
+		List<TransportOrder> orders = switch (state) {
+			case NEEDS_ASSIGNMENT -> assignmentRepository.findUnassignedOrdersByStatus(OrderStatus.APPROVED);
+			case ASSIGNED -> assignmentRepository.findAssignedNonTerminalOrders(TERMINAL_ORDER_STATUSES);
+		};
+		return orders.stream()
 				.map(OrderAssignmentInboxResponse::from).toList();
 	}
 
@@ -46,11 +53,7 @@ public class OrderStaffAssignmentService {
 		if (role == null) {
 			throw new InvalidOrderStaffAssignmentException("A staff role is required");
 		}
-		UserRole userRole = switch (role) {
-			case TRANSPORT_SPECIALIST -> UserRole.TRANSPORT_SPECIALIST;
-			case FLEET_ROUTE_COORDINATOR -> UserRole.FLEET_ROUTE_COORDINATOR;
-		};
-		return userRepository.findActiveStaffCandidates(userRole, ACTIVE_ORDER_STATUSES);
+		return findCandidates(role);
 	}
 
 	@Transactional(readOnly = true)
@@ -106,14 +109,28 @@ public class OrderStaffAssignmentService {
 		}
 	}
 
+	private List<StaffCandidateResponse> findCandidates(OrderStaffRole role) {
+		return switch (role) {
+			case TRANSPORT_SPECIALIST -> userRepository.findActiveTransportSpecialistCandidates();
+			case FLEET_ROUTE_COORDINATOR -> userRepository.findActiveFleetRouteCoordinatorCandidates();
+		};
+	}
+
 	private List<OrderStaffAssignmentResponse> toResponses(List<OrderStaffAssignment> assignments) {
 		Map<UUID, UserAccount> users = userRepository.findAllById(assignments.stream()
 				.map(OrderStaffAssignment::getUserId).distinct().toList()).stream()
 				.collect(Collectors.toMap(UserAccount::getId, Function.identity()));
+		Map<UUID, Long> activeOrderCounts = List.of(
+				userRepository.findActiveTransportSpecialistCandidates(),
+				userRepository.findActiveFleetRouteCoordinatorCandidates()).stream()
+				.flatMap(List::stream)
+				.collect(Collectors.toMap(StaffCandidateResponse::id, StaffCandidateResponse::activeOrderCount));
 		return assignments.stream().map(assignment -> {
 			UserAccount user = users.get(assignment.getUserId());
 			return new OrderStaffAssignmentResponse(assignment.getAssignmentRole(), assignment.getUserId(),
-					user == null ? null : user.getFullName(), assignment.getAssignedBy(), assignment.getAssignedAt());
+					user == null ? null : user.getFullName(), user == null ? null : user.getEmail(),
+					activeOrderCounts.getOrDefault(assignment.getUserId(), 0L), assignment.getAssignedBy(),
+					assignment.getAssignedAt());
 		}).toList();
 	}
 }

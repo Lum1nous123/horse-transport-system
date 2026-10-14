@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AssignmentWorkspaceFrame from "@/components/AssignmentWorkspaceFrame";
 import {
-  staffAssignmentService,
+  getStaffAssignmentService,
   type AssignmentOrderSummary,
 } from "@/lib/staff-assignment/service";
 import { useLogisticsAccess } from "@/lib/staff-assignment/use-logistics-access";
@@ -18,6 +18,7 @@ function formatDate(value: string) {
 
 export default function StaffAssignmentQueuePage() {
   const { state: accessState, preview, message: accessMessage } = useLogisticsAccess();
+  const staffAssignmentService = useMemo(() => getStaffAssignmentService(preview), [preview]);
   const [needsAssignment, setNeedsAssignment] = useState<AssignmentOrderSummary[]>([]);
   const [assigned, setAssigned] = useState<AssignmentOrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +36,7 @@ export default function StaffAssignmentQueuePage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [staffAssignmentService]);
 
   useEffect(() => {
     if (accessState !== "allowed") return;

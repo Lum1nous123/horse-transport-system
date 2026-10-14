@@ -12,6 +12,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.ColumnTransformer;
 import org.hibernate.type.SqlTypes;
 
 @Entity
@@ -28,7 +29,8 @@ public class AirLegExecution {
 	private UUID escortId;
 
 	@Enumerated(EnumType.STRING)
-	@JdbcTypeCode(SqlTypes.NAMED_ENUM)
+	@JdbcTypeCode(SqlTypes.VARCHAR)
+	@ColumnTransformer(read = "status::text", write = "?::execution_status")
 	@Column(nullable = false, columnDefinition = "execution_status")
 	private ExecutionStatus status;
 

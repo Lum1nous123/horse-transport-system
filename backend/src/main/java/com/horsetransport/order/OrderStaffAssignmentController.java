@@ -25,8 +25,9 @@ public class OrderStaffAssignmentController {
 	}
 
 	@GetMapping("/assignment-inbox")
-	public List<OrderAssignmentInboxResponse> inbox() {
-		return assignmentService.findInbox();
+	public List<OrderAssignmentInboxResponse> inbox(
+			@RequestParam(defaultValue = "NEEDS_ASSIGNMENT") OrderAssignmentState state) {
+		return assignmentService.findInbox(state);
 	}
 
 	@GetMapping("/{orderId}/assignment-candidates")

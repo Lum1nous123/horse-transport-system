@@ -216,7 +216,7 @@ class TransportOrderServiceTest {
 		LocalDateTime deadline = LocalDateTime.of(2026, 10, 15, 17, 0);
 		TransportOrder approved = order(OrderStatus.APPROVED);
 		approved.setDocumentCompletionDeadline(deadline, UUID.randomUUID());
-		when(assignmentRepository.findActionableDocumentsByStatusAndAssignedTransportSpecialist(
+		when(assignmentRepository.findDocumentInboxByStatusAndAssignedTransportSpecialist(
 				OrderStatus.APPROVED, CUSTOMER_ID)).thenReturn(List.of(approved));
 
 		List<DocumentInboxResponse> result = service.findTransportSpecialistDocumentInbox();
@@ -225,9 +225,24 @@ class TransportOrderServiceTest {
 		assertThat(result.getFirst().status()).isEqualTo(OrderStatus.APPROVED);
 		assertThat(result.getFirst().documentCompletionDeadlineAt()).isEqualTo(deadline);
 		assertThat(result.getFirst().documentDeadlineSetAt()).isNotNull();
-		verify(assignmentRepository).findActionableDocumentsByStatusAndAssignedTransportSpecialist(
+		verify(assignmentRepository).findDocumentInboxByStatusAndAssignedTransportSpecialist(
 				OrderStatus.APPROVED, CUSTOMER_ID);
 		verify(auditLogRepository, never()).saveAndFlush(any());
+	}
+
+	@Test
+	void transportSpecialistDocumentInboxRetainsFinalConfirmedLockedOrder() {
+		TransportOrder finalConfirmed = order(OrderStatus.APPROVED);
+		finalConfirmed.finalConfirmDocuments(CUSTOMER_ID);
+		when(assignmentRepository.findDocumentInboxByStatusAndAssignedTransportSpecialist(
+				OrderStatus.APPROVED, CUSTOMER_ID)).thenReturn(List.of(finalConfirmed));
+
+		List<DocumentInboxResponse> result = service.findTransportSpecialistDocumentInbox();
+
+		assertThat(result).extracting(DocumentInboxResponse::id)
+				.containsExactly(finalConfirmed.getId());
+		assertThat(result.getFirst().documentsFinalConfirmedAt()).isNotNull();
+		assertThat(result.getFirst().documentsLockedAt()).isNotNull();
 	}
 
 	@Test

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import com.horsetransport.route.Vehicle;
 import com.horsetransport.route.VehicleRepository;
@@ -26,6 +27,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
 class LocalDevelopmentDataSeederTest {
+	private final String developmentPassword = "generated-" + UUID.randomUUID();
 
 	@Mock private UserRepository userRepository;
 	@Mock private VehicleRepository vehicleRepository;
@@ -45,7 +47,7 @@ class LocalDevelopmentDataSeederTest {
 		when(userRepository.existsByEmailIgnoreCase(any())).thenReturn(false);
 		when(vehicleRepository.findByPlateNumber(any())).thenReturn(Optional.empty());
 		LocalDevelopmentDataSeeder seeder = new LocalDevelopmentDataSeeder(
-				userRepository, vehicleRepository, passwordEncoder);
+				userRepository, vehicleRepository, passwordEncoder, developmentPassword);
 
 		seeder.run(null);
 
@@ -60,9 +62,9 @@ class LocalDevelopmentDataSeederTest {
 		assertThat(created).extracting(UserAccount::getRole).containsExactly(UserRole.values());
 		assertThat(created).allSatisfy(account -> {
 			assertThat(account.getStatus()).isEqualTo(UserStatus.ACTIVE);
-			assertThat(passwordEncoder.matches(LocalDevelopmentDataSeeder.DEVELOPMENT_PASSWORD,
+			assertThat(passwordEncoder.matches(developmentPassword,
 					account.getPasswordHash())).isTrue();
-			assertThat(account.getPasswordHash()).doesNotContain(LocalDevelopmentDataSeeder.DEVELOPMENT_PASSWORD);
+			assertThat(account.getPasswordHash()).doesNotContain(developmentPassword);
 		});
 
 		ArgumentCaptor<Vehicle> vehicles = ArgumentCaptor.forClass(Vehicle.class);
@@ -79,7 +81,7 @@ class LocalDevelopmentDataSeederTest {
 		when(userRepository.existsByEmailIgnoreCase(any())).thenReturn(true);
 		when(vehicleRepository.findByPlateNumber(any())).thenReturn(Optional.empty());
 		LocalDevelopmentDataSeeder seeder = new LocalDevelopmentDataSeeder(
-				userRepository, vehicleRepository, passwordEncoder);
+				userRepository, vehicleRepository, passwordEncoder, developmentPassword);
 
 		seeder.run(null);
 

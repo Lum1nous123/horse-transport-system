@@ -14,6 +14,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.ColumnTransformer;
 import org.hibernate.type.SqlTypes;
 
 @Entity
@@ -27,7 +28,8 @@ public class Payment {
 	private UUID transportOrderId;
 
 	@Enumerated(EnumType.STRING)
-	@JdbcTypeCode(SqlTypes.NAMED_ENUM)
+	@JdbcTypeCode(SqlTypes.VARCHAR)
+	@ColumnTransformer(read = "payment_type::text", write = "?::payment_type")
 	@Column(name = "payment_type", nullable = false, columnDefinition = "payment_type")
 	private PaymentType paymentType;
 

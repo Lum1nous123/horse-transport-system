@@ -20,6 +20,8 @@ import com.horsetransport.order.TransportOrderHorse;
 import com.horsetransport.order.TransportOrderRepository;
 import com.horsetransport.payment.DocumentPhaseStarter;
 import com.horsetransport.security.CurrentUserProvider;
+import com.horsetransport.horse.Horse;
+import com.horsetransport.horse.HorseRepository;
 import com.horsetransport.user.UserRole;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -33,15 +35,18 @@ public class DocumentChecklistService implements DocumentPhaseStarter {
 	private final TransportOrderRepository orderRepository;
 	private final HorseDocumentRepository documentRepository;
 	private final HorseDocumentVersionRepository versionRepository;
+	private final HorseRepository horseRepository;
 	private final TransportSpecialistAssignmentGuard assignmentGuard;
 	private final CurrentUserProvider currentUserProvider;
 
 	public DocumentChecklistService(TransportOrderRepository orderRepository,
 			HorseDocumentRepository documentRepository, HorseDocumentVersionRepository versionRepository,
-			TransportSpecialistAssignmentGuard assignmentGuard, CurrentUserProvider currentUserProvider) {
+			HorseRepository horseRepository, TransportSpecialistAssignmentGuard assignmentGuard,
+			CurrentUserProvider currentUserProvider) {
 		this.orderRepository = orderRepository;
 		this.documentRepository = documentRepository;
 		this.versionRepository = versionRepository;
+		this.horseRepository = horseRepository;
 		this.assignmentGuard = assignmentGuard;
 		this.currentUserProvider = currentUserProvider;
 	}
@@ -176,18 +181,25 @@ public class DocumentChecklistService implements DocumentPhaseStarter {
 
 	private DocumentChecklistResponse toResponse(TransportOrder order, List<TransportOrderHorse> orderHorses,
 			List<HorseDocument> documents) {
+		Map<UUID, Horse> horsesById = horseRepository.findAllById(orderHorses.stream()
+				.map(TransportOrderHorse::getHorseId).toList()).stream()
+				.collect(java.util.stream.Collectors.toMap(Horse::getId, horse -> horse));
 		Map<UUID, List<HorseDocument>> byOrderHorse = new HashMap<>();
 		for (HorseDocument document : documents) {
 			byOrderHorse.computeIfAbsent(document.getTransportOrderHorseId(), ignored -> new ArrayList<>()).add(document);
 		}
 		List<HorseDocumentChecklistResponse> horses = orderHorses.stream()
 				.sorted(Comparator.comparing(TransportOrderHorse::getId))
-				.map(orderHorse -> new HorseDocumentChecklistResponse(orderHorse.getId(), orderHorse.getHorseId(),
+				.map(orderHorse -> {
+					Horse horse = horsesById.get(orderHorse.getHorseId());
+					return new HorseDocumentChecklistResponse(orderHorse.getId(), orderHorse.getHorseId(),
+						horse == null ? null : horse.getName(), horse == null ? null : horse.getMicrochipId(),
 						orderHorse.getDocumentStatus(), byOrderHorse.get(orderHorse.getId()).stream()
 								.sorted(Comparator.comparing(HorseDocument::getDocumentType))
 								.map(document -> new HorseDocumentItemResponse(document.getId(),
 										document.getDocumentType(), true))
-								.toList()))
+								.toList());
+				})
 				.toList();
 		boolean locked = order.getDocumentsLockedAt() != null;
 		boolean canFinalConfirm = order.getStatus() == OrderStatus.APPROVED && !locked

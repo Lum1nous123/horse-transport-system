@@ -2,6 +2,7 @@ package com.horsetransport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,7 +13,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-@Testcontainers(disabledWithoutDocker = true)
+@Testcontainers
 @SpringBootTest(properties = {
 		"app.security.jwt.secret=01234567890123456789012345678901",
 		"spring.jpa.hibernate.ddl-auto=validate"
@@ -32,16 +33,20 @@ class PostgresFlywayHibernateValidationTest {
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
 
-	@Test
-	void flywayMigrationsSupportHibernateSchemaValidationOnPostgres() {
-		Integer frcEligibleColumns = jdbcTemplate.queryForObject("""
-				select count(*)
-				from information_schema.columns
-				where table_schema = 'public'
-					and table_name = 'transport_orders'
-					and column_name = 'frc_eligible'
-				""", Integer.class);
+	@Autowired
+	private Flyway flyway;
 
-		assertThat(frcEligibleColumns).isZero();
+	@Test
+	void freshDatabaseMigratesAndSupportsHibernateSchemaValidation() {
+		PostgresMigrationAssertions.assertCanonicalHistory(jdbcTemplate);
+		PostgresMigrationAssertions.assertRefundSchema(jdbcTemplate);
+		PostgresMigrationAssertions.assertOrderCodeSequenceExists(jdbcTemplate);
+		PostgresMigrationAssertions.assertFrcEligibleColumnIsAbsent(jdbcTemplate);
+		flyway.validate();
+		assertThat(flyway.migrate().migrationsExecuted).isZero();
+
+		Long firstSequenceValue = jdbcTemplate.queryForObject(
+				"select nextval('transport_order_code_seq')", Long.class);
+		assertThat(firstSequenceValue).isEqualTo(1L);
 	}
 }

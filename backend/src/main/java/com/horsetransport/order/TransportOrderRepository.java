@@ -35,7 +35,6 @@ public interface TransportOrderRepository extends JpaRepository<TransportOrder, 
 	@Query(value = "select nextval('transport_order_code_seq')", nativeQuery = true)
 	long nextOrderCodeValue();
 
-	@EntityGraph(attributePaths = "horses")
 	@Query(value = """
 			select o.*
 			from transport_orders o
@@ -57,7 +56,6 @@ public interface TransportOrderRepository extends JpaRepository<TransportOrder, 
 			""", nativeQuery = true)
 	List<TransportOrder> findFrcPlanningQueue(@Param("frcUserId") UUID frcUserId);
 
-	@EntityGraph(attributePaths = "horses")
 	@Query(value = """
 			select o.*
 			from transport_orders o
@@ -81,7 +79,6 @@ public interface TransportOrderRepository extends JpaRepository<TransportOrder, 
 			@Param("orderId") UUID orderId,
 			@Param("frcUserId") UUID frcUserId);
 
-	@EntityGraph(attributePaths = "horses")
 	@Query(value = """
 			select o.*
 			from transport_orders o

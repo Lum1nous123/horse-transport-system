@@ -291,13 +291,18 @@ class DocumentVersionServiceTest {
 	}
 
 	@Test
-	void transportSpecialistCannotReadHistoryOutsideActiveDocumentPhase() {
+	void assignedTransportSpecialistCanReadHistoryAfterDocumentPhaseIsLocked() {
 		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.TRANSPORT_SPECIALIST);
 		when(documentRepository.findById(DOCUMENT_ID)).thenReturn(Optional.of(document));
-		when(order.getStatus()).thenReturn(OrderStatus.READY_TO_SHIP);
+		when(order.getDocumentsLockedAt()).thenReturn(LocalDateTime.now());
+		HorseDocumentVersion version = draft(1);
+		ReflectionTestUtils.setField(version, "status", DocumentVersionStatus.APPROVED);
+		when(versionRepository.findAllByHorseDocument_IdOrderByVersionNoDesc(DOCUMENT_ID))
+				.thenReturn(List.of(version));
 
-		assertThatThrownBy(() -> service.history(DOCUMENT_ID))
-				.isInstanceOf(DocumentVersionConflictException.class);
+		assertThat(service.history(DOCUMENT_ID)).extracting(DocumentVersionResponse::status)
+				.containsExactly(DocumentVersionStatus.APPROVED);
+		verify(assignmentGuard).requireAssignedToCurrentTransportSpecialist(ORDER_ID);
 	}
 
 	@Test
