@@ -7,6 +7,8 @@ public record OrderStaffAssignmentResponse(
 		OrderStaffRole role,
 		UUID userId,
 		String fullName,
+		String email,
+		long activeOrderCount,
 		UUID assignedBy,
 		LocalDateTime assignedAt) {
 }

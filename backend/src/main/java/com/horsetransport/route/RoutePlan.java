@@ -13,6 +13,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.ColumnTransformer;
 import org.hibernate.type.SqlTypes;
 
 @Entity
@@ -26,7 +27,8 @@ public class RoutePlan {
 	private UUID transportOrderId;
 
 	@Enumerated(EnumType.STRING)
-	@JdbcTypeCode(SqlTypes.NAMED_ENUM)
+	@JdbcTypeCode(SqlTypes.VARCHAR)
+	@ColumnTransformer(read = "status::text", write = "?::route_plan_status")
 	@Column(nullable = false, columnDefinition = "route_plan_status")
 	private RoutePlanStatus status;
 

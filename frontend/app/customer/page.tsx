@@ -59,6 +59,10 @@ type DepositPayment = {
   latestAttempt?: { providerStatus: "PENDING" | "OPEN" | "SUCCEEDED" | "CANCELLED" | "EXPIRED" } | null;
 };
 type DepositCheckout = { checkoutUrl: string };
+type RemainingBalanceSummary = {
+  paymentStatus: "PENDING" | "PAID" | "REFUNDED";
+  checkoutEligible: boolean;
+};
 const emptyOrder: OrderFields = {
   originAddress: "", originCountry: "", destinationAddress: "", destinationCountry: "",
   requestedDepartureAt: "", transportMode: null, specialRequirements: "", recipientName: "",
@@ -178,6 +182,7 @@ export default function CustomerPage() {
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelError, setCancelError] = useState("");
   const [documentOrder, setDocumentOrder] = useState<Order | null>(null);
+  const [remainingBalances, setRemainingBalances] = useState<Record<string, RemainingBalanceSummary>>({});
 
   const loadWorkspace = useCallback(async () => {
     if (preview || isLocalPreviewRequested()) {
@@ -206,6 +211,15 @@ export default function CustomerPage() {
       ]) as [Horse[], Order[]];
       setHorses(horseData);
       setOrders(orderData);
+      const balanceResults = await Promise.allSettled(orderData
+        .filter((order) => order.status === "APPROVED")
+        .map(async (order) => [
+          order.id,
+          await customerFetch(`/api/v1/orders/${order.id}/remaining-balance`) as RemainingBalanceSummary,
+        ] as const));
+      setRemainingBalances(Object.fromEntries(balanceResults
+        .filter((result): result is PromiseFulfilledResult<readonly [string, RemainingBalanceSummary]> => result.status === "fulfilled")
+        .map((result) => result.value)));
     } catch (error) {
       if (!getAccessToken()) {
         router.replace("/login");
@@ -440,6 +454,9 @@ export default function CustomerPage() {
                 <div className="customer-order-main"><div className="customer-order-title"><h3>{order.orderCode}</h3><span className={`order-status status-${order.status.toLowerCase()}`}>{order.status.replaceAll("_", " ")}</span></div><p>{[order.originAddress || order.originCountry || "Origin pending", order.destinationAddress || order.destinationCountry || "Destination pending"].join("  →  ")}</p><span className="customer-order-subline">{order.horseIds.length} {order.horseIds.length === 1 ? "horse" : "horses"}{order.requestedDepartureAt ? ` · ${new Date(order.requestedDepartureAt).toLocaleString()}` : " · Departure not set"}</span></div>
                 <div className="customer-order-actions">
                   {preview && order.id === "preview-balance-order" && <Link className="customer-primary-button compact" href={`/customer/orders/${order.id}/remaining-balance?preview=1`}>Pay remaining balance</Link>}
+                  {!preview && remainingBalances[order.id]?.checkoutEligible && <Link className="customer-primary-button compact" href={`/customer/orders/${order.id}/remaining-balance`}>Pay remaining balance</Link>}
+                  {!preview && remainingBalances[order.id]?.paymentStatus === "PAID" && <Link className="customer-secondary-button compact" href={`/customer/orders/${order.id}/remaining-balance`}>View payment</Link>}
+                  {!preview && ["READY_TO_SHIP", "IN_PROGRESS", "DELIVERED"].includes(order.status) && <Link className="customer-secondary-button compact" href={`/customer/orders/${order.id}/remaining-balance`}>View payment</Link>}
                   {preview && order.status === "CANCELLED" && <Link className="customer-secondary-button compact" href={`/customer/orders/${order.id}?preview=1`}>View cancellation &amp; refund</Link>}
                   {order.status === "DRAFT" && <button className="customer-secondary-button compact" type="button" onClick={() => startEdit(order)}>Edit draft</button>}
                   {order.status === "QUOTATION_SENT" && <button className="customer-secondary-button compact" type="button" onClick={() => void openQuotation(order)}>View bill</button>}

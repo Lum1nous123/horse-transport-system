@@ -4,5 +4,5 @@ import java.util.UUID;
 
 import com.horsetransport.user.UserRole;
 
-public record StaffCandidateResponse(UUID id, String fullName, UserRole role, long activeOrderCount) {
+public record StaffCandidateResponse(UUID id, String fullName, String email, UserRole role, long activeOrderCount) {
 }

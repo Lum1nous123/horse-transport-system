@@ -98,17 +98,29 @@ class OrderStaffAssignmentServiceTest {
 	@Test
 	void candidateLookupRequiresAnUnassignedApprovedOrderAndRequestsTheSelectedRole() {
 		when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-		when(userRepository.findActiveStaffCandidates(UserRole.TRANSPORT_SPECIALIST,
-				List.of(OrderStatus.APPROVED, OrderStatus.READY_TO_SHIP, OrderStatus.IN_PROGRESS)))
-				.thenReturn(List.of(new StaffCandidateResponse(TS_ID, "TS User",
+		when(userRepository.findActiveTransportSpecialistCandidates())
+				.thenReturn(List.of(new StaffCandidateResponse(TS_ID, "TS User", "ts@example.test",
 						UserRole.TRANSPORT_SPECIALIST, 2)));
 
 		List<StaffCandidateResponse> candidates = service.findCandidates(ORDER_ID,
 				OrderStaffRole.TRANSPORT_SPECIALIST);
 
 		assertEquals(2, candidates.get(0).activeOrderCount());
-		verify(userRepository).findActiveStaffCandidates(UserRole.TRANSPORT_SPECIALIST,
-				List.of(OrderStatus.APPROVED, OrderStatus.READY_TO_SHIP, OrderStatus.IN_PROGRESS));
+		verify(userRepository).findActiveTransportSpecialistCandidates();
+	}
+
+	@Test
+	void fleetCoordinatorCandidateLookupUsesTheRoleSpecificWorkloadQuery() {
+		when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+		when(userRepository.findActiveFleetRouteCoordinatorCandidates())
+				.thenReturn(List.of(new StaffCandidateResponse(FRC_ID, "FRC User", "frc@example.test",
+						UserRole.FLEET_ROUTE_COORDINATOR, 3)));
+
+		List<StaffCandidateResponse> candidates = service.findCandidates(ORDER_ID,
+				OrderStaffRole.FLEET_ROUTE_COORDINATOR);
+
+		assertEquals(3, candidates.get(0).activeOrderCount());
+		verify(userRepository).findActiveFleetRouteCoordinatorCandidates();
 	}
 
 	@Test

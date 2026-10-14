@@ -47,7 +47,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-	@ExceptionHandler({HorseDocumentNotFoundException.class, DocumentVersionNotFoundException.class})
+	@ExceptionHandler({ HorseDocumentNotFoundException.class, DocumentVersionNotFoundException.class })
 	public ResponseEntity<ApiError> handleDocumentNotFound(RuntimeException exception) {
 		return error(HttpStatus.NOT_FOUND, "DOCUMENT_VERSION_NOT_FOUND", exception.getMessage());
 	}
@@ -140,7 +140,7 @@ public class GlobalExceptionHandler {
 		return error(HttpStatus.BAD_REQUEST, "QUOTATION_VALIDATION_ERROR", exception.getMessage());
 	}
 
-		@ExceptionHandler(RoutePlanNotFoundException.class)
+	@ExceptionHandler(RoutePlanNotFoundException.class)
 	public ResponseEntity<ApiError> handleRoutePlanNotFound(RoutePlanNotFoundException exception) {
 		return error(HttpStatus.NOT_FOUND, "ROUTE_PLAN_NOT_FOUND", exception.getMessage());
 	}
@@ -188,8 +188,8 @@ public class GlobalExceptionHandler {
 		return error(HttpStatus.FORBIDDEN, "UNASSIGNED_TRANSPORT_SPECIALIST", exception.getMessage());
 	}
 
-	@ExceptionHandler({InvalidOrderHorsesException.class, InvalidRejectionReasonException.class,
-			OrderSubmissionValidationException.class})
+	@ExceptionHandler({ InvalidOrderHorsesException.class, InvalidRejectionReasonException.class,
+			OrderSubmissionValidationException.class })
 	public ResponseEntity<ApiError> handleOrderBusinessValidation(RuntimeException exception) {
 		return error(HttpStatus.BAD_REQUEST, "ORDER_VALIDATION_ERROR", exception.getMessage());
 	}

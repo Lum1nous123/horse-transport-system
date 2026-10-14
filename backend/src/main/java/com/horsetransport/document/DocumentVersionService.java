@@ -187,7 +187,6 @@ public class DocumentVersionService {
 					.orElseThrow(HorseDocumentNotFoundException::new);
 			assignmentGuard.requireAssignedToCurrentTransportSpecialist(
 					document.getTransportOrderHorse().getTransportOrder().getId());
-			ensureActiveDocumentPhase(document);
 		}
 		else {
 			documentRepository.findOwnedById(documentId, actorUserId)

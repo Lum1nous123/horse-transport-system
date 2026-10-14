@@ -46,7 +46,8 @@ class OrderStaffAssignmentAuthorizationTest {
 	@Test
 	void logisticsManagerCanReadAssignmentInboxCandidatesAndReadback() throws Exception {
 		String token = token(UserRole.LOGISTICS_MANAGER);
-		when(assignmentService.findInbox()).thenReturn(List.of());
+		when(assignmentService.findInbox(com.horsetransport.order.OrderAssignmentState.NEEDS_ASSIGNMENT))
+				.thenReturn(List.of());
 		when(assignmentService.findCandidates(ORDER_ID,
 				com.horsetransport.order.OrderStaffRole.TRANSPORT_SPECIALIST)).thenReturn(List.of());
 		when(assignmentService.findAssignments(ORDER_ID)).thenReturn(List.of());

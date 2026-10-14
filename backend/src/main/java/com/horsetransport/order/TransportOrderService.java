@@ -70,7 +70,7 @@ public class TransportOrderService {
 
 	@Transactional(readOnly = true)
 	public List<DocumentInboxResponse> findTransportSpecialistDocumentInbox() {
-		return assignmentRepository.findActionableDocumentsByStatusAndAssignedTransportSpecialist(
+		return assignmentRepository.findDocumentInboxByStatusAndAssignedTransportSpecialist(
 				OrderStatus.APPROVED, currentUserProvider.getCurrentUserId()).stream()
 				.map(DocumentInboxResponse::from)
 				.toList();

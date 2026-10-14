@@ -70,8 +70,8 @@ class TransportOrderControllerTest {
 		LocalDateTime deadline = LocalDateTime.of(2026, 10, 15, 17, 0);
 		LocalDateTime deadlineSetAt = LocalDateTime.of(2026, 10, 2, 10, 30);
 		DocumentInboxResponse item = new DocumentInboxResponse(ORDER_ID, "ORD-test", OrderStatus.APPROVED,
-				"Hanoi", null, "Da Nang", null, LocalDateTime.of(2026, 10, 20, 9, 0), 2,
-				deadline, deadlineSetAt, LocalDateTime.now());
+				"Hanoi", null, "Da Nang", null, LocalDateTime.of(2026, 10, 20, 9, 0), TransportMode.ROAD, 2,
+				deadline, deadlineSetAt, deadlineSetAt.plusHours(1), deadlineSetAt.plusHours(1), LocalDateTime.now());
 		when(service.findTransportSpecialistDocumentInbox()).thenReturn(List.of(item));
 
 		mockMvc.perform(get("/api/v1/orders/document-inbox"))
@@ -80,7 +80,9 @@ class TransportOrderControllerTest {
 				.andExpect(jsonPath("$[0].status").value("APPROVED"))
 				.andExpect(jsonPath("$[0].horseCount").value(2))
 				.andExpect(jsonPath("$[0].documentCompletionDeadlineAt").value("2026-10-15T17:00:00"))
-				.andExpect(jsonPath("$[0].documentDeadlineSetAt").value("2026-10-02T10:30:00"));
+				.andExpect(jsonPath("$[0].documentDeadlineSetAt").value("2026-10-02T10:30:00"))
+				.andExpect(jsonPath("$[0].documentsFinalConfirmedAt").value("2026-10-02T11:30:00"))
+				.andExpect(jsonPath("$[0].documentsLockedAt").value("2026-10-02T11:30:00"));
 	}
 
 	@Test

@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AssignmentWorkspaceFrame from "@/components/AssignmentWorkspaceFrame";
 import {
   AssignmentServiceError,
-  staffAssignmentService,
+  getStaffAssignmentService,
   type AssignmentCandidate,
   type AssignmentOrderDetail,
   type StaffRole,
@@ -23,6 +23,7 @@ function formatDate(value: string) {
 export default function StaffAssignmentDetailPage() {
   const params = useParams<{ orderId: string }>();
   const { state: accessState, preview, message: accessMessage } = useLogisticsAccess();
+  const staffAssignmentService = useMemo(() => getStaffAssignmentService(preview), [preview]);
   const [order, setOrder] = useState<AssignmentOrderDetail | null>(null);
   const [transportSpecialistId, setTransportSpecialistId] = useState("");
   const [fleetRouteCoordinatorId, setFleetRouteCoordinatorId] = useState("");
@@ -47,7 +48,7 @@ export default function StaffAssignmentDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [params.orderId]);
+  }, [params.orderId, staffAssignmentService]);
 
   useEffect(() => {
     if (accessState !== "allowed") return;

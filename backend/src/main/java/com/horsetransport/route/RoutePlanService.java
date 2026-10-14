@@ -426,6 +426,7 @@ public List<CheckpointResponse> updateCheckpoints(UUID orderId, UUID legId,
 		return new LmRoutePlanReviewDetailResponse(
 				toResponse(routePlan),
 				RoutePlanReviewResponse.from(review),
+				roadAllocations(legs),
 				executionStaffingService.getStaffing(routePlan, legs),
 				null);
 	}
@@ -449,6 +450,7 @@ public List<CheckpointResponse> updateCheckpoints(UUID orderId, UUID legId,
 		return new LmRoutePlanReviewDetailResponse(
 				toResponse(savedPlan),
 				RoutePlanReviewResponse.from(savedReview),
+				roadAllocations(routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(savedPlan.getId())),
 				ExecutionStaffingResponse.empty(),
 				null);
 	}
@@ -490,8 +492,16 @@ public List<CheckpointResponse> updateCheckpoints(UUID orderId, UUID legId,
 		return new LmRoutePlanReviewDetailResponse(
 				toResponse(savedPlan),
 				RoutePlanReviewResponse.from(savedReview),
+				roadAllocations(legs),
 				executionStaffing,
 				order.getStatus());
+	}
+
+	private List<RoadAllocationDetailResponse> roadAllocations(List<RouteLeg> legs) {
+		return legs.stream()
+				.filter(leg -> leg.getLegType() == RouteLegType.ROAD)
+				.map(this::toRoadAllocationDetail)
+				.toList();
 	}
 
 		private TransportOrder findAccessiblePlanningOrder(UUID orderId, UUID frcUserId) {

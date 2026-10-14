@@ -22,6 +22,7 @@ import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderHorse;
 import com.horsetransport.order.TransportOrderRepository;
 import com.horsetransport.order.TransportSpecialistAssignmentGuard;
+import com.horsetransport.horse.HorseRepository;
 import com.horsetransport.security.CurrentUserProvider;
 import com.horsetransport.user.UserRole;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +43,7 @@ class DocumentChecklistServiceTest {
 	@Mock private TransportOrderRepository orderRepository;
 	@Mock private HorseDocumentRepository documentRepository;
 	@Mock private HorseDocumentVersionRepository versionRepository;
+	@Mock private HorseRepository horseRepository;
 	@Mock private TransportSpecialistAssignmentGuard assignmentGuard;
 	@Mock private CurrentUserProvider currentUserProvider;
 	private DocumentChecklistService service;
@@ -50,7 +52,7 @@ class DocumentChecklistServiceTest {
 	@BeforeEach
 	void setUp() {
 		service = new DocumentChecklistService(orderRepository, documentRepository, versionRepository,
-				assignmentGuard, currentUserProvider);
+				horseRepository, assignmentGuard, currentUserProvider);
 	}
 
 	@Test
