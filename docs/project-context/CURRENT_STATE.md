@@ -232,6 +232,21 @@ automatic execution staffing, and Order `READY_TO_SHIP`. Targeted checks and
 frontend production builds have passed, but the full regression suite has not
 yet completed because Docker/Testcontainers remains unavailable.
 
+Sprint 3 BE-22–BE-24 work is implemented locally but not yet reviewed. Shared
+`StatusAuditRecorder` requires the caller's transaction, flushes audit writes,
+and constrains entity types to BR-22. `RouteLegExecutionCoordinator` adds the
+common first-start, first Order `IN_PROGRESS`, non-final completion, and next
+RouteLeg readiness policy; LM confirmation opens the first leg as `READY`.
+ROAD execution now records independent per-Vehicle checkpoint arrivals and
+welfare, requires destination plus final welfare before completing a Vehicle,
+and aggregates all Vehicle completions before calling the coordinator for a
+non-final leg. BE-25 AIR, BE-26 PoD/delivery, BE-27 tracking events, FE-14/15
+integration, and PostgreSQL rollback evidence remain outstanding. Backend
+compilation, Spring context, and focused ROAD/coordinator/BE-21 audit tests
+pass. PostgreSQL Hibernate validation was attempted but could not start because
+Docker is unavailable. Coverage evidence is tracked in
+`docs/implementation/sprint-3-audit-coverage.md`.
+
 ### COMPLETED
 
 - Business discovery
