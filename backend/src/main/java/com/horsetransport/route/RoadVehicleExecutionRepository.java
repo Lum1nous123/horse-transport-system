@@ -5,11 +5,19 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+import jakarta.persistence.LockModeType;
+
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface RoadVehicleExecutionRepository extends JpaRepository<RoadVehicleExecution, UUID> {
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select execution from RoadVehicleExecution execution where execution.roadLegVehicleId = :vehicleId")
+	java.util.Optional<RoadVehicleExecution> findByRoadLegVehicleIdForUpdate(
+			@Param("vehicleId") UUID roadLegVehicleId);
 
 	List<RoadVehicleExecution> findAllByRoadLegVehicleIdIn(Collection<UUID> roadLegVehicleIds);
 

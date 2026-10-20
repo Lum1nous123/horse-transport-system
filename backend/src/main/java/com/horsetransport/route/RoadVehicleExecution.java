@@ -109,4 +109,28 @@ public class RoadVehicleExecution {
 	public LocalDateTime getCompletedAt() {
 		return completedAt;
 	}
+
+	public void start(LocalDateTime startedAt) {
+		if (status != ExecutionStatus.NOT_STARTED) {
+			throw new RoutePlanValidationException("Vehicle execution has already started");
+		}
+		status = ExecutionStatus.IN_PROGRESS;
+		this.startedAt = startedAt;
+	}
+
+	public void arriveAtDestination(LocalDateTime arrivedAt) {
+		if (status != ExecutionStatus.IN_PROGRESS) {
+			throw new RoutePlanValidationException("Vehicle must be in progress before destination arrival");
+		}
+		status = ExecutionStatus.DESTINATION;
+		destinationArrivedAt = arrivedAt;
+	}
+
+	public void complete(LocalDateTime completedAt) {
+		if (status != ExecutionStatus.DESTINATION) {
+			throw new RoutePlanValidationException("Vehicle requires destination arrival and final welfare to complete");
+		}
+		status = ExecutionStatus.COMPLETED;
+		this.completedAt = completedAt;
+	}
 }
