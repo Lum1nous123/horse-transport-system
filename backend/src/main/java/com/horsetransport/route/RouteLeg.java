@@ -138,6 +138,29 @@ public class RouteLeg {
 		this.sequenceNo = sequenceNo;
 	}
 
+	public void markReady() {
+		if (status != RouteLegStatus.PLANNED) {
+			throw new RoutePlanValidationException("Only a planned RouteLeg can become ready");
+		}
+		status = RouteLegStatus.READY;
+	}
+
+	public void start() {
+		if (status != RouteLegStatus.READY) {
+			throw new RoutePlanValidationException("Only a ready RouteLeg can start");
+		}
+		status = RouteLegStatus.IN_PROGRESS;
+		startedAt = LocalDateTime.now();
+	}
+
+	public void complete() {
+		if (status != RouteLegStatus.IN_PROGRESS) {
+			throw new RoutePlanValidationException("Only an in-progress RouteLeg can complete");
+		}
+		status = RouteLegStatus.COMPLETED;
+		completedAt = LocalDateTime.now();
+	}
+
 	public UUID getId() {
 		return id;
 	}

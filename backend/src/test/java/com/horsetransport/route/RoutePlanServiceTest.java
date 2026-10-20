@@ -315,7 +315,10 @@ class RoutePlanServiceTest {
 		assertThat(response.review().decision()).isEqualTo(RoutePlanReviewDecision.CONFIRMED);
 		assertThat(response.orderStatus()).isEqualTo(OrderStatus.READY_TO_SHIP);
 		assertThat(order.getStatus()).isEqualTo(OrderStatus.READY_TO_SHIP);
+		assertThat(leg.getStatus()).isEqualTo(RouteLegStatus.READY);
 		verify(executionStaffingService).assignStaff(plan, List.of(leg));
+		verify(statusAuditRecorder).recordUserTransition(AuditEntityType.ROUTE_LEG, leg.getId(),
+				RouteLegStatus.PLANNED.name(), RouteLegStatus.READY.name(), LM_ID, null);
 		verify(statusAuditRecorder).recordSystemTransition(AuditEntityType.TRANSPORT_ORDER,
 				ORDER_ID, OrderStatus.APPROVED.name(), OrderStatus.READY_TO_SHIP.name());
 	}
