@@ -218,6 +218,13 @@ public class TransportOrder {
 		status = OrderStatus.READY_TO_SHIP;
 	}
 
+	public void startTransport() {
+		if (status != OrderStatus.READY_TO_SHIP) {
+			throw new InvalidOrderTransitionException(status, "start transport");
+		}
+		status = OrderStatus.IN_PROGRESS;
+	}
+
 	public void setDocumentCompletionDeadline(LocalDateTime deadline, UUID actorUserId) {
 		documentCompletionDeadlineAt = deadline;
 		documentDeadlineSetBy = actorUserId;

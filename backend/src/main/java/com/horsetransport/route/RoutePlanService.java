@@ -478,10 +478,15 @@ public List<CheckpointResponse> updateCheckpoints(UUID orderId, UUID legId,
 		review.confirm(lmUserId);
 		ExecutionStaffingResponse executionStaffing = executionStaffingService.assignStaff(routePlan, legs);
 		OrderStatus previousOrderStatus = order.getStatus();
+		RouteLeg firstLeg = legs.get(0);
+		firstLeg.markReady();
 		order.markReadyToShip();
 		RoutePlan savedPlan = routePlanRepository.save(routePlan);
 		RoutePlanReview savedReview = routePlanReviewRepository.save(review);
+		routeLegRepository.save(firstLeg);
 		orderRepository.save(order);
+		statusAuditRecorder.recordUserTransition(AuditEntityType.ROUTE_LEG, firstLeg.getId(),
+				RouteLegStatus.PLANNED.name(), RouteLegStatus.READY.name(), lmUserId, null);
 		statusAuditRecorder.recordSystemTransition(
 				AuditEntityType.TRANSPORT_ORDER,
 				order.getId(),
