@@ -14,10 +14,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import com.horsetransport.audit.AuditActorKind;
 import com.horsetransport.audit.AuditEntityType;
-import com.horsetransport.audit.StatusAuditLog;
-import com.horsetransport.audit.StatusAuditLogRepository;
+import com.horsetransport.audit.StatusAuditRecorder;
 import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderHorse;
@@ -37,6 +35,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 class RoutePlanServiceTest {
 
 	private static final UUID FRC_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
+	private static final UUID LM_ID = UUID.fromString("99999999-9999-9999-9999-999999999999");
 	private static final UUID CUSTOMER_ID = UUID.fromString("22222222-2222-2222-2222-222222222222");
 	private static final UUID ORDER_ID = UUID.fromString("33333333-3333-3333-3333-333333333333");
 	private static final UUID ORDER_HORSE_ID = UUID.fromString("44444444-4444-4444-4444-444444444444");
@@ -55,7 +54,7 @@ class RoutePlanServiceTest {
 	@Mock private CheckpointRepository checkpointRepository;
 	@Mock private RoutePlanReviewRepository routePlanReviewRepository;
 	@Mock private ExecutionStaffingService executionStaffingService;
-	@Mock private StatusAuditLogRepository auditLogRepository;
+	@Mock private StatusAuditRecorder statusAuditRecorder;
 
 	private RoutePlanService service;
 
@@ -64,7 +63,7 @@ class RoutePlanServiceTest {
 		service = new RoutePlanService(orderRepository, routePlanRepository, routeLegRepository,
 				vehicleRepository, roadLegVehicleRepository, roadLegVehicleHorseRepository,
 				checkpointRepository, routePlanReviewRepository, executionStaffingService,
-				auditLogRepository, currentUserProvider);
+				statusAuditRecorder, currentUserProvider);
 
 		lenient().when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.FLEET_ROUTE_COORDINATOR);
 		lenient().when(currentUserProvider.getCurrentUserId()).thenReturn(FRC_ID);
@@ -291,6 +290,7 @@ class RoutePlanServiceTest {
 	@Test
 	void lmConfirmRevalidatesAssignsStaffAndMarksOrderReadyToShip() {
 		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.LOGISTICS_MANAGER);
+		when(currentUserProvider.getCurrentUserId()).thenReturn(LM_ID);
 		RoutePlan plan = routePlan();
 		plan.submitForReview();
 		RoutePlanReview review = new RoutePlanReview(plan.getId(), 1, FRC_ID);
@@ -316,12 +316,8 @@ class RoutePlanServiceTest {
 		assertThat(response.orderStatus()).isEqualTo(OrderStatus.READY_TO_SHIP);
 		assertThat(order.getStatus()).isEqualTo(OrderStatus.READY_TO_SHIP);
 		verify(executionStaffingService).assignStaff(plan, List.of(leg));
-		ArgumentCaptor<StatusAuditLog> audit = ArgumentCaptor.forClass(StatusAuditLog.class);
-		verify(auditLogRepository).saveAndFlush(audit.capture());
-		assertThat(audit.getValue().getEntityType()).isEqualTo(AuditEntityType.TRANSPORT_ORDER);
-		assertThat(audit.getValue().getOldStatus()).isEqualTo(OrderStatus.APPROVED.name());
-		assertThat(audit.getValue().getNewStatus()).isEqualTo(OrderStatus.READY_TO_SHIP.name());
-		assertThat(audit.getValue().getActorKind()).isEqualTo(AuditActorKind.SYSTEM);
+		verify(statusAuditRecorder).recordSystemTransition(AuditEntityType.TRANSPORT_ORDER,
+				ORDER_ID, OrderStatus.APPROVED.name(), OrderStatus.READY_TO_SHIP.name());
 	}
 
 	@Test
