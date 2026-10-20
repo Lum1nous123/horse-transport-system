@@ -12,8 +12,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.horsetransport.audit.AuditEntityType;
-import com.horsetransport.audit.StatusAuditLog;
-import com.horsetransport.audit.StatusAuditLogRepository;
+import com.horsetransport.audit.StatusAuditRecorder;
 import com.horsetransport.order.OrderNotFoundException;
 import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
@@ -37,7 +36,7 @@ public class RoutePlanService {
     private final CheckpointRepository checkpointRepository;
     private final RoutePlanReviewRepository routePlanReviewRepository;
     private final ExecutionStaffingService executionStaffingService;
-    private final StatusAuditLogRepository auditLogRepository;
+    private final StatusAuditRecorder statusAuditRecorder;
     private final CurrentUserProvider currentUserProvider;
 
 	public RoutePlanService(TransportOrderRepository orderRepository,
@@ -49,7 +48,7 @@ public class RoutePlanService {
 		CheckpointRepository checkpointRepository,
 		RoutePlanReviewRepository routePlanReviewRepository,
 		ExecutionStaffingService executionStaffingService,
-		StatusAuditLogRepository auditLogRepository,
+		StatusAuditRecorder statusAuditRecorder,
 		CurrentUserProvider currentUserProvider) {
 	this.orderRepository = orderRepository;
 	this.routePlanRepository = routePlanRepository;
@@ -60,7 +59,7 @@ public class RoutePlanService {
 	this.checkpointRepository = checkpointRepository;
 	this.routePlanReviewRepository = routePlanReviewRepository;
 	this.executionStaffingService = executionStaffingService;
-	this.auditLogRepository = auditLogRepository;
+	this.statusAuditRecorder = statusAuditRecorder;
 	this.currentUserProvider = currentUserProvider;
 }
 
@@ -483,11 +482,11 @@ public List<CheckpointResponse> updateCheckpoints(UUID orderId, UUID legId,
 		RoutePlan savedPlan = routePlanRepository.save(routePlan);
 		RoutePlanReview savedReview = routePlanReviewRepository.save(review);
 		orderRepository.save(order);
-		auditLogRepository.saveAndFlush(StatusAuditLog.systemTransition(
+		statusAuditRecorder.recordSystemTransition(
 				AuditEntityType.TRANSPORT_ORDER,
 				order.getId(),
 				previousOrderStatus.name(),
-				OrderStatus.READY_TO_SHIP.name()));
+				OrderStatus.READY_TO_SHIP.name());
 
 		return new LmRoutePlanReviewDetailResponse(
 				toResponse(savedPlan),
