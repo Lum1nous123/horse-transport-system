@@ -52,6 +52,8 @@ export default function LoginForm() {
         router.replace("/transport-specialist");
       } else if (currentUser.role === "FLEET_ROUTE_COORDINATOR") {
         router.replace("/fleet-route-coordinator");
+      } else if (currentUser.role === "DRIVER") {
+        router.replace("/driver");
       } else if (currentUser.role === "CUSTOMER") {
         router.replace("/customer");
       } else {
