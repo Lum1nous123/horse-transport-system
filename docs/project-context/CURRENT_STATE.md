@@ -159,6 +159,23 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### FE-14 Driver execution — local work, not merged (2026-10-20)
+
+- User-approved design: assigned ROAD workspace before Start, then a separate
+  static route schematic/check-in view after persisted Start confirmation.
+- Local frontend implementation adds `/driver`, execution detail, Driver login
+  routing, shared execution UI, and development-only behavioral preview/tests.
+- BE-23/BE-24 issues #111/#112 and FE-14 #116 were read directly. They define
+  behavior but publish no concrete endpoint/DTO/error contract; no Driver
+  execution API exists in the inspected local checkout or remote main tree.
+  Production therefore explicitly reports unavailable; it never uses mocks.
+- Real API integration, QA-13 verification, review, and merge remain open. This
+  work is **not Done**. No commit/push is authorized in the current session.
+- Resume details: `frontend/DRIVER_EXECUTION.md` and
+  `docs/reports/FE14_DRIVER_EXECUTION_LOCAL_VERIFICATION.md`.
+
+### Earlier implementation handoff
+
 PR #43–#46, PR #48–#50, and PR #53 cover BE-01 through BE-07, JWT
 Authentication, and the LM Order Inbox support; all are merged into `main`.
 PR #47 provides the frontend authentication/landing foundation, while PR #51

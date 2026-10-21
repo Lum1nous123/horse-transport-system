@@ -7378,6 +7378,141 @@ button.ts-workflow-step-header:focus-visible {
   .frc-planning-table tbody tr,.frc-open-order { transition: none; }
 }
 
+/* Escort ROAD execution and Vehicle-specific welfare workspace. */
+.escort-workspace-page { min-height: 100vh; background: #f5f8fa; }
+.escort-workspace-content { width: min(100% - 48px,1180px); padding-top: 30px; padding-bottom: 72px; }
+.escort-topbar-nav { display: flex; align-self: stretch; align-items: stretch; }
+.escort-topbar-nav a { display: inline-flex; align-items: center; border-bottom: 3px solid var(--color-primary); padding: 0 18px; color: var(--color-primary-hover); font-size: .875rem; font-weight: 650; }
+.escort-page-heading,.escort-detail-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 28px; margin-bottom: 26px; }
+.escort-page-heading > div,.escort-detail-heading > div { min-width: 0; }
+.escort-page-heading > div > span,.escort-detail-heading > div > span,.escort-section-heading > div > span { color: var(--color-primary-hover); font-size: .76rem; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
+.escort-page-heading h1,.escort-detail-heading h1 { margin: 5px 0 0; color: var(--color-navy); font-size: 2.25rem; line-height: 1.14; letter-spacing: -.035em; }
+.escort-detail-heading h1 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; }
+.escort-detail-heading h1 small { color: var(--color-body); font-size: .92rem; font-weight: 600; letter-spacing: 0; }
+.escort-page-heading p,.escort-detail-heading p { max-width: 68ch; margin: 9px 0 0; color: var(--color-body); font-size: .9rem; line-height: 1.6; }
+.escort-detail-heading p { color: var(--color-ink); font-size: 1rem; font-weight: 650; }
+.escort-detail-heading > div:last-child { display: flex; flex: 0 0 auto; gap: 10px; }
+.escort-page-heading > button { flex: 0 0 auto; }
+.escort-queue-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin: 0 0 20px; }
+.escort-queue-summary > div { display: flex; align-items: center; justify-content: space-between; gap: 20px; border: 1px solid var(--color-border); border-radius: 10px; padding: 17px 19px; background: #fff; }
+.escort-queue-summary dt { color: var(--color-body); font-size: .8rem; font-weight: 650; }
+.escort-queue-summary dd { margin: 0; color: var(--color-navy); font-size: 1.55rem; font-weight: 750; }
+.escort-queue-panel,.escort-horses,.escort-checkpoint-section,.escort-final-welfare { border: 1px solid var(--color-border); border-radius: 11px; background: #fff; }
+.escort-queue-panel { padding: 24px; }
+.escort-panel-heading,.escort-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; }
+.escort-panel-heading h2,.escort-section-heading h2 { margin: 0; color: var(--color-navy); font-size: 1.12rem; }
+.escort-panel-heading p,.escort-section-heading p { margin: 5px 0 0; color: var(--color-body); font-size: .78rem; line-height: 1.55; }
+.escort-panel-heading > span,.escort-section-heading > strong { flex: 0 0 auto; border-radius: 99px; padding: 6px 10px; background: #eaf3f9; color: var(--color-primary-hover); font-size: .72rem; font-weight: 750; }
+.escort-work-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; margin-top: 20px; }
+.escort-work-card { display: flex; min-width: 0; flex-direction: column; border: 1px solid #d8e2e8; border-radius: 10px; padding: 20px; background: #fff; }
+.escort-work-card header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.escort-work-card header div > span { color: var(--color-primary-hover); font-size: .7rem; font-weight: 750; }
+.escort-work-card h3 { margin: 4px 0 0; color: var(--color-navy); font-size: 1.25rem; }
+.escort-work-card header p { margin: 3px 0 0; color: var(--color-muted); font-size: .76rem; }
+.escort-status { display: inline-flex; min-height: 28px; align-items: center; border-radius: 99px; padding: 4px 9px; background: #eaf3f9; color: #1f64aa; font-size: .7rem; font-weight: 750; white-space: nowrap; }
+.escort-status.is-destination { background: #fff0c7; color: #76520a; }
+.escort-status.is-completed { background: #e2f3e9; color: #12653c; }
+.escort-status.is-not_started { background: #f2f0ee; color: #675b52; }
+.escort-route-line { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); align-items: center; gap: 10px; margin: 18px 0; border-radius: 8px; padding: 13px; background: #f3f7fa; color: var(--color-ink); font-size: .78rem; font-weight: 650; }
+.escort-route-line span:last-child { text-align: right; }
+.escort-route-line b { color: var(--color-primary); }
+.escort-work-card dl { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin: 0 0 18px; }
+.escort-work-card dl div { border-left: 2px solid #d6e5ee; padding-left: 10px; }
+.escort-work-card dt { color: var(--color-muted); font-size: .68rem; }
+.escort-work-card dd { margin: 3px 0 0; color: var(--color-navy); font-size: .78rem; font-weight: 700; }
+.escort-open-work { width: 100%; justify-content: center; margin-top: auto; text-decoration: none; }
+.escort-empty-state { display: flex; align-items: center; gap: 18px; border: 1px solid #cfe1d6; border-radius: 11px; padding: 28px; background: #f3fbf6; }
+.escort-empty-state > span { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 50%; background: #dff2e7; color: #16794b; font-weight: 750; }
+.escort-empty-state h2 { margin: 0; color: var(--color-navy); font-size: 1.05rem; }
+.escort-empty-state p { margin: 5px 0 0; color: var(--color-body); font-size: .8rem; }
+.escort-queue-skeleton,.escort-detail-skeleton { display: grid; gap: 16px; }
+.escort-queue-skeleton span,.escort-detail-skeleton span { display: block; border-radius: 10px; background: #e4edf2; animation: escort-skeleton-pulse 1.4s ease-in-out infinite alternate; }
+.escort-queue-skeleton span:first-child,.escort-detail-skeleton span:first-child { width: 58%; height: 110px; }
+.escort-queue-skeleton span:nth-child(2),.escort-detail-skeleton span:nth-child(2) { height: 160px; }
+.escort-queue-skeleton span:last-child,.escort-detail-skeleton span:last-child { height: 360px; }
+@keyframes escort-skeleton-pulse { to { background: #f1f5f7; } }
+.escort-breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-bottom: 20px; color: var(--color-muted); font-size: .8rem; }
+.escort-breadcrumb a { color: var(--color-primary-hover); text-decoration: underline; text-underline-offset: 3px; }
+.escort-unavailable { width: min(100%,640px); margin: 48px auto; border: 1px solid var(--color-border); border-radius: 12px; padding: 34px; background: #fff; text-align: center; }
+.escort-unavailable h1 { margin: 4px 0 8px; color: var(--color-navy); font-size: 1.6rem; }
+.escort-unavailable > p:not(.customer-eyebrow) { margin: 0 auto 22px; color: var(--color-body); line-height: 1.6; }
+.escort-unavailable > div { display: flex; justify-content: center; gap: 10px; }
+.escort-execution-facts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1px; margin: 0 0 20px; overflow: hidden; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-border); }
+.escort-execution-facts > div { min-width: 0; padding: 16px 18px; background: #fff; }
+.escort-execution-facts dt { color: var(--color-muted); font-size: .69rem; font-weight: 650; }
+.escort-execution-facts dd { margin: 5px 0 0; overflow-wrap: anywhere; color: var(--color-navy); font-size: .8rem; font-weight: 700; }
+.escort-horses,.escort-checkpoint-section,.escort-final-welfare { margin-bottom: 20px; padding: 24px; }
+.escort-horses > div:last-child { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin-top: 18px; }
+.escort-horses article { display: grid; grid-template-columns: 36px minmax(0,1fr); align-items: center; gap: 10px; border: 1px solid #dbe5eb; border-radius: 8px; padding: 12px; }
+.escort-horses article > span { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 50%; background: #eaf3f9; color: var(--color-primary-hover); font-size: .75rem; font-weight: 750; }
+.escort-horses article strong,.escort-horses article small { display: block; }
+.escort-horses article strong { color: var(--color-navy); font-size: .8rem; }
+.escort-horses article small { margin-top: 3px; color: var(--color-muted); font-size: .68rem; }
+.escort-checkpoint-list { display: grid; gap: 0; margin: 22px 0 0; padding: 0; list-style: none; }
+.escort-checkpoint-list > li { position: relative; display: grid; grid-template-columns: 38px minmax(0,1fr); gap: 14px; padding-bottom: 22px; }
+.escort-checkpoint-list > li:last-child { padding-bottom: 0; }
+.escort-checkpoint-list > li:not(:last-child)::after { position: absolute; top: 38px; bottom: 0; left: 18px; width: 1px; background: #cddde6; content: ""; }
+.escort-checkpoint-marker { position: relative; z-index: 1; display: grid; width: 38px; height: 38px; place-items: center; border: 1px solid #b8cad7; border-radius: 50%; background: #fff; color: var(--color-muted); font-size: .75rem; font-weight: 750; }
+.escort-checkpoint-list > li.is-reached .escort-checkpoint-marker { border-color: #79bd97; background: #e4f4ea; color: #12653c; }
+.escort-checkpoint-list > li > article { min-width: 0; border: 1px solid #d9e4ea; border-radius: 9px; padding: 18px; }
+.escort-checkpoint-list > li > article > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.escort-checkpoint-list header span { color: var(--color-primary-hover); font-size: .68rem; font-weight: 700; text-transform: uppercase; }
+.escort-checkpoint-list h3 { margin: 4px 0 0; color: var(--color-navy); font-size: .95rem; }
+.escort-checkpoint-list header > strong { color: var(--color-muted); font-size: .7rem; font-weight: 650; text-align: right; }
+.escort-welfare-form { margin-top: 17px; border-top: 1px solid #e2eaef; padding-top: 17px; }
+.escort-welfare-form-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.escort-welfare-form-heading h3 { margin: 0; color: var(--color-navy); font-size: .86rem; }
+.escort-welfare-form-heading p { margin: 4px 0 0; color: var(--color-body); font-size: .73rem; line-height: 1.5; }
+.escort-welfare-form-heading > span { flex: 0 0 auto; color: #8c5b0e; font-size: .68rem; font-weight: 700; }
+.escort-welfare-fields { display: grid; grid-template-columns: minmax(220px,.8fr) minmax(0,1.2fr); gap: 14px; margin: 15px 0 13px; }
+.escort-welfare-fields label { display: grid; align-content: start; gap: 6px; color: var(--color-ink); font-size: .72rem; font-weight: 650; }
+.escort-welfare-fields label > span b { color: #a52a20; }
+.escort-welfare-fields input,.escort-welfare-fields textarea { width: 100%; border: 1px solid #b9cbd6; border-radius: 7px; padding: 10px 11px; background: #fff; color: var(--color-ink); font: inherit; font-weight: 500; }
+.escort-welfare-fields input { min-height: 44px; padding: 8px; }
+.escort-welfare-fields textarea { resize: vertical; }
+.escort-welfare-fields input:focus,.escort-welfare-fields textarea:focus { border-color: var(--color-primary); outline: 2px solid #66aeda33; outline-offset: 1px; }
+.escort-welfare-fields label small { color: var(--color-muted); font-size: .65rem; font-weight: 500; }
+.escort-form-error { margin: 0 0 10px; color: #a52a20; font-size: .72rem; font-weight: 650; }
+.escort-welfare-readback { display: grid; grid-template-columns: 150px minmax(0,1fr); gap: 16px; margin-top: 17px; border-top: 1px solid #e2eaef; padding-top: 17px; }
+.escort-welfare-readback img { width: 150px; height: 104px; border-radius: 7px; object-fit: cover; background: #edf2f5; }
+.escort-welfare-readback span,.escort-welfare-readback strong,.escort-welfare-readback time { display: block; }
+.escort-welfare-readback span { color: #16794b; font-size: .68rem; font-weight: 750; text-transform: uppercase; }
+.escort-welfare-readback strong { margin-top: 4px; color: var(--color-navy); font-size: .78rem; }
+.escort-welfare-readback p { margin: 7px 0; color: var(--color-body); font-size: .76rem; line-height: 1.5; }
+.escort-welfare-readback time { color: var(--color-muted); font-size: .66rem; }
+.escort-locked-note,.escort-no-checkpoints { margin: 17px 0 0; border-radius: 7px; padding: 13px 14px; background: #f3f5f6; color: var(--color-body); font-size: .74rem; line-height: 1.5; }
+.escort-no-checkpoints strong { color: var(--color-navy); font-size: .8rem; }
+.escort-no-checkpoints p { margin: 3px 0 0; }
+.escort-final-welfare.is-ready { border-color: #b7d7c5; }
+
+@media (max-width: 900px) {
+  .escort-work-list,.escort-horses > div:last-child { grid-template-columns: minmax(0,1fr); }
+  .escort-execution-facts { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .escort-welfare-fields { grid-template-columns: minmax(0,1fr); }
+}
+
+@media (max-width: 680px) {
+  .escort-workspace-content { width: min(100% - 28px,1180px); padding-top: 22px; padding-bottom: 48px; }
+  .escort-topbar-nav { display: none; }
+  .escort-topbar .customer-topbar-actions > span { display: none; }
+  .escort-page-heading,.escort-detail-heading { align-items: stretch; flex-direction: column; gap: 17px; }
+  .escort-page-heading h1,.escort-detail-heading h1 { font-size: 1.8rem; }
+  .escort-page-heading > button,.escort-detail-heading > div:last-child,.escort-detail-heading > div:last-child > * { width: 100%; }
+  .escort-detail-heading > div:last-child { flex-direction: column; }
+  .escort-queue-summary,.escort-execution-facts { grid-template-columns: minmax(0,1fr); }
+  .escort-queue-panel,.escort-horses,.escort-checkpoint-section,.escort-final-welfare { padding: 18px 16px; }
+  .escort-panel-heading,.escort-section-heading,.escort-checkpoint-list > li > article > header,.escort-welfare-form-heading { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .escort-welfare-form-heading > span { align-self: flex-start; }
+  .escort-welfare-readback { grid-template-columns: minmax(0,1fr); }
+  .escort-welfare-readback img { width: 100%; height: 180px; }
+  .escort-unavailable { margin: 24px auto; padding: 25px 18px; }
+  .escort-unavailable > div { flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .escort-queue-skeleton span,.escort-detail-skeleton span { animation: none; }
+}
+
 /* Customer Remaining Balance checkout and persisted result. */
 
 /* Logistics Manager Route Plan review and locked staffing result. */
