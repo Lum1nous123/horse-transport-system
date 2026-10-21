@@ -14,6 +14,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.ColumnTransformer;
 import org.hibernate.type.SqlTypes;
 
 @Entity
@@ -27,7 +28,8 @@ public class Payment {
 	private UUID transportOrderId;
 
 	@Enumerated(EnumType.STRING)
-	@JdbcTypeCode(SqlTypes.NAMED_ENUM)
+	@JdbcTypeCode(SqlTypes.VARCHAR)
+	@ColumnTransformer(read = "payment_type::text", write = "?::payment_type")
 	@Column(name = "payment_type", nullable = false, columnDefinition = "payment_type")
 	private PaymentType paymentType;
 
@@ -100,6 +102,17 @@ public class Payment {
 			status = PaymentStatus.PENDING;
 			paidAt = null;
 		}
+	}
+
+	void markRefunded(LocalDateTime refundedAt) {
+		if (status == PaymentStatus.REFUNDED) return;
+		if (status != PaymentStatus.PAID) throw new DepositPaymentConflictException("Only a paid Deposit can be refunded");
+		status = PaymentStatus.REFUNDED;
+		this.refundedAt = refundedAt;
+	}
+
+	void restorePaidAfterRefundFailure() {
+		if (status == PaymentStatus.REFUNDED) { status = PaymentStatus.PAID; refundedAt = null; }
 	}
 
 	public UUID getId() { return id; }

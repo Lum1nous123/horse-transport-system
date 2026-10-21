@@ -10,7 +10,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +27,7 @@ import com.horsetransport.order.OrderHorseDocumentStatus;
 import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderHorse;
+import com.horsetransport.order.TransportSpecialistAssignmentGuard;
 import com.horsetransport.security.CurrentUserProvider;
 import com.horsetransport.user.UserRole;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,6 +58,7 @@ class DocumentVersionServiceTest {
 	@Mock private HorseDocumentVersionRepository versionRepository;
 	@Mock private StatusAuditLogRepository auditRepository;
 	@Mock private CurrentUserProvider currentUserProvider;
+	@Mock private TransportSpecialistAssignmentGuard assignmentGuard;
 	@Mock private DocumentStorage storage;
 	@Mock private HorseDocument document;
 	@Mock private TransportOrderHorse orderHorse;
@@ -64,7 +69,8 @@ class DocumentVersionServiceTest {
 	@BeforeEach
 	void setUp() {
 		service = new DocumentVersionService(documentRepository, versionRepository, auditRepository,
-				currentUserProvider, storage);
+				currentUserProvider, assignmentGuard, storage,
+				Clock.fixed(Instant.parse("2026-10-04T12:00:00Z"), ZoneOffset.UTC));
 		when(currentUserProvider.getCurrentUserId()).thenReturn(CUSTOMER_ID);
 		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.CUSTOMER);
 		when(documentRepository.findOwnedByIdForUpdate(DOCUMENT_ID, CUSTOMER_ID))
@@ -270,6 +276,7 @@ class DocumentVersionServiceTest {
 		assertThat(service.history(DOCUMENT_ID)).extracting(DocumentVersionResponse::versionNo)
 				.containsExactly(1);
 		verify(documentRepository, never()).findOwnedById(DOCUMENT_ID, CUSTOMER_ID);
+		verify(assignmentGuard).requireAssignedToCurrentTransportSpecialist(ORDER_ID);
 	}
 
 	@Test
@@ -284,13 +291,18 @@ class DocumentVersionServiceTest {
 	}
 
 	@Test
-	void transportSpecialistCannotReadHistoryOutsideActiveDocumentPhase() {
+	void assignedTransportSpecialistCanReadHistoryAfterDocumentPhaseIsLocked() {
 		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.TRANSPORT_SPECIALIST);
 		when(documentRepository.findById(DOCUMENT_ID)).thenReturn(Optional.of(document));
-		when(order.getStatus()).thenReturn(OrderStatus.READY_TO_SHIP);
+		when(order.getDocumentsLockedAt()).thenReturn(LocalDateTime.now());
+		HorseDocumentVersion version = draft(1);
+		ReflectionTestUtils.setField(version, "status", DocumentVersionStatus.APPROVED);
+		when(versionRepository.findAllByHorseDocument_IdOrderByVersionNoDesc(DOCUMENT_ID))
+				.thenReturn(List.of(version));
 
-		assertThatThrownBy(() -> service.history(DOCUMENT_ID))
-				.isInstanceOf(DocumentVersionConflictException.class);
+		assertThat(service.history(DOCUMENT_ID)).extracting(DocumentVersionResponse::status)
+				.containsExactly(DocumentVersionStatus.APPROVED);
+		verify(assignmentGuard).requireAssignedToCurrentTransportSpecialist(ORDER_ID);
 	}
 
 	@Test
@@ -484,15 +496,24 @@ class DocumentVersionServiceTest {
 	}
 
 	@Test
-	void doesNotEnforcePastDeadlineButBlocksInactiveOrderState() {
-		when(order.getDocumentCompletionDeadlineAt()).thenReturn(LocalDateTime.of(2020, 1, 1, 0, 0));
-		when(versionRepository.findByHorseDocument_IdAndCurrentTrue(DOCUMENT_ID)).thenReturn(Optional.empty());
-		when(versionRepository.findMaximumVersionNo(DOCUMENT_ID)).thenReturn(0);
-		assertThat(service.create(DOCUMENT_ID, pdf(), null).status()).isEqualTo(DocumentVersionStatus.DRAFT);
+	void customerCannotCreateDocumentAtOrAfterDeadline() {
+		when(order.getDocumentCompletionDeadlineAt()).thenReturn(LocalDateTime.of(2026, 10, 4, 12, 0));
+		assertThatThrownBy(() -> service.create(DOCUMENT_ID, pdf(), null))
+				.isInstanceOf(DocumentVersionConflictException.class)
+				.hasMessageContaining("deadline has passed");
 
 		when(order.getStatus()).thenReturn(OrderStatus.CANCELLED);
 		assertThatThrownBy(() -> service.create(DOCUMENT_ID, pdf(), null))
 				.isInstanceOf(DocumentVersionConflictException.class);
+	}
+
+	@Test
+	void customerCanCreateDocumentBeforeDeadline() {
+		when(order.getDocumentCompletionDeadlineAt()).thenReturn(LocalDateTime.of(2026, 10, 4, 12, 0, 1));
+		when(versionRepository.findByHorseDocument_IdAndCurrentTrue(DOCUMENT_ID)).thenReturn(Optional.empty());
+		when(versionRepository.findMaximumVersionNo(DOCUMENT_ID)).thenReturn(0);
+
+		assertThat(service.create(DOCUMENT_ID, pdf(), null).status()).isEqualTo(DocumentVersionStatus.DRAFT);
 	}
 
 	private HorseDocumentVersion draft(int versionNo) {

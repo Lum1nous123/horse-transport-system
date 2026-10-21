@@ -12,15 +12,20 @@ public record DocumentInboxResponse(
 		String destinationAddress,
 		String destinationCountry,
 		LocalDateTime requestedDepartureAt,
+		TransportMode transportMode,
 		int horseCount,
 		LocalDateTime documentCompletionDeadlineAt,
 		LocalDateTime documentDeadlineSetAt,
+		LocalDateTime documentsFinalConfirmedAt,
+		LocalDateTime documentsLockedAt,
 		LocalDateTime createdAt) {
 
 	static DocumentInboxResponse from(TransportOrder order) {
 		return new DocumentInboxResponse(order.getId(), order.getOrderCode(), order.getStatus(),
 				order.getOriginAddress(), order.getOriginCountry(), order.getDestinationAddress(),
-				order.getDestinationCountry(), order.getRequestedDepartureAt(), order.getHorses().size(),
-				order.getDocumentCompletionDeadlineAt(), order.getDocumentDeadlineSetAt(), order.getCreatedAt());
+				order.getDestinationCountry(), order.getRequestedDepartureAt(), order.getTransportMode(),
+				order.getHorses().size(),
+				order.getDocumentCompletionDeadlineAt(), order.getDocumentDeadlineSetAt(),
+				order.getDocumentsFinalConfirmedAt(), order.getDocumentsLockedAt(), order.getCreatedAt());
 	}
 }

@@ -11,7 +11,11 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.horsetransport.audit.AuditEntityType;
+import com.horsetransport.audit.StatusAuditLog;
+import com.horsetransport.audit.StatusAuditLogRepository;
 import com.horsetransport.order.OrderNotFoundException;
+import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderRepository;
 import com.horsetransport.security.CurrentUserProvider;
@@ -32,6 +36,8 @@ public class RoutePlanService {
     private final RoadLegVehicleHorseRepository roadLegVehicleHorseRepository;
     private final CheckpointRepository checkpointRepository;
     private final RoutePlanReviewRepository routePlanReviewRepository;
+    private final ExecutionStaffingService executionStaffingService;
+    private final StatusAuditLogRepository auditLogRepository;
     private final CurrentUserProvider currentUserProvider;
 
 	public RoutePlanService(TransportOrderRepository orderRepository,
@@ -42,6 +48,8 @@ public class RoutePlanService {
 		RoadLegVehicleHorseRepository roadLegVehicleHorseRepository,
 		CheckpointRepository checkpointRepository,
 		RoutePlanReviewRepository routePlanReviewRepository,
+		ExecutionStaffingService executionStaffingService,
+		StatusAuditLogRepository auditLogRepository,
 		CurrentUserProvider currentUserProvider) {
 	this.orderRepository = orderRepository;
 	this.routePlanRepository = routePlanRepository;
@@ -51,6 +59,8 @@ public class RoutePlanService {
 	this.roadLegVehicleHorseRepository = roadLegVehicleHorseRepository;
 	this.checkpointRepository = checkpointRepository;
 	this.routePlanReviewRepository = routePlanReviewRepository;
+	this.executionStaffingService = executionStaffingService;
+	this.auditLogRepository = auditLogRepository;
 	this.currentUserProvider = currentUserProvider;
 }
 
@@ -412,7 +422,13 @@ public List<CheckpointResponse> updateCheckpoints(UUID orderId, UUID legId,
 
 		RoutePlan routePlan = findPendingLmRoutePlan(orderId);
 		RoutePlanReview review = findPendingReview(routePlan);
-		return new LmRoutePlanReviewDetailResponse(toResponse(routePlan), RoutePlanReviewResponse.from(review));
+		List<RouteLeg> legs = routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(routePlan.getId());
+		return new LmRoutePlanReviewDetailResponse(
+				toResponse(routePlan),
+				RoutePlanReviewResponse.from(review),
+				roadAllocations(legs),
+				executionStaffingService.getStaffing(routePlan, legs),
+				null);
 	}
 
 	@Transactional
@@ -431,7 +447,12 @@ public List<CheckpointResponse> updateCheckpoints(UUID orderId, UUID legId,
 		RoutePlan savedPlan = routePlanRepository.save(routePlan);
 		RoutePlanReview savedReview = routePlanReviewRepository.save(review);
 
-		return new LmRoutePlanReviewDetailResponse(toResponse(savedPlan), RoutePlanReviewResponse.from(savedReview));
+		return new LmRoutePlanReviewDetailResponse(
+				toResponse(savedPlan),
+				RoutePlanReviewResponse.from(savedReview),
+				roadAllocations(routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(savedPlan.getId())),
+				ExecutionStaffingResponse.empty(),
+				null);
 	}
 
 	@Transactional
@@ -439,7 +460,7 @@ public List<CheckpointResponse> updateCheckpoints(UUID orderId, UUID legId,
 		requireLm();
 
 		UUID lmUserId = currentUserProvider.getCurrentUserId();
-		TransportOrder order = orderRepository.findById(orderId)
+		TransportOrder order = orderRepository.findByIdForUpdate(orderId)
 				.orElseThrow(OrderNotFoundException::new);
 		RoutePlan routePlan = findPendingLmRoutePlan(orderId);
 		RoutePlanReview review = findPendingReview(routePlan);
@@ -456,10 +477,31 @@ public List<CheckpointResponse> updateCheckpoints(UUID orderId, UUID legId,
 
 		routePlan.approve();
 		review.confirm(lmUserId);
+		ExecutionStaffingResponse executionStaffing = executionStaffingService.assignStaff(routePlan, legs);
+		OrderStatus previousOrderStatus = order.getStatus();
+		order.markReadyToShip();
 		RoutePlan savedPlan = routePlanRepository.save(routePlan);
 		RoutePlanReview savedReview = routePlanReviewRepository.save(review);
+		orderRepository.save(order);
+		auditLogRepository.saveAndFlush(StatusAuditLog.systemTransition(
+				AuditEntityType.TRANSPORT_ORDER,
+				order.getId(),
+				previousOrderStatus.name(),
+				OrderStatus.READY_TO_SHIP.name()));
 
-		return new LmRoutePlanReviewDetailResponse(toResponse(savedPlan), RoutePlanReviewResponse.from(savedReview));
+		return new LmRoutePlanReviewDetailResponse(
+				toResponse(savedPlan),
+				RoutePlanReviewResponse.from(savedReview),
+				roadAllocations(legs),
+				executionStaffing,
+				order.getStatus());
+	}
+
+	private List<RoadAllocationDetailResponse> roadAllocations(List<RouteLeg> legs) {
+		return legs.stream()
+				.filter(leg -> leg.getLegType() == RouteLegType.ROAD)
+				.map(this::toRoadAllocationDetail)
+				.toList();
 	}
 
 		private TransportOrder findAccessiblePlanningOrder(UUID orderId, UUID frcUserId) {

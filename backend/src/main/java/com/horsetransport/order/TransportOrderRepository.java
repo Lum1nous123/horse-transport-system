@@ -1,5 +1,6 @@
 package com.horsetransport.order;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -34,7 +35,6 @@ public interface TransportOrderRepository extends JpaRepository<TransportOrder, 
 	@Query(value = "select nextval('transport_order_code_seq')", nativeQuery = true)
 	long nextOrderCodeValue();
 
-	@EntityGraph(attributePaths = "horses")
 	@Query(value = """
 			select o.*
 			from transport_orders o
@@ -56,7 +56,6 @@ public interface TransportOrderRepository extends JpaRepository<TransportOrder, 
 			""", nativeQuery = true)
 	List<TransportOrder> findFrcPlanningQueue(@Param("frcUserId") UUID frcUserId);
 
-		@EntityGraph(attributePaths = "horses")
 	@Query(value = """
 			select o.*
 			from transport_orders o
@@ -80,7 +79,6 @@ public interface TransportOrderRepository extends JpaRepository<TransportOrder, 
 			@Param("orderId") UUID orderId,
 			@Param("frcUserId") UUID frcUserId);
 
-		@EntityGraph(attributePaths = "horses")
 	@Query(value = """
 			select o.*
 			from transport_orders o
@@ -97,4 +95,15 @@ public interface TransportOrderRepository extends JpaRepository<TransportOrder, 
 	Optional<TransportOrder> findAssignedFrcRoutePlanOrder(
 			@Param("orderId") UUID orderId,
 			@Param("frcUserId") UUID frcUserId);
+
+	@Query(value = "select o.id from transport_orders o "
+			+ "where o.status = 'APPROVED' "
+			+ "and o.document_completion_deadline_at is not null "
+			+ "and o.document_completion_deadline_at <= :now "
+			+ "and o.documents_locked_at is null "
+			+ "and o.documents_final_confirmed_at is null "
+			+ "and exists (select 1 from payments p where p.transport_order_id = o.id "
+			+ "and p.payment_type = 'DEPOSIT' and p.status = 'PAID') "
+			+ "order by o.document_completion_deadline_at, o.id", nativeQuery = true)
+	List<UUID> findDueDocumentDeadlineOrderIds(@Param("now") LocalDateTime now);
 }

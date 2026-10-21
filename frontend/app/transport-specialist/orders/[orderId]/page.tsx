@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import type { KeyboardEvent } from "react";
 import TransportSpecialistWorkspaceFrame from "@/components/TransportSpecialistWorkspaceFrame";
 import {
   SpecialistWorkspaceError,
-  transportSpecialistWorkspaceService,
+  getTransportSpecialistWorkspaceService,
   type AssignedSpecialistOrderDetail,
   type DocumentType,
   type SpecialistDocument,
@@ -39,6 +39,7 @@ function formatDate(value: string) {
 
 export default function AssignedOrderDetailPage() {
   const params = useParams<{ orderId: string }>();
+  const router = useRouter();
   const orderId = params.orderId;
   const {
     state: accessState,
@@ -47,6 +48,10 @@ export default function AssignedOrderDetailPage() {
     previewSpecialistName,
     message: accessMessage,
   } = useTransportSpecialistAccess();
+  const transportSpecialistWorkspaceService = useMemo(
+    () => getTransportSpecialistWorkspaceService(preview),
+    [preview],
+  );
   const [order, setOrder] = useState<AssignedSpecialistOrderDetail | null>(null);
   const [selectedHorseId, setSelectedHorseId] = useState("");
   const [loading, setLoading] = useState(true);
@@ -81,7 +86,7 @@ export default function AssignedOrderDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [orderId]);
+  }, [orderId, transportSpecialistWorkspaceService]);
 
   useEffect(() => {
     if (accessState !== "allowed") return;
@@ -148,6 +153,22 @@ export default function AssignedOrderDetailPage() {
 
   async function finalConfirm() {
     if (!order) return;
+    if (!preview) {
+      setBusyKey("final-confirm");
+      setError("");
+      setErrorCode("");
+      try {
+        await transportSpecialistWorkspaceService.finalConfirmDocuments(order.id);
+        router.push("/transport-specialist");
+        router.refresh();
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "We couldn't Final Confirm these documents.");
+        setErrorCode(caught instanceof SpecialistWorkspaceError ? caught.code : "REQUEST_FAILED");
+      } finally {
+        setBusyKey("");
+      }
+      return;
+    }
     await runMutation(
       "final-confirm",
       () => transportSpecialistWorkspaceService.finalConfirmDocuments(order.id),

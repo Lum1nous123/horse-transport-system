@@ -1,0 +1,53 @@
+import { apiFetch } from "@/lib/api";
+import { clearAccessToken, getAccessToken, getCurrentUser } from "@/lib/auth";
+import { CoordinatorWorkspaceError, type AssignedCoordinatorQueue, type FleetRouteCoordinatorService, type RoadCheckpoint, type RoadCheckpointInput, type RoadLegSetup, type RouteLegInput, type RoutePlanDetail, type RoutePlanStatus } from "./types";
+
+type ApiError = { code?: string; message?: string };
+class HttpError extends CoordinatorWorkspaceError { constructor(message: string, code: CoordinatorWorkspaceError["code"], readonly apiCode?: string) { super(message, code); } }
+type QueueItem = { orderId:string; orderCode:string; originAddress:string|null; originCountry:string|null; destinationAddress:string|null; destinationCountry:string|null; requestedDepartureAt:string; transportMode:"ROAD"|"AIR"|"COMBINED"; horseCount:number; routePlanStatus:Exclude<RoutePlanStatus,"NOT_STARTED">|null; routePlanEditable:boolean };
+type Context = QueueItem & { recipientName:string; horses:Array<{orderHorseId:string;horseId:string}>; routePlan:{routePlanId:string|null;status:Exclude<RoutePlanStatus,"NOT_STARTED">|null;editableByFrc:boolean} };
+type Leg = { id:string;sequenceNo:number;legType:"ROAD"|"AIR";origin:string;destination:string;plannedDepartureAt:string;plannedArrivalAt:string;airProviderName:string|null;airReference:string|null;airCapacityHorses:number|null;equipmentDetails:string|null;notes:string|null };
+type Plan = { id:string;transportOrderId:string;status:Exclude<RoutePlanStatus,"NOT_STARTED">;createdAt:string;updatedAt:string|null;legs:Leg[] };
+type Validation = { valid:boolean;issues:Array<{code:string;message:string;routeLegId:string|null}> };
+type Candidate = { vehicleId:string;plateNumber:string;vehicleName:string;vehicleType:string;horseCapacity:number;selectable:boolean;reasons:string[] };
+type Allocation = { vehicles:Array<{vehicleId:string;orderHorseIds:string[]}> };
+type Checkpoint = RoadCheckpoint & { createdAt:string;updatedAt:string|null };
+
+async function request<T>(path:string, init?:RequestInit):Promise<T> {
+  const token=getAccessToken(); if(!token) throw new HttpError("Your session has expired. Sign in again.","FORBIDDEN");
+  let response:Response; try { response=await apiFetch(path,{...init,headers:{Authorization:`Bearer ${token}`,Accept:"application/json","Content-Type":"application/json",...init?.headers}}); }
+  catch { throw new HttpError("We couldn't reach the planning service. Try again.","REQUEST_FAILED"); }
+  if(response.ok) return response.status===204 ? undefined as T : await response.json() as T;
+  let error:ApiError={}; try { error=await response.json() as ApiError; } catch {}
+  const message=error.message||"We couldn't complete the Route Plan request.";
+  if(response.status===401){clearAccessToken();throw new HttpError("Your session has expired. Sign in again.","FORBIDDEN",error.code);}
+  if(response.status===403) throw new HttpError(message,"FORBIDDEN",error.code);
+  if(response.status===404) throw new HttpError(message,"NOT_FOUND",error.code);
+  if(response.status===409) throw new HttpError(message,error.code==="ROUTE_PLAN_NOT_EDITABLE"?"LOCKED":"STALE_STATE",error.code);
+  if(response.status===400) throw new HttpError(message,"VALIDATION_FAILED",error.code);
+  throw new HttpError(message,"REQUEST_FAILED",error.code);
+}
+const root=(id:string)=>`/api/v1/frc/orders/${id}/route-plan`;
+const place=(a:string|null,c:string|null)=>[a,c].filter(Boolean).join(", ")||"Not provided";
+const local=(value:string)=>new Date(value).toISOString().slice(0,19);
+function mapPlan(plan:Plan, validation:Validation):RoutePlanDetail { return { id:plan.id,orderId:plan.transportOrderId,status:plan.status,revision:0,updatedAt:plan.updatedAt??plan.createdAt,returnedReason:null,readOnly:!["DRAFT","RETURNED"].includes(plan.status),legs:plan.legs,validationIssues:validation.issues.map(i=>({code:i.code,message:i.message,severity:"ERROR",legId:i.routeLegId,field:null})) }; }
+async function readPlan(id:string){const [p,v]=await Promise.all([request<Plan>(root(id)),request<Validation>(`${root(id)}/validation`)]);return mapPlan(p,v);}
+async function getPlan(id:string){try{return await readPlan(id);}catch(e){if(!(e instanceof HttpError)||e.apiCode!=="ROUTE_PLAN_NOT_FOUND")throw e;await request(root(id),{method:"POST"});return readPlan(id);}}
+async function context(id:string){const [c,u]=await Promise.all([request<Context>(`/api/v1/frc/orders/${id}/planning-context`),getCurrentUser()]);return {id:c.orderId,orderCode:c.orderCode,origin:place(c.originAddress,c.originCountry),destination:place(c.destinationAddress,c.destinationCountry),requestedDepartureAt:c.requestedDepartureAt,horseCount:c.horses.length,transportMode:c.transportMode,routePlanStatus:c.routePlan.status??"NOT_STARTED" as const,routePlanUpdatedAt:null,returnReason:null,customerName:c.recipientName||"Customer",assignedAt:"",assignedTransportSpecialistName:"Assigned Transport Specialist",assignedFleetRouteCoordinatorId:u.id,assignedFleetRouteCoordinatorName:u.fullName,documentFinalConfirmedAt:"",remainingBalancePaidAt:"",readiness:[{id:"documents",label:"Documents Final Confirmed",description:"Document phase is locked.",state:"complete" as const},{id:"payment",label:"Remaining Balance paid",description:"Persisted payment is confirmed.",state:"complete" as const},{id:"planning",label:"Route planning",description:"Build and submit the Route Plan.",state:"current" as const}],readOnly:!c.routePlan.editableByFrc};}
+async function setup(id:string,legId:string):Promise<RoadLegSetup>{const [p,c,cs,a,x]=await Promise.all([readPlan(id),request<Context>(`/api/v1/frc/orders/${id}/planning-context`),request<Candidate[]>(`${root(id)}/legs/${legId}/vehicle-candidates`),request<Allocation>(`${root(id)}/legs/${legId}/vehicles`),request<Checkpoint[]>(`${root(id)}/legs/${legId}/checkpoints`)]);return{routeLegId:legId,revision:0,updatedAt:x.map(v=>v.updatedAt??v.createdAt).sort().at(-1)??null,readOnly:p.readOnly,candidates:cs.map(v=>({id:v.vehicleId,plateNumber:v.plateNumber,vehicleName:v.vehicleName,vehicleType:v.vehicleType,horseCapacity:v.horseCapacity,selectable:v.selectable,unavailableReason:v.reasons.join("; ")||null})),horses:c.horses.map(h=>({orderHorseId:h.orderHorseId,name:`Horse ${h.horseId}`,microchipId:h.horseId,travelNotes:null})),allocations:a.vehicles.map(v=>({vehicleId:v.vehicleId,orderHorseIds:v.orderHorseIds})),checkpoints:x.map(({id,sequenceNo,name,checkpointType,countryCode,minimumRequiredStopMinutes,plannedStopDurationMinutes,notes})=>({id,sequenceNo,name,checkpointType,countryCode,minimumRequiredStopMinutes,plannedStopDurationMinutes,notes})),validationIssues:p.validationIssues.filter(i=>i.legId===legId).map(i=>({code:i.code,message:i.message,target:"SETUP",targetId:legId}))};}
+const checkpointInput=(c:RoadCheckpoint):RoadCheckpointInput=>({name:c.name,checkpointType:c.checkpointType,countryCode:c.countryCode,minimumRequiredStopMinutes:c.minimumRequiredStopMinutes,plannedStopDurationMinutes:c.plannedStopDurationMinutes,notes:c.notes});
+async function putCheckpoints(id:string,legId:string,items:RoadCheckpointInput[]){await request(`${root(id)}/legs/${legId}/checkpoints`,{method:"PUT",body:JSON.stringify({checkpoints:items.map((c,i)=>({...c,sequenceNo:i+1}))})});return setup(id,legId);}
+
+export const apiFleetRouteCoordinatorService:FleetRouteCoordinatorService={
+ async listAssignedActionableOrders():Promise<AssignedCoordinatorQueue>{const q=await request<QueueItem[]>("/api/v1/frc/planning-queue");return{orders:q.map(o=>({id:o.orderId,orderCode:o.orderCode,origin:place(o.originAddress,o.originCountry),destination:place(o.destinationAddress,o.destinationCountry),requestedDepartureAt:o.requestedDepartureAt,horseCount:o.horseCount,transportMode:o.transportMode,routePlanStatus:o.routePlanStatus??"NOT_STARTED",routePlanUpdatedAt:null,returnReason:null}))};},
+ getAssignedPlanningContext:context,getRoutePlan:getPlan,
+ async saveRouteLeg(id:string,input:RouteLegInput,legId?:string){const p=await getPlan(id),sequenceNo=legId?p.legs.find(l=>l.id===legId)?.sequenceNo:p.legs.length+1;if(!sequenceNo)throw new HttpError("This route leg no longer exists.","STALE_STATE");await request(`${root(id)}/legs${legId?`/${legId}`:""}`,{method:legId?"PUT":"POST",body:JSON.stringify({...input,sequenceNo,plannedDepartureAt:local(input.plannedDepartureAt),plannedArrivalAt:local(input.plannedArrivalAt)})});return readPlan(id);},
+ async deleteRouteLeg(id,legId){await request(`${root(id)}/legs/${legId}`,{method:"DELETE"});const p=await readPlan(id);if(p.legs.some((l,i)=>l.sequenceNo!==i+1))await request(`${root(id)}/legs/reorder`,{method:"PUT",body:JSON.stringify({legs:p.legs.map((l,i)=>({legId:l.id,sequenceNo:i+1}))})});return readPlan(id);},
+ async moveRouteLeg(id,legId,direction){const p=await readPlan(id),legs=[...p.legs],i=legs.findIndex(l=>l.id===legId),t=direction==="UP"?i-1:i+1;if(i<0)throw new HttpError("This route leg no longer exists.","STALE_STATE");if(t<0||t>=legs.length)return p;[legs[i],legs[t]]=[legs[t],legs[i]];await request(`${root(id)}/legs/reorder`,{method:"PUT",body:JSON.stringify({legs:legs.map((l,n)=>({legId:l.id,sequenceNo:n+1}))})});return readPlan(id);},
+ validateRoutePlan:readPlan,async submitRoutePlan(id){await request(`${root(id)}/submit`,{method:"POST"});return readPlan(id);},getRoadLegSetup:setup,
+ async saveRoadAllocations(id,legId,input){await request(`${root(id)}/legs/${legId}/vehicles`,{method:"PUT",body:JSON.stringify({vehicles:input.selectedVehicleIds.map(vehicleId=>({vehicleId,orderHorseIds:input.horseAssignments.filter(a=>a.vehicleId===vehicleId).map(a=>a.orderHorseId)}))})});return setup(id,legId);},
+ async saveRoadCheckpoint(id,legId,input,checkpointId){const s=await setup(id,legId),items=s.checkpoints.map(checkpointInput);if(checkpointId){const i=s.checkpoints.findIndex(c=>c.id===checkpointId);if(i<0)throw new HttpError("This checkpoint no longer exists.","STALE_STATE");items[i]=input;}else items.push(input);return putCheckpoints(id,legId,items);},
+ async deleteRoadCheckpoint(id,legId,checkpointId){const s=await setup(id,legId);return putCheckpoints(id,legId,s.checkpoints.filter(c=>c.id!==checkpointId).map(checkpointInput));},
+ async moveRoadCheckpoint(id,legId,checkpointId,direction){const s=await setup(id,legId),items=[...s.checkpoints],i=items.findIndex(c=>c.id===checkpointId),t=direction==="UP"?i-1:i+1;if(i<0)throw new HttpError("This checkpoint no longer exists.","STALE_STATE");if(t<0||t>=items.length)return s;[items[i],items[t]]=[items[t],items[i]];return putCheckpoints(id,legId,items.map(checkpointInput));},
+ validateRoadLegSetup:setup,
+};

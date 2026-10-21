@@ -20,6 +20,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.ColumnTransformer;
 import org.hibernate.type.SqlTypes;
 
 @Entity
@@ -88,11 +89,18 @@ public class TransportOrder {
 	@Column(name = "document_deadline_set_at")
 	private LocalDateTime documentDeadlineSetAt;
 
+	@Column(name = "documents_final_confirmed_by")
+	private UUID documentsFinalConfirmedBy;
+
+	@Column(name = "documents_final_confirmed_at")
+	private LocalDateTime documentsFinalConfirmedAt;
+
 	@Column(name = "documents_locked_at")
 	private LocalDateTime documentsLockedAt;
 
 	@Enumerated(EnumType.STRING)
-	@JdbcTypeCode(SqlTypes.NAMED_ENUM)
+	@JdbcTypeCode(SqlTypes.VARCHAR)
+	@ColumnTransformer(read = "status::text", write = "?::order_status")
 	@Column(nullable = false, columnDefinition = "order_status")
 	private OrderStatus status;
 
@@ -164,6 +172,12 @@ public class TransportOrder {
 		cancelledAt = LocalDateTime.now();
 	}
 
+	public void cancelForDocumentDeadline(LocalDateTime cancelledAt) {
+		status = OrderStatus.CANCELLED;
+		cancellationReason = null;
+		this.cancelledAt = cancelledAt;
+	}
+
 	void reject(String reason) {
 		status = OrderStatus.REJECTED;
 		rejectionReason = reason.trim();
@@ -197,10 +211,24 @@ public class TransportOrder {
 		}
 	}
 
+	public void markReadyToShip() {
+		if (status != OrderStatus.APPROVED) {
+			throw new InvalidOrderTransitionException(status, "ready to ship");
+		}
+		status = OrderStatus.READY_TO_SHIP;
+	}
+
 	public void setDocumentCompletionDeadline(LocalDateTime deadline, UUID actorUserId) {
 		documentCompletionDeadlineAt = deadline;
 		documentDeadlineSetBy = actorUserId;
 		documentDeadlineSetAt = LocalDateTime.now();
+	}
+
+	public void finalConfirmDocuments(UUID actorUserId) {
+		LocalDateTime confirmedAt = LocalDateTime.now();
+		documentsFinalConfirmedBy = actorUserId;
+		documentsFinalConfirmedAt = confirmedAt;
+		documentsLockedAt = confirmedAt;
 	}
 
 	void restoreDraft() {
@@ -239,6 +267,8 @@ public class TransportOrder {
 	public LocalDateTime getDocumentCompletionDeadlineAt() { return documentCompletionDeadlineAt; }
 	public UUID getDocumentDeadlineSetBy() { return documentDeadlineSetBy; }
 	public LocalDateTime getDocumentDeadlineSetAt() { return documentDeadlineSetAt; }
+	public UUID getDocumentsFinalConfirmedBy() { return documentsFinalConfirmedBy; }
+	public LocalDateTime getDocumentsFinalConfirmedAt() { return documentsFinalConfirmedAt; }
 	public LocalDateTime getDocumentsLockedAt() { return documentsLockedAt; }
 	public OrderStatus getStatus() { return status; }
 	public LocalDateTime getCreatedAt() { return createdAt; }

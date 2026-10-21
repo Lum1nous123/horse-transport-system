@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import TransportSpecialistWorkspaceFrame from "@/components/TransportSpecialistWorkspaceFrame";
 import {
-  transportSpecialistWorkspaceService,
+  getTransportSpecialistWorkspaceService,
   type AssignedSpecialistOrderSummary,
 } from "@/lib/transport-specialist-workspace/service";
 import { useTransportSpecialistAccess } from "@/lib/transport-specialist-workspace/use-specialist-access";
@@ -27,6 +27,10 @@ export default function TransportSpecialistPage() {
     previewSpecialistName,
     message: accessMessage,
   } = useTransportSpecialistAccess();
+  const transportSpecialistWorkspaceService = useMemo(
+    () => getTransportSpecialistWorkspaceService(preview),
+    [preview],
+  );
   const [actionRequired, setActionRequired] = useState<AssignedSpecialistOrderSummary[]>([]);
   const [finalConfirmed, setFinalConfirmed] = useState<AssignedSpecialistOrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,7 +48,7 @@ export default function TransportSpecialistPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [transportSpecialistWorkspaceService]);
 
   useEffect(() => {
     if (accessState !== "allowed") return;

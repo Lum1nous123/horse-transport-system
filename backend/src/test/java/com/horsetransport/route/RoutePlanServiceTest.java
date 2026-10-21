@@ -14,6 +14,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.horsetransport.audit.AuditActorKind;
+import com.horsetransport.audit.AuditEntityType;
+import com.horsetransport.audit.StatusAuditLog;
+import com.horsetransport.audit.StatusAuditLogRepository;
 import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderHorse;
@@ -50,6 +54,8 @@ class RoutePlanServiceTest {
 	@Mock private RoadLegVehicleHorseRepository roadLegVehicleHorseRepository;
 	@Mock private CheckpointRepository checkpointRepository;
 	@Mock private RoutePlanReviewRepository routePlanReviewRepository;
+	@Mock private ExecutionStaffingService executionStaffingService;
+	@Mock private StatusAuditLogRepository auditLogRepository;
 
 	private RoutePlanService service;
 
@@ -57,7 +63,8 @@ class RoutePlanServiceTest {
 	void setUp() {
 		service = new RoutePlanService(orderRepository, routePlanRepository, routeLegRepository,
 				vehicleRepository, roadLegVehicleRepository, roadLegVehicleHorseRepository,
-				checkpointRepository, routePlanReviewRepository, currentUserProvider);
+				checkpointRepository, routePlanReviewRepository, executionStaffingService,
+				auditLogRepository, currentUserProvider);
 
 		lenient().when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.FLEET_ROUTE_COORDINATOR);
 		lenient().when(currentUserProvider.getCurrentUserId()).thenReturn(FRC_ID);
@@ -73,6 +80,10 @@ class RoutePlanServiceTest {
 		lenient().when(checkpointRepository.findAllByRouteLegIdOrderBySequenceNoAsc(any()))
 				.thenReturn(List.of());
 		lenient().when(checkpointRepository.findAllByRouteLegIdIn(any())).thenReturn(List.of());
+		lenient().when(executionStaffingService.getStaffing(any(), any()))
+				.thenReturn(ExecutionStaffingResponse.empty());
+		lenient().when(executionStaffingService.assignStaff(any(), any()))
+				.thenReturn(ExecutionStaffingResponse.empty());
 	}
 
 	@Test
@@ -278,15 +289,16 @@ class RoutePlanServiceTest {
 	}
 
 	@Test
-	void lmConfirmRevalidatesAndLocksRoutePlan() {
+	void lmConfirmRevalidatesAssignsStaffAndMarksOrderReadyToShip() {
 		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.LOGISTICS_MANAGER);
 		RoutePlan plan = routePlan();
 		plan.submitForReview();
 		RoutePlanReview review = new RoutePlanReview(plan.getId(), 1, FRC_ID);
 		RouteLeg leg = airLeg(plan.getId(), 1, "Stable A", "Destination Stable", 2);
+		TransportOrder order = order(ORDER_HORSE_ID, SECOND_ORDER_HORSE_ID);
 
-		when(orderRepository.findById(ORDER_ID))
-				.thenReturn(Optional.of(order(ORDER_HORSE_ID, SECOND_ORDER_HORSE_ID)));
+		when(orderRepository.findByIdForUpdate(ORDER_ID))
+				.thenReturn(Optional.of(order));
 		when(routePlanRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(plan));
 		when(routePlanReviewRepository.findFirstByRoutePlanIdAndDecisionOrderBySubmissionNoDesc(
 				plan.getId(), RoutePlanReviewDecision.PENDING)).thenReturn(Optional.of(review));
@@ -301,6 +313,15 @@ class RoutePlanServiceTest {
 		assertThat(response.routePlan().lockedAt()).isNotNull();
 		assertThat(response.routePlan().approvedAt()).isNotNull();
 		assertThat(response.review().decision()).isEqualTo(RoutePlanReviewDecision.CONFIRMED);
+		assertThat(response.orderStatus()).isEqualTo(OrderStatus.READY_TO_SHIP);
+		assertThat(order.getStatus()).isEqualTo(OrderStatus.READY_TO_SHIP);
+		verify(executionStaffingService).assignStaff(plan, List.of(leg));
+		ArgumentCaptor<StatusAuditLog> audit = ArgumentCaptor.forClass(StatusAuditLog.class);
+		verify(auditLogRepository).saveAndFlush(audit.capture());
+		assertThat(audit.getValue().getEntityType()).isEqualTo(AuditEntityType.TRANSPORT_ORDER);
+		assertThat(audit.getValue().getOldStatus()).isEqualTo(OrderStatus.APPROVED.name());
+		assertThat(audit.getValue().getNewStatus()).isEqualTo(OrderStatus.READY_TO_SHIP.name());
+		assertThat(audit.getValue().getActorKind()).isEqualTo(AuditActorKind.SYSTEM);
 	}
 
 	@Test

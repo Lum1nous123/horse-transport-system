@@ -54,6 +54,8 @@ export default function LoginForm() {
         router.replace("/fleet-route-coordinator");
       } else if (currentUser.role === "DRIVER") {
         router.replace("/driver");
+      } else if (currentUser.role === "ESCORT") {
+        router.replace("/escort");
       } else if (currentUser.role === "CUSTOMER") {
         router.replace("/customer");
       } else {

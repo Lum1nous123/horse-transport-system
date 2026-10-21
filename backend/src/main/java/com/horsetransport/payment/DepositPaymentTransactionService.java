@@ -17,6 +17,7 @@ import com.horsetransport.quotation.QuotationRepository;
 import com.horsetransport.quotation.QuotationStatus;
 import com.horsetransport.security.CurrentUserProvider;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -36,12 +37,14 @@ public class DepositPaymentTransactionService {
 	private final StatusAuditLogRepository auditLogRepository;
 	private final CurrentUserProvider currentUserProvider;
 	private final DocumentPhaseStarter documentPhaseStarter;
+	private final DepositRefundRepository refundRepository;
 
+	@Autowired
 	public DepositPaymentTransactionService(PaymentRepository paymentRepository,
 			PaymentAttemptRepository attemptRepository, PaymentProviderEventRepository eventRepository,
 			TransportOrderRepository orderRepository, QuotationRepository quotationRepository,
 			StatusAuditLogRepository auditLogRepository, CurrentUserProvider currentUserProvider,
-			DocumentPhaseStarter documentPhaseStarter) {
+			DocumentPhaseStarter documentPhaseStarter, DepositRefundRepository refundRepository) {
 		this.paymentRepository = paymentRepository;
 		this.attemptRepository = attemptRepository;
 		this.eventRepository = eventRepository;
@@ -50,6 +53,16 @@ public class DepositPaymentTransactionService {
 		this.auditLogRepository = auditLogRepository;
 		this.currentUserProvider = currentUserProvider;
 		this.documentPhaseStarter = documentPhaseStarter;
+		this.refundRepository = refundRepository;
+	}
+
+	DepositPaymentTransactionService(PaymentRepository paymentRepository,
+			PaymentAttemptRepository attemptRepository, PaymentProviderEventRepository eventRepository,
+			TransportOrderRepository orderRepository, QuotationRepository quotationRepository,
+			StatusAuditLogRepository auditLogRepository, CurrentUserProvider currentUserProvider,
+			DocumentPhaseStarter documentPhaseStarter) {
+		this(paymentRepository, attemptRepository, eventRepository, orderRepository, quotationRepository,
+				auditLogRepository, currentUserProvider, documentPhaseStarter, null);
 	}
 
 	@Transactional
@@ -129,7 +142,8 @@ public class DepositPaymentTransactionService {
 				.orElseThrow(DepositPaymentNotFoundException::new);
 		PaymentAttempt latest = attemptRepository.findFirstByPaymentIdOrderByAttemptNoDesc(payment.getId())
 				.orElse(null);
-		return DepositPaymentResponse.from(payment, latest);
+		DepositRefund refund = refundRepository == null ? null : refundRepository.findByPaymentId(payment.getId()).orElse(null);
+		return DepositPaymentResponse.from(payment, latest, refund);
 	}
 
 	@Transactional

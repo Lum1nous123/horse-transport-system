@@ -77,6 +77,11 @@ public class StatusAuditLog {
 
 	public static StatusAuditLog systemTransition(AuditEntityType entityType, UUID entityId, String oldStatus,
 			String newStatus) {
+		return systemTransition(entityType, entityId, oldStatus, newStatus, LocalDateTime.now());
+	}
+
+	public static StatusAuditLog systemTransition(AuditEntityType entityType, UUID entityId, String oldStatus,
+			String newStatus, LocalDateTime occurredAt) {
 		StatusAuditLog log = new StatusAuditLog();
 		log.id = UUID.randomUUID();
 		log.entityType = entityType;
@@ -86,7 +91,7 @@ public class StatusAuditLog {
 		log.actorKind = AuditActorKind.SYSTEM;
 		log.actorUserId = null;
 		log.reason = null;
-		log.occurredAt = LocalDateTime.now();
+		log.occurredAt = occurredAt;
 		return log;
 	}
 
