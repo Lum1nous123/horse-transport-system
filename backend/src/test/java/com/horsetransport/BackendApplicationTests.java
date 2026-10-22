@@ -3,6 +3,7 @@ package com.horsetransport;
 import com.horsetransport.horse.HorseRepository;
 import com.horsetransport.document.HorseDocumentRepository;
 import com.horsetransport.document.HorseDocumentVersionRepository;
+import com.horsetransport.delivery.ProofOfDeliveryRepository;
 import com.horsetransport.audit.StatusAuditLogRepository;
 import com.horsetransport.order.TransportOrderRepository;
 import com.horsetransport.order.OrderStaffAssignmentRepository;
@@ -111,6 +112,9 @@ class BackendApplicationTests {
 
 	@MockitoBean
 	private WelfareEvidenceRepository welfareEvidenceRepository;
+
+	@MockitoBean
+	private ProofOfDeliveryRepository proofOfDeliveryRepository;
 
 	@MockitoBean
 	private EntityManager entityManager;

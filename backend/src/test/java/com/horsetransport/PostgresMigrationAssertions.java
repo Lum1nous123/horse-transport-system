@@ -68,6 +68,31 @@ final class PostgresMigrationAssertions {
 		assertThat(sequenceName).isEqualTo("transport_order_code_seq");
 	}
 
+	static void assertProofOfDeliverySchema(JdbcTemplate jdbcTemplate) {
+		List<String> checkConstraints = jdbcTemplate.queryForList("""
+				select pg_get_constraintdef(oid)
+				from pg_constraint
+				where conrelid = 'proofs_of_delivery'::regclass
+					and contype = 'c'
+				""", String.class);
+		assertThat(checkConstraints).anySatisfy(definition ->
+				assertThat(definition).contains("road_vehicle_execution_id", "air_leg_execution_id"));
+		assertThat(checkConstraints).anySatisfy(definition ->
+				assertThat(definition).contains("recipient_name", "btrim"));
+
+		List<String> uniqueIndexes = jdbcTemplate.queryForList("""
+				select indexdef
+				from pg_indexes
+				where schemaname = 'public'
+					and tablename = 'proofs_of_delivery'
+					and indexname in ('uq_proofs_of_delivery_road_execution',
+						'uq_proofs_of_delivery_air_execution')
+				order by indexname
+				""", String.class);
+		assertThat(uniqueIndexes).hasSize(2).allSatisfy(definition ->
+				assertThat(definition).contains("CREATE UNIQUE INDEX", "WHERE"));
+	}
+
 	static void assertFrcEligibleColumnIsAbsent(JdbcTemplate jdbcTemplate) {
 		Integer frcEligibleColumns = jdbcTemplate.queryForObject("""
 				select count(*)

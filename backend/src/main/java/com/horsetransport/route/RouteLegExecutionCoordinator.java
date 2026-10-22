@@ -1,5 +1,7 @@
 package com.horsetransport.route;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
@@ -8,6 +10,7 @@ import jakarta.persistence.EntityManager;
 import com.horsetransport.audit.AuditEntityType;
 import com.horsetransport.audit.StatusAuditRecorder;
 import com.horsetransport.order.OrderStatus;
+import com.horsetransport.order.OrderDeliveredEvent;
 import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderRepository;
 import com.horsetransport.security.CurrentUserProvider;
@@ -16,6 +19,7 @@ import com.horsetransport.user.UserRepository;
 import com.horsetransport.user.UserRole;
 import com.horsetransport.user.UserStatus;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +42,8 @@ public class RouteLegExecutionCoordinator {
 	private final CurrentUserProvider currentUserProvider;
 	private final StatusAuditRecorder auditRecorder;
 	private final EntityManager entityManager;
+	private final ApplicationEventPublisher eventPublisher;
+	private final Clock clock;
 
 	public RouteLegExecutionCoordinator(RouteLegRepository routeLegRepository,
 			RoutePlanRepository routePlanRepository, TransportOrderRepository orderRepository,
@@ -45,7 +51,7 @@ public class RouteLegExecutionCoordinator {
 			RoadVehicleExecutionRepository roadExecutionRepository,
 			AirLegExecutionRepository airExecutionRepository, UserRepository userRepository,
 			CurrentUserProvider currentUserProvider, StatusAuditRecorder auditRecorder,
-			EntityManager entityManager) {
+			EntityManager entityManager, ApplicationEventPublisher eventPublisher, Clock clock) {
 		this.routeLegRepository = routeLegRepository;
 		this.routePlanRepository = routePlanRepository;
 		this.orderRepository = orderRepository;
@@ -56,6 +62,8 @@ public class RouteLegExecutionCoordinator {
 		this.currentUserProvider = currentUserProvider;
 		this.auditRecorder = auditRecorder;
 		this.entityManager = entityManager;
+		this.eventPublisher = eventPublisher;
+		this.clock = clock;
 	}
 
 	@Transactional(propagation = Propagation.MANDATORY)
@@ -162,6 +170,38 @@ public class RouteLegExecutionCoordinator {
 				RouteLegStatus.IN_PROGRESS.name(), RouteLegStatus.COMPLETED.name(), actorId, null);
 		auditRecorder.recordUserTransition(AuditEntityType.ROUTE_LEG, nextLeg.getId(),
 				RouteLegStatus.PLANNED.name(), RouteLegStatus.READY.name(), actorId, null);
+		return true;
+	}
+
+	/** Completes the final leg and delivers its Order only after PoD readiness succeeds. */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public boolean completeFinalLegWhenReady(UUID routeLegId, BooleanSupplier completionReady) {
+		LockedContext context = lockContext(routeLegId);
+		List<RouteLeg> legs = context.legs();
+		int index = indexOf(legs, routeLegId);
+		if (index != legs.size() - 1) {
+			throw new RoutePlanValidationException("Only the final RouteLeg can complete the delivery flow");
+		}
+		RouteLeg leg = legs.get(index);
+		if (context.plan().getStatus() != RoutePlanStatus.APPROVED
+				|| context.order().getStatus() != OrderStatus.IN_PROGRESS
+				|| leg.getStatus() != RouteLegStatus.IN_PROGRESS) {
+			throw new RoutePlanValidationException("Final delivery requires an in-progress final RouteLeg and Order");
+		}
+		if (!completionReady.getAsBoolean()) return false;
+
+		UUID actorId = requireAssignedActiveActor(leg);
+		LocalDateTime deliveredAt = LocalDateTime.now(clock);
+		leg.complete();
+		context.order().deliver(deliveredAt);
+		routeLegRepository.save(leg);
+		orderRepository.save(context.order());
+		auditRecorder.recordUserTransition(AuditEntityType.ROUTE_LEG, leg.getId(),
+				RouteLegStatus.IN_PROGRESS.name(), RouteLegStatus.COMPLETED.name(), actorId, null);
+		auditRecorder.recordUserTransition(AuditEntityType.TRANSPORT_ORDER, context.order().getId(),
+				OrderStatus.IN_PROGRESS.name(), OrderStatus.DELIVERED.name(), actorId, null);
+		eventPublisher.publishEvent(new OrderDeliveredEvent(context.order().getId(),
+				context.order().getCustomerId(), leg.getId(), deliveredAt));
 		return true;
 	}
 
