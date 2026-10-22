@@ -101,4 +101,38 @@ public class AirLegExecution {
 	public LocalDateTime getCompletedAt() {
 		return completedAt;
 	}
+
+	public void start(LocalDateTime startedAt) {
+		// chỉ cho phép bắt đầu khi chuyến AIR chưa được bắt đầu
+		if (status != ExecutionStatus.NOT_STARTED) {
+			throw new RoutePlanValidationException("AIR leg execution has already started");
+		}
+		// đánh dấu chuyến AIR đã bắt đầu thực hiện
+		status = ExecutionStatus.IN_PROGRESS;
+		this.startedAt = startedAt;
+	}
+
+	// đánh dấu chuyến AIR đã đến nơi
+	public void arriveAtDestination(LocalDateTime arrivedAt) {
+		// chỉ cho phép đánh dấu đến nơi khi chuyến AIR đang trong tiến trình thực hiện
+		if (status != ExecutionStatus.IN_PROGRESS) {
+			throw new RoutePlanValidationException("AIR leg must be in progress before destination arrival");
+		}
+
+		// đánh dấu chuyến AIR đã đến nơi
+		status = ExecutionStatus.DESTINATION;
+		this.destinationArrivedAt = arrivedAt;
+	}
+
+	// hoàn tất chuyến bay và nhận vào thời gian hoàn tất
+	public void complete(LocalDateTime completedAt) {
+		// kiểm tra AIR đến đích chưa
+		if (status != ExecutionStatus.DESTINATION) {
+			throw new RoutePlanValidationException("AIR leg requires destination arrival and final welfare to complete");
+		}
+		// đánh dấu chuyến AIR đã hoàn tất
+		status = ExecutionStatus.COMPLETED;
+		// nhận vào thời gian hoàn tất
+		this.completedAt = completedAt;
+	}
 }

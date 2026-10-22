@@ -3,13 +3,23 @@ package com.horsetransport.route;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
+import jakarta.persistence.LockModeType;
+
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface AirLegExecutionRepository extends JpaRepository<AirLegExecution, UUID> {
+
+	Optional<AirLegExecution> findByRouteLegId(UUID routeLegId);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select execution from AirLegExecution execution where execution.routeLegId = :routeLegId")
+	Optional<AirLegExecution> findByRouteLegIdForUpdate(@Param("routeLegId") UUID routeLegId);
 
 	List<AirLegExecution> findAllByRouteLegIdIn(Collection<UUID> routeLegIds);
 
