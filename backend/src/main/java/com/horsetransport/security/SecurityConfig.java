@@ -84,6 +84,8 @@ public class SecurityConfig {
 								.hasRole("FLEET_ROUTE_COORDINATOR")
 						.requestMatchers("/api/v1/lm/route-plan-reviews/**")
 								.hasRole("LOGISTICS_MANAGER")
+						.requestMatchers("/api/v1/air-executions/**")
+								.hasRole("ESCORT")
 						.anyRequest().denyAll())
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
