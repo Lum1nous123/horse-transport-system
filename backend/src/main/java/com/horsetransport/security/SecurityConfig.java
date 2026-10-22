@@ -86,6 +86,11 @@ public class SecurityConfig {
 								.hasRole("LOGISTICS_MANAGER")
 						.requestMatchers("/api/v1/air-executions/**")
 								.hasRole("ESCORT")
+						.requestMatchers(HttpMethod.POST,
+								"/api/v1/road-executions/vehicles/*/proof-of-delivery")
+								.hasRole("ESCORT")
+						.requestMatchers("/api/v1/road-executions/**")
+								.hasAnyRole("DRIVER", "ESCORT")
 						.anyRequest().denyAll())
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

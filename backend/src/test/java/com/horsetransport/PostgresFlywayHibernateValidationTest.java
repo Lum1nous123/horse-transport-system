@@ -42,6 +42,7 @@ class PostgresFlywayHibernateValidationTest {
 		PostgresMigrationAssertions.assertRefundSchema(jdbcTemplate);
 		PostgresMigrationAssertions.assertOrderCodeSequenceExists(jdbcTemplate);
 		PostgresMigrationAssertions.assertFrcEligibleColumnIsAbsent(jdbcTemplate);
+		PostgresMigrationAssertions.assertProofOfDeliverySchema(jdbcTemplate);
 		flyway.validate();
 		assertThat(flyway.migrate().migrationsExecuted).isZero();
 

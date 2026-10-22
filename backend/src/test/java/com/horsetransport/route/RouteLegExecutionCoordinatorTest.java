@@ -2,11 +2,15 @@ package com.horsetransport.route;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -15,6 +19,7 @@ import jakarta.persistence.EntityManager;
 import com.horsetransport.audit.AuditEntityType;
 import com.horsetransport.audit.StatusAuditRecorder;
 import com.horsetransport.order.OrderStatus;
+import com.horsetransport.order.OrderDeliveredEvent;
 import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderRepository;
 import com.horsetransport.security.CurrentUserProvider;
@@ -26,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,6 +53,7 @@ class RouteLegExecutionCoordinatorTest {
 	@Mock private CurrentUserProvider currentUserProvider;
 	@Mock private StatusAuditRecorder auditRecorder;
 	@Mock private EntityManager entityManager;
+	@Mock private ApplicationEventPublisher eventPublisher;
 
 	private RoutePlan plan;
 	private TransportOrder order;
@@ -58,7 +65,8 @@ class RouteLegExecutionCoordinatorTest {
 	void setUp() throws ReflectiveOperationException {
 		coordinator = new RouteLegExecutionCoordinator(routeLegRepository, routePlanRepository,
 				orderRepository, roadLegVehicleRepository, roadExecutionRepository,
-				airExecutionRepository, userRepository, currentUserProvider, auditRecorder, entityManager);
+				airExecutionRepository, userRepository, currentUserProvider, auditRecorder, entityManager,
+				eventPublisher, Clock.fixed(Instant.parse("2026-10-22T10:00:00Z"), ZoneOffset.UTC));
 		plan = new RoutePlan(ORDER_ID, UUID.randomUUID());
 		ReflectionTestUtils.setField(plan, "id", PLAN_ID);
 		ReflectionTestUtils.setField(plan, "status", RoutePlanStatus.APPROVED);
@@ -137,6 +145,67 @@ class RouteLegExecutionCoordinatorTest {
 				.hasMessageContaining("PoD handover");
 		assertThat(firstLeg.getStatus()).isEqualTo(RouteLegStatus.IN_PROGRESS);
 		verifyNoInteractions(auditRecorder);
+	}
+
+	@Test
+	void finalLegCompletesOrderAuditsAndPublishesDeliveryEventWhenPodIsReady() {
+		firstLeg.start();
+		ReflectionTestUtils.setField(order, "status", OrderStatus.IN_PROGRESS);
+		prepare(FIRST_LEG_ID, List.of(firstLeg));
+		when(currentUserProvider.getCurrentUserId()).thenReturn(ESCORT_ID);
+		when(userRepository.findByIdForUpdate(ESCORT_ID)).thenReturn(Optional.of(escort()));
+		when(airExecutionRepository.findByRouteLegId(FIRST_LEG_ID))
+				.thenReturn(Optional.of(new AirLegExecution(FIRST_LEG_ID, ESCORT_ID)));
+
+		boolean completed = coordinator.completeFinalLegWhenReady(FIRST_LEG_ID, () -> true);
+
+		assertThat(completed).isTrue();
+		assertThat(firstLeg.getStatus()).isEqualTo(RouteLegStatus.COMPLETED);
+		assertThat(order.getStatus()).isEqualTo(OrderStatus.DELIVERED);
+		assertThat(order.getDeliveredAt()).isEqualTo(LocalDateTime.of(2026, 10, 22, 10, 0));
+		verify(auditRecorder).recordUserTransition(AuditEntityType.ROUTE_LEG, FIRST_LEG_ID,
+				RouteLegStatus.IN_PROGRESS.name(), RouteLegStatus.COMPLETED.name(), ESCORT_ID, null);
+		verify(auditRecorder).recordUserTransition(AuditEntityType.TRANSPORT_ORDER, ORDER_ID,
+				OrderStatus.IN_PROGRESS.name(), OrderStatus.DELIVERED.name(), ESCORT_ID, null);
+		verify(eventPublisher).publishEvent(new OrderDeliveredEvent(ORDER_ID,
+				order.getCustomerId(), FIRST_LEG_ID, order.getDeliveredAt()));
+	}
+
+	@Test
+	void finalReadinessIsCheckedOnlyAfterSharedOrderAndLegLocks() {
+		firstLeg.start();
+		ReflectionTestUtils.setField(order, "status", OrderStatus.IN_PROGRESS);
+		prepare(FIRST_LEG_ID, List.of(firstLeg));
+
+		boolean completed = coordinator.completeFinalLegWhenReady(FIRST_LEG_ID, () -> {
+			verify(orderRepository).findByIdForUpdate(ORDER_ID);
+			verify(routeLegRepository).findAllByRoutePlanIdForUpdate(PLAN_ID);
+			return false;
+		});
+
+		assertThat(completed).isFalse();
+		assertThat(firstLeg.getStatus()).isEqualTo(RouteLegStatus.IN_PROGRESS);
+		assertThat(order.getStatus()).isEqualTo(OrderStatus.IN_PROGRESS);
+		verifyNoInteractions(auditRecorder, eventPublisher);
+	}
+
+	@Test
+	void synchronousDeliveryEventFailurePropagatesToTheTransactionCaller() {
+		firstLeg.start();
+		ReflectionTestUtils.setField(order, "status", OrderStatus.IN_PROGRESS);
+		prepare(FIRST_LEG_ID, List.of(firstLeg));
+		when(currentUserProvider.getCurrentUserId()).thenReturn(ESCORT_ID);
+		when(userRepository.findByIdForUpdate(ESCORT_ID)).thenReturn(Optional.of(escort()));
+		when(airExecutionRepository.findByRouteLegId(FIRST_LEG_ID))
+				.thenReturn(Optional.of(new AirLegExecution(FIRST_LEG_ID, ESCORT_ID)));
+		doThrow(new IllegalStateException("listener failed"))
+				.when(eventPublisher).publishEvent(new OrderDeliveredEvent(
+						ORDER_ID, order.getCustomerId(), FIRST_LEG_ID,
+						LocalDateTime.of(2026, 10, 22, 10, 0)));
+
+		assertThatThrownBy(() -> coordinator.completeFinalLegWhenReady(FIRST_LEG_ID, () -> true))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessage("listener failed");
 	}
 
 	@Test

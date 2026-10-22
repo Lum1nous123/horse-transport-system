@@ -80,6 +80,9 @@ public class TransportOrder {
 	@Column(name = "approved_at")
 	private LocalDateTime approvedAt;
 
+	@Column(name = "delivered_at")
+	private LocalDateTime deliveredAt;
+
 	@Column(name = "document_completion_deadline_at")
 	private LocalDateTime documentCompletionDeadlineAt;
 
@@ -225,6 +228,14 @@ public class TransportOrder {
 		status = OrderStatus.IN_PROGRESS;
 	}
 
+	public void deliver(LocalDateTime deliveredAt) {
+		if (status != OrderStatus.IN_PROGRESS) {
+			throw new InvalidOrderTransitionException(status, "delivered");
+		}
+		status = OrderStatus.DELIVERED;
+		this.deliveredAt = deliveredAt;
+	}
+
 	public void setDocumentCompletionDeadline(LocalDateTime deadline, UUID actorUserId) {
 		documentCompletionDeadlineAt = deadline;
 		documentDeadlineSetBy = actorUserId;
@@ -271,6 +282,7 @@ public class TransportOrder {
 	public String getCancellationReason() { return cancellationReason; }
 	public LocalDateTime getCancelledAt() { return cancelledAt; }
 	public LocalDateTime getApprovedAt() { return approvedAt; }
+	public LocalDateTime getDeliveredAt() { return deliveredAt; }
 	public LocalDateTime getDocumentCompletionDeadlineAt() { return documentCompletionDeadlineAt; }
 	public UUID getDocumentDeadlineSetBy() { return documentDeadlineSetBy; }
 	public LocalDateTime getDocumentDeadlineSetAt() { return documentDeadlineSetAt; }
