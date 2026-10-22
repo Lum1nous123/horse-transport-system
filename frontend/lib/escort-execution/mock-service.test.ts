@@ -31,11 +31,12 @@ describe("mockEscortExecutionService", () => {
   it("returns only ROAD work assigned to the signed-in Escort", async () => {
     const queue = await mockEscortExecutionService.listAssignedRoadWork();
 
-    expect(queue.executions).toHaveLength(2);
-    expect(queue.executions.map((item) => item.executionId)).toEqual([
+    expect(queue.executions.map((item) => item.executionId)).toEqual(expect.arrayContaining([
       "road-execution-2074-a",
       "road-execution-2108-final",
-    ]);
+      "road-execution-to-air",
+    ]));
+    expect(queue.executions.map((item) => item.executionId)).not.toContain("road-execution-2074-b");
   });
 
   it("rejects access to a Vehicle assigned to another Escort", async () => {

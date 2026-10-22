@@ -1,17 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import EscortWorkspaceFrame from "@/components/EscortWorkspaceFrame";
-import RoadWelfareForm from "@/components/RoadWelfareForm";
+import WelfareEvidenceForm from "@/components/WelfareEvidenceForm";
+import WelfareEvidenceReadback from "@/components/WelfareEvidenceReadback";
 import {
   EscortExecutionError,
   getEscortExecutionService,
   type AssignedRoadExecutionDetail,
   type RecordRoadWelfareInput,
-  type WelfareEvidence,
 } from "@/lib/escort-execution/service";
 import { useEscortAccess } from "@/lib/escort-execution/use-escort-access";
 
@@ -27,26 +26,6 @@ function formatDateTime(value: string) {
 
 function label(value: string) {
   return value.toLowerCase().replaceAll("_", " ").replace(/^./, (character) => character.toUpperCase());
-}
-
-function WelfareReadback({ evidence }: { evidence: WelfareEvidence }) {
-  return (
-    <article className="escort-welfare-readback">
-      <Image
-        src={evidence.photoUrl}
-        alt={`Welfare evidence ${evidence.photoName}`}
-        width={160}
-        height={110}
-        unoptimized
-      />
-      <div>
-        <span>Saved welfare evidence</span>
-        <strong>{evidence.photoName}</strong>
-        <p>{evidence.note}</p>
-        <time dateTime={evidence.recordedAt}>{formatDateTime(evidence.recordedAt)}</time>
-      </div>
-    </article>
-  );
 }
 
 export default function RoadExecutionDetailPage() {
@@ -205,9 +184,9 @@ export default function RoadExecutionDetailPage() {
                       <article>
                         <header><div><span>Checkpoint {checkpoint.sequenceNo} · {label(checkpoint.checkpointType)}</span><h3>{checkpoint.name}</h3></div><strong>{checkpoint.arrivedAt ? `Reached ${formatDateTime(checkpoint.arrivedAt)}` : "Not reached"}</strong></header>
                         {checkpoint.welfareEvidence ? (
-                          <WelfareReadback evidence={checkpoint.welfareEvidence} />
+                          <WelfareEvidenceReadback evidence={checkpoint.welfareEvidence} />
                         ) : canRecord ? (
-                          <RoadWelfareForm
+                          <WelfareEvidenceForm
                             formId={`checkpoint-${checkpoint.id}`}
                             contextLabel={`${checkpoint.name} checkpoint`}
                             title="Record checkpoint welfare"
@@ -232,9 +211,9 @@ export default function RoadExecutionDetailPage() {
               <strong>{execution.isFinalLeg ? "Final leg" : "Non-final leg"}</strong>
             </div>
             {execution.finalWelfareEvidence ? (
-              <WelfareReadback evidence={execution.finalWelfareEvidence} />
+              <WelfareEvidenceReadback evidence={execution.finalWelfareEvidence} />
             ) : execution.availableActions.finalWelfare ? (
-              <RoadWelfareForm
+              <WelfareEvidenceForm
                 formId="final-welfare"
                 contextLabel={`${execution.vehiclePlateNumber} final destination`}
                 title="Record final destination welfare"
