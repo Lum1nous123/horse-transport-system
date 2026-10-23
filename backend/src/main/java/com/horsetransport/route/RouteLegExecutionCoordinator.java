@@ -9,6 +9,7 @@ import java.util.function.BooleanSupplier;
 import jakarta.persistence.EntityManager;
 import com.horsetransport.audit.AuditEntityType;
 import com.horsetransport.audit.StatusAuditRecorder;
+import com.horsetransport.notification.NotificationService;
 import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.OrderDeliveredEvent;
 import com.horsetransport.order.TransportOrder;
@@ -41,6 +42,7 @@ public class RouteLegExecutionCoordinator {
 	private final UserRepository userRepository;
 	private final CurrentUserProvider currentUserProvider;
 	private final StatusAuditRecorder auditRecorder;
+	private final NotificationService notificationService;
 	private final EntityManager entityManager;
 	private final ApplicationEventPublisher eventPublisher;
 	private final Clock clock;
@@ -51,7 +53,8 @@ public class RouteLegExecutionCoordinator {
 			RoadVehicleExecutionRepository roadExecutionRepository,
 			AirLegExecutionRepository airExecutionRepository, UserRepository userRepository,
 			CurrentUserProvider currentUserProvider, StatusAuditRecorder auditRecorder,
-			EntityManager entityManager, ApplicationEventPublisher eventPublisher, Clock clock) {
+			NotificationService notificationService, EntityManager entityManager,
+			ApplicationEventPublisher eventPublisher, Clock clock) {
 		this.routeLegRepository = routeLegRepository;
 		this.routePlanRepository = routePlanRepository;
 		this.orderRepository = orderRepository;
@@ -61,6 +64,7 @@ public class RouteLegExecutionCoordinator {
 		this.userRepository = userRepository;
 		this.currentUserProvider = currentUserProvider;
 		this.auditRecorder = auditRecorder;
+		this.notificationService = notificationService;
 		this.entityManager = entityManager;
 		this.eventPublisher = eventPublisher;
 		this.clock = clock;
@@ -125,6 +129,9 @@ public class RouteLegExecutionCoordinator {
 		routeLegRepository.save(leg);
 		auditRecorder.recordUserTransition(AuditEntityType.ROUTE_LEG, leg.getId(),
 				RouteLegStatus.READY.name(), RouteLegStatus.IN_PROGRESS.name(), actorId, null);
+		if (index == 0) {
+			notificationService.createTripStarted(context.order().getCustomerId(), context.order().getId());
+		}
 	}
 
 	/** Completes only a non-final leg after the mode handler validates its execution. */
@@ -170,6 +177,8 @@ public class RouteLegExecutionCoordinator {
 				RouteLegStatus.IN_PROGRESS.name(), RouteLegStatus.COMPLETED.name(), actorId, null);
 		auditRecorder.recordUserTransition(AuditEntityType.ROUTE_LEG, nextLeg.getId(),
 				RouteLegStatus.PLANNED.name(), RouteLegStatus.READY.name(), actorId, null);
+		notificationService.createRouteLegCompleted(context.order().getCustomerId(),
+				context.order().getId(), leg.getId());
 		return true;
 	}
 
@@ -200,6 +209,8 @@ public class RouteLegExecutionCoordinator {
 				RouteLegStatus.IN_PROGRESS.name(), RouteLegStatus.COMPLETED.name(), actorId, null);
 		auditRecorder.recordUserTransition(AuditEntityType.TRANSPORT_ORDER, context.order().getId(),
 				OrderStatus.IN_PROGRESS.name(), OrderStatus.DELIVERED.name(), actorId, null);
+		notificationService.createRouteLegCompleted(context.order().getCustomerId(),
+				context.order().getId(), leg.getId());
 		eventPublisher.publishEvent(new OrderDeliveredEvent(context.order().getId(),
 				context.order().getCustomerId(), leg.getId(), deliveredAt));
 		return true;

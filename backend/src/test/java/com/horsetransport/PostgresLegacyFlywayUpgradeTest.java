@@ -58,6 +58,7 @@ class PostgresLegacyFlywayUpgradeTest {
 		PostgresMigrationAssertions.assertOrderCodeSequenceExists(jdbcTemplate);
 		PostgresMigrationAssertions.assertFrcEligibleColumnIsAbsent(jdbcTemplate);
 		PostgresMigrationAssertions.assertProofOfDeliverySchema(jdbcTemplate);
+		PostgresMigrationAssertions.assertNotificationSchema(jdbcTemplate);
 		flyway.validate();
 		assertThat(flyway.migrate().migrationsExecuted).isZero();
 

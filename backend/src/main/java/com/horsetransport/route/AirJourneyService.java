@@ -10,6 +10,9 @@ import java.util.UUID;
 import com.horsetransport.document.DocumentFileValidationException;
 import com.horsetransport.document.DocumentStorage;
 import com.horsetransport.document.DocumentStorageException;
+import com.horsetransport.notification.NotificationService;
+import com.horsetransport.order.TransportOrder;
+import com.horsetransport.order.TransportOrderRepository;
 import com.horsetransport.security.CurrentUserProvider;
 import com.horsetransport.user.UserAccount;
 import com.horsetransport.user.UserRepository;
@@ -35,24 +38,29 @@ public class AirJourneyService {
 	private final RouteLegRepository routeLegRepository;
 	private final RoutePlanRepository routePlanRepository;
 	private final WelfareEvidenceRepository welfareRepository;
+	private final TransportOrderRepository orderRepository;
 	private final UserRepository userRepository;
 	private final CurrentUserProvider currentUserProvider;
 	private final RouteLegExecutionCoordinator coordinator;
+	private final NotificationService notificationService;
 	private final DocumentStorage storage;
 	private final Clock clock;
 
 	public AirJourneyService(AirLegExecutionRepository executionRepository,
 			RouteLegRepository routeLegRepository, RoutePlanRepository routePlanRepository,
-			WelfareEvidenceRepository welfareRepository, UserRepository userRepository,
+			WelfareEvidenceRepository welfareRepository, TransportOrderRepository orderRepository,
+			UserRepository userRepository,
 			CurrentUserProvider currentUserProvider, RouteLegExecutionCoordinator coordinator,
-			DocumentStorage storage, Clock clock) {
+			NotificationService notificationService, DocumentStorage storage, Clock clock) {
 		this.executionRepository = executionRepository;
 		this.routeLegRepository = routeLegRepository;
 		this.routePlanRepository = routePlanRepository;
 		this.welfareRepository = welfareRepository;
+		this.orderRepository = orderRepository;
 		this.userRepository = userRepository;
 		this.currentUserProvider = currentUserProvider;
 		this.coordinator = coordinator;
+		this.notificationService = notificationService;
 		this.storage = storage;
 		this.clock = clock;
 	}
@@ -88,7 +96,10 @@ public class AirJourneyService {
 		}
 
 		context.execution().arriveAtDestination(LocalDateTime.now(clock));
-		return AirExecutionResponse.from(executionRepository.saveAndFlush(context.execution()));
+		AirLegExecution updated = executionRepository.saveAndFlush(context.execution());
+		notificationService.createAirFinalDestinationReached(context.customerId(),
+				context.planOrderId(), context.execution().getId());
+		return AirExecutionResponse.from(updated);
 	}
 
 	@Transactional
@@ -120,6 +131,7 @@ public class AirJourneyService {
 		WelfareEvidence evidence = welfareRepository.saveAndFlush(new WelfareEvidence(
 				context.execution().getId(), WelfareEventType.FINAL_DESTINATION, photoUrl,
 				validated.note(), actorId, LocalDateTime.now(clock)));
+		notificationService.createWelfareUpdated(context.customerId(), context.planOrderId(), evidence.getId());
 		completeNonFinalExecution(context);
 		return WelfareEvidenceResponse.from(evidence);
 	}
@@ -214,7 +226,9 @@ public class AirJourneyService {
 		if (plan.getStatus() != RoutePlanStatus.APPROVED) {
 			throw new RoutePlanValidationException("Route Plan must be approved before execution");
 		}
-		return new AirContext(execution, leg, plan.getTransportOrderId());
+		TransportOrder order = orderRepository.findById(plan.getTransportOrderId())
+				.orElseThrow(RoutePlanNotFoundException::new);
+		return new AirContext(execution, leg, order.getId(), order.getCustomerId());
 	}
 
 	private UUID requireAssignedEscort(AirLegExecution execution) {
@@ -230,6 +244,6 @@ public class AirJourneyService {
 		return actorId;
 	}
 
-	private record AirContext(AirLegExecution execution, RouteLeg leg, UUID planOrderId) { }
+	private record AirContext(AirLegExecution execution, RouteLeg leg, UUID planOrderId, UUID customerId) { }
 	private record ValidatedPhoto(byte[] content, String contentType, String note) { }
 }

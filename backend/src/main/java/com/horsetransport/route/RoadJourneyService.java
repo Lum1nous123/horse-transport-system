@@ -11,6 +11,9 @@ import java.util.UUID;
 import com.horsetransport.document.DocumentFileValidationException;
 import com.horsetransport.document.DocumentStorage;
 import com.horsetransport.document.DocumentStorageException;
+import com.horsetransport.notification.NotificationService;
+import com.horsetransport.order.TransportOrder;
+import com.horsetransport.order.TransportOrderRepository;
 import com.horsetransport.route.RoutePlanStatus;
 import com.horsetransport.security.CurrentUserProvider;
 import com.horsetransport.user.UserAccount;
@@ -40,9 +43,11 @@ public class RoadJourneyService {
 	private final CheckpointRepository checkpointRepository;
 	private final VehicleCheckpointArrivalRepository arrivalRepository;
 	private final WelfareEvidenceRepository welfareRepository;
+	private final TransportOrderRepository orderRepository;
 	private final UserRepository userRepository;
 	private final CurrentUserProvider currentUserProvider;
 	private final RouteLegExecutionCoordinator coordinator;
+	private final NotificationService notificationService;
 	private final DocumentStorage storage;
 	private final Clock clock;
 
@@ -50,8 +55,9 @@ public class RoadJourneyService {
 			RoadVehicleExecutionRepository executionRepository, RouteLegRepository routeLegRepository,
 			RoutePlanRepository routePlanRepository, CheckpointRepository checkpointRepository,
 			VehicleCheckpointArrivalRepository arrivalRepository, WelfareEvidenceRepository welfareRepository,
-			UserRepository userRepository, CurrentUserProvider currentUserProvider,
-			RouteLegExecutionCoordinator coordinator, DocumentStorage storage, Clock clock) {
+			TransportOrderRepository orderRepository, UserRepository userRepository,
+			CurrentUserProvider currentUserProvider, RouteLegExecutionCoordinator coordinator,
+			NotificationService notificationService, DocumentStorage storage, Clock clock) {
 		this.roadVehicleRepository = roadVehicleRepository;
 		this.executionRepository = executionRepository;
 		this.routeLegRepository = routeLegRepository;
@@ -59,9 +65,11 @@ public class RoadJourneyService {
 		this.checkpointRepository = checkpointRepository;
 		this.arrivalRepository = arrivalRepository;
 		this.welfareRepository = welfareRepository;
+		this.orderRepository = orderRepository;
 		this.userRepository = userRepository;
 		this.currentUserProvider = currentUserProvider;
 		this.coordinator = coordinator;
+		this.notificationService = notificationService;
 		this.storage = storage;
 		this.clock = clock;
 	}
@@ -112,6 +120,7 @@ public class RoadJourneyService {
 		}
 		VehicleCheckpointArrival arrival = arrivalRepository.saveAndFlush(new VehicleCheckpointArrival(
 				context.execution().getId(), checkpointId, actorId, LocalDateTime.now(clock)));
+		notificationService.createCheckpointReached(context.customerId(), context.planOrderId(), arrival.getId());
 		return CheckpointArrivalResponse.from(arrival);
 	}
 
@@ -130,7 +139,10 @@ public class RoadJourneyService {
 		requireWelfareForLastReachedCheckpoint(context, arrivalRepository
 				.findAllByRoadVehicleExecutionId(context.execution().getId()));
 		context.execution().arriveAtDestination(LocalDateTime.now(clock));
-		return RoadExecutionResponse.from(completeVehicleWhenReady(context));
+		RoadVehicleExecution updated = completeVehicleWhenReady(context);
+		notificationService.createRoadFinalDestinationReached(context.customerId(),
+				context.planOrderId(), context.execution().getId());
+		return RoadExecutionResponse.from(updated);
 	}
 
 	@Transactional
@@ -184,6 +196,7 @@ public class RoadJourneyService {
 		WelfareEvidence evidence = welfareRepository.saveAndFlush(new WelfareEvidence(
 				context.execution().getId(), checkpointId, eventType, photoUrl, validated.note(),
 				actorId, LocalDateTime.now(clock)));
+		notificationService.createWelfareUpdated(context.customerId(), context.planOrderId(), evidence.getId());
 		if (eventType == WelfareEventType.FINAL_DESTINATION) {
 			completeVehicleWhenReady(context);
 		}
@@ -230,7 +243,9 @@ public class RoadJourneyService {
 		if (plan.getStatus() != RoutePlanStatus.APPROVED) {
 			throw new RoutePlanValidationException("Route Plan must be approved before execution");
 		}
-		return new RoadContext(roadVehicle, execution, leg, plan.getTransportOrderId());
+		TransportOrder order = orderRepository.findById(plan.getTransportOrderId())
+				.orElseThrow(RoutePlanNotFoundException::new);
+		return new RoadContext(roadVehicle, execution, leg, order.getId(), order.getCustomerId());
 	}
 
 	private void ensureLegInProgress(RoadContext context) {
@@ -320,6 +335,6 @@ public class RoadJourneyService {
 	}
 
 	private record RoadContext(RoadLegVehicle roadVehicle, RoadVehicleExecution execution,
-			RouteLeg leg, UUID planOrderId) { }
+			RouteLeg leg, UUID planOrderId, UUID customerId) { }
 	private record ValidatedPhoto(byte[] content, String contentType, String note) { }
 }

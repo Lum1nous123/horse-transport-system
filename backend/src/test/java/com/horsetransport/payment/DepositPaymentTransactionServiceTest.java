@@ -25,6 +25,7 @@ import com.horsetransport.audit.AuditActorKind;
 import com.horsetransport.audit.AuditEntityType;
 import com.horsetransport.audit.StatusAuditLog;
 import com.horsetransport.audit.StatusAuditLogRepository;
+import com.horsetransport.notification.NotificationService;
 import com.horsetransport.order.OrderNotFoundException;
 import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
@@ -59,13 +60,16 @@ class DepositPaymentTransactionServiceTest {
 	@Mock private StatusAuditLogRepository auditLogRepository;
 	@Mock private CurrentUserProvider currentUserProvider;
 	@Mock private DocumentPhaseStarter documentPhaseStarter;
+	@Mock private DepositRefundRepository refundRepository;
+	@Mock private NotificationService notificationService;
 
 	private DepositPaymentTransactionService service;
 
 	@BeforeEach
 	void setUp() {
 		service = new DepositPaymentTransactionService(paymentRepository, attemptRepository, eventRepository,
-				orderRepository, quotationRepository, auditLogRepository, currentUserProvider, documentPhaseStarter);
+				orderRepository, quotationRepository, auditLogRepository, currentUserProvider,
+				documentPhaseStarter, refundRepository, notificationService);
 		lenient().when(currentUserProvider.getCurrentUserId()).thenReturn(CUSTOMER_ID);
 	}
 
@@ -197,6 +201,8 @@ class DepositPaymentTransactionServiceTest {
 		assertThat(fixture.order().getStatus()).isEqualTo(OrderStatus.APPROVED);
 		verify(auditLogRepository).saveAndFlush(any());
 		verify(documentPhaseStarter).startForOrder(ORDER_ID);
+		verify(notificationService).createPaymentResult(CUSTOMER_ID, ORDER_ID,
+				fixture.payment().getId(), PaymentType.DEPOSIT);
 	}
 
 	@Test
@@ -238,6 +244,7 @@ class DepositPaymentTransactionServiceTest {
 		assertThat(fixture.order().getStatus()).isEqualTo(OrderStatus.QUOTATION_SENT);
 		verify(auditLogRepository, never()).saveAndFlush(any());
 		verify(documentPhaseStarter, never()).startForOrder(any());
+		verify(notificationService, never()).createPaymentResult(any(), any(), any(), any());
 	}
 
 	@Test
