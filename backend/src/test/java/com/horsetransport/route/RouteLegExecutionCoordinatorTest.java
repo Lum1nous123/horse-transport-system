@@ -2,7 +2,9 @@ package com.horsetransport.route;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -18,6 +20,7 @@ import java.util.UUID;
 import jakarta.persistence.EntityManager;
 import com.horsetransport.audit.AuditEntityType;
 import com.horsetransport.audit.StatusAuditRecorder;
+import com.horsetransport.notification.NotificationService;
 import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.OrderDeliveredEvent;
 import com.horsetransport.order.TransportOrder;
@@ -52,6 +55,7 @@ class RouteLegExecutionCoordinatorTest {
 	@Mock private UserRepository userRepository;
 	@Mock private CurrentUserProvider currentUserProvider;
 	@Mock private StatusAuditRecorder auditRecorder;
+	@Mock private NotificationService notificationService;
 	@Mock private EntityManager entityManager;
 	@Mock private ApplicationEventPublisher eventPublisher;
 
@@ -65,8 +69,9 @@ class RouteLegExecutionCoordinatorTest {
 	void setUp() throws ReflectiveOperationException {
 		coordinator = new RouteLegExecutionCoordinator(routeLegRepository, routePlanRepository,
 				orderRepository, roadLegVehicleRepository, roadExecutionRepository,
-				airExecutionRepository, userRepository, currentUserProvider, auditRecorder, entityManager,
-				eventPublisher, Clock.fixed(Instant.parse("2026-10-22T10:00:00Z"), ZoneOffset.UTC));
+				airExecutionRepository, userRepository, currentUserProvider, auditRecorder,
+				notificationService, entityManager, eventPublisher,
+				Clock.fixed(Instant.parse("2026-10-22T10:00:00Z"), ZoneOffset.UTC));
 		plan = new RoutePlan(ORDER_ID, UUID.randomUUID());
 		ReflectionTestUtils.setField(plan, "id", PLAN_ID);
 		ReflectionTestUtils.setField(plan, "status", RoutePlanStatus.APPROVED);
@@ -99,6 +104,25 @@ class RouteLegExecutionCoordinatorTest {
 				OrderStatus.READY_TO_SHIP.name(), OrderStatus.IN_PROGRESS.name(), ESCORT_ID, null);
 		verify(auditRecorder).recordUserTransition(AuditEntityType.ROUTE_LEG, FIRST_LEG_ID,
 				RouteLegStatus.READY.name(), RouteLegStatus.IN_PROGRESS.name(), ESCORT_ID, null);
+		verify(notificationService).createTripStarted(order.getCustomerId(), ORDER_ID);
+	}
+
+	@Test
+	void laterRouteLegStartDoesNotCreateAnotherTripStartedNotification() {
+		firstLeg.start();
+		firstLeg.complete();
+		secondLeg.markReady();
+		ReflectionTestUtils.setField(order, "status", OrderStatus.IN_PROGRESS);
+		prepare(SECOND_LEG_ID, List.of(firstLeg, secondLeg));
+		when(currentUserProvider.getCurrentUserId()).thenReturn(ESCORT_ID);
+		when(userRepository.findByIdForUpdate(ESCORT_ID)).thenReturn(Optional.of(escort()));
+		when(airExecutionRepository.findByRouteLegId(SECOND_LEG_ID))
+				.thenReturn(Optional.of(new AirLegExecution(SECOND_LEG_ID, ESCORT_ID)));
+
+		coordinator.startCurrentLeg(SECOND_LEG_ID);
+
+		assertThat(secondLeg.getStatus()).isEqualTo(RouteLegStatus.IN_PROGRESS);
+		verify(notificationService, never()).createTripStarted(any(), any());
 	}
 
 	@Test
@@ -132,6 +156,7 @@ class RouteLegExecutionCoordinatorTest {
 				RouteLegStatus.IN_PROGRESS.name(), RouteLegStatus.COMPLETED.name(), ESCORT_ID, null);
 		verify(auditRecorder).recordUserTransition(AuditEntityType.ROUTE_LEG, SECOND_LEG_ID,
 				RouteLegStatus.PLANNED.name(), RouteLegStatus.READY.name(), ESCORT_ID, null);
+		verify(notificationService).createRouteLegCompleted(order.getCustomerId(), ORDER_ID, FIRST_LEG_ID);
 	}
 
 	@Test
@@ -167,6 +192,8 @@ class RouteLegExecutionCoordinatorTest {
 				RouteLegStatus.IN_PROGRESS.name(), RouteLegStatus.COMPLETED.name(), ESCORT_ID, null);
 		verify(auditRecorder).recordUserTransition(AuditEntityType.TRANSPORT_ORDER, ORDER_ID,
 				OrderStatus.IN_PROGRESS.name(), OrderStatus.DELIVERED.name(), ESCORT_ID, null);
+		verify(notificationService).createRouteLegCompleted(order.getCustomerId(), ORDER_ID, FIRST_LEG_ID);
+		verify(notificationService, never()).createOrderDelivered(any(), any());
 		verify(eventPublisher).publishEvent(new OrderDeliveredEvent(ORDER_ID,
 				order.getCustomerId(), FIRST_LEG_ID, order.getDeliveredAt()));
 	}
@@ -209,6 +236,25 @@ class RouteLegExecutionCoordinatorTest {
 	}
 
 	@Test
+	void notificationFailurePropagatesBeforeFinalDeliveryEventSoTheTransactionCanRollBack() {
+		firstLeg.start();
+		ReflectionTestUtils.setField(order, "status", OrderStatus.IN_PROGRESS);
+		prepare(FIRST_LEG_ID, List.of(firstLeg));
+		when(currentUserProvider.getCurrentUserId()).thenReturn(ESCORT_ID);
+		when(userRepository.findByIdForUpdate(ESCORT_ID)).thenReturn(Optional.of(escort()));
+		when(airExecutionRepository.findByRouteLegId(FIRST_LEG_ID))
+				.thenReturn(Optional.of(new AirLegExecution(FIRST_LEG_ID, ESCORT_ID)));
+		doThrow(new IllegalStateException("notification failed")).when(notificationService)
+				.createRouteLegCompleted(order.getCustomerId(), ORDER_ID, FIRST_LEG_ID);
+
+		assertThatThrownBy(() -> coordinator.completeFinalLegWhenReady(FIRST_LEG_ID, () -> true))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessage("notification failed");
+
+		verify(eventPublisher, never()).publishEvent(any());
+	}
+
+	@Test
 	void duplicateStartCannotCreateASecondTransition() {
 		firstLeg.start();
 		prepare(FIRST_LEG_ID, List.of(firstLeg, secondLeg));
@@ -217,6 +263,7 @@ class RouteLegExecutionCoordinatorTest {
 				.isInstanceOf(RoutePlanValidationException.class)
 				.hasMessageContaining("READY");
 		verifyNoInteractions(auditRecorder);
+		verifyNoInteractions(notificationService);
 	}
 
 	@Test
@@ -240,6 +287,7 @@ class RouteLegExecutionCoordinatorTest {
 		assertThat(roadLeg.getStatus()).isEqualTo(RouteLegStatus.IN_PROGRESS);
 		assertThat(order.getStatus()).isEqualTo(OrderStatus.IN_PROGRESS);
 		verifyNoInteractions(auditRecorder);
+		verifyNoInteractions(notificationService);
 	}
 
 	private void prepare(UUID requestedLegId, List<RouteLeg> legs) {

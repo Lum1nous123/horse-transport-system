@@ -14,6 +14,8 @@ public interface RoadLegVehicleRepository extends JpaRepository<RoadLegVehicle, 
 
 	List<RoadLegVehicle> findAllByRouteLegId(UUID routeLegId);
 
+	List<RoadLegVehicle> findAllByRouteLegIdIn(Collection<UUID> routeLegIds);
+
 	@Modifying
 	void deleteAllByRouteLegId(UUID routeLegId);
 

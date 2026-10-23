@@ -18,6 +18,9 @@ import java.util.UUID;
 
 import com.horsetransport.document.DocumentFileValidationException;
 import com.horsetransport.document.DocumentStorage;
+import com.horsetransport.notification.NotificationService;
+import com.horsetransport.order.TransportOrder;
+import com.horsetransport.order.TransportOrderRepository;
 import com.horsetransport.security.CurrentUserProvider;
 import com.horsetransport.user.UserAccount;
 import com.horsetransport.user.UserRepository;
@@ -39,16 +42,20 @@ class AirJourneyServiceTest {
 	private static final UUID ORDER_ID = UUID.randomUUID();
 	private static final UUID LEG_ID = UUID.randomUUID();
 	private static final UUID EXECUTION_ID = UUID.randomUUID();
+	private static final UUID EVIDENCE_ID = UUID.randomUUID();
 	private static final UUID ESCORT_ID = UUID.randomUUID();
+	private static final UUID CUSTOMER_ID = UUID.randomUUID();
 	private static final LocalDateTime NOW = LocalDateTime.of(2026, 10, 21, 9, 30);
 
 	@Mock private AirLegExecutionRepository executionRepository;
 	@Mock private RouteLegRepository routeLegRepository;
 	@Mock private RoutePlanRepository routePlanRepository;
 	@Mock private WelfareEvidenceRepository welfareRepository;
+	@Mock private TransportOrderRepository orderRepository;
 	@Mock private UserRepository userRepository;
 	@Mock private CurrentUserProvider currentUserProvider;
 	@Mock private RouteLegExecutionCoordinator coordinator;
+	@Mock private NotificationService notificationService;
 	@Mock private DocumentStorage storage;
 
 	private AirJourneyService service;
@@ -59,7 +66,8 @@ class AirJourneyServiceTest {
 	@BeforeEach
 	void setUp() {
 		service = new AirJourneyService(executionRepository, routeLegRepository, routePlanRepository,
-				welfareRepository, userRepository, currentUserProvider, coordinator, storage,
+				welfareRepository, orderRepository, userRepository, currentUserProvider, coordinator,
+				notificationService, storage,
 				Clock.fixed(Instant.parse("2026-10-21T09:30:00Z"), ZoneOffset.UTC));
 		plan = new RoutePlan(ORDER_ID, UUID.randomUUID());
 		ReflectionTestUtils.setField(plan, "id", PLAN_ID);
@@ -73,6 +81,10 @@ class AirJourneyServiceTest {
 		when(executionRepository.findByRouteLegIdForUpdate(LEG_ID)).thenReturn(Optional.of(execution));
 		when(routeLegRepository.findById(LEG_ID)).thenReturn(Optional.of(leg));
 		when(routePlanRepository.findById(PLAN_ID)).thenReturn(Optional.of(plan));
+		TransportOrder order = org.mockito.Mockito.mock(TransportOrder.class);
+		when(order.getId()).thenReturn(ORDER_ID);
+		when(order.getCustomerId()).thenReturn(CUSTOMER_ID);
+		when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
 	}
 
 	@Test
@@ -147,6 +159,7 @@ class AirJourneyServiceTest {
 		assertThat(response.status()).isEqualTo(ExecutionStatus.DESTINATION);
 		assertThat(response.destinationArrivedAt()).isEqualTo(NOW);
 		verify(executionRepository).saveAndFlush(execution);
+		verify(notificationService).createAirFinalDestinationReached(CUSTOMER_ID, ORDER_ID, EXECUTION_ID);
 	}
 
 	@Test
@@ -162,6 +175,7 @@ class AirJourneyServiceTest {
 		assertThat(response.status()).isEqualTo(ExecutionStatus.DESTINATION);
 		assertThat(response.destinationArrivedAt()).isEqualTo(NOW.minusMinutes(5));
 		verify(executionRepository, never()).saveAndFlush(execution);
+		verify(notificationService, never()).createAirFinalDestinationReached(any(), any(), any());
 	}
 
 	@Test
@@ -188,7 +202,7 @@ class AirJourneyServiceTest {
 		when(storage.upload(any(byte[].class), any(String.class), any(String.class), anyBoolean()))
 				.thenReturn("https://storage.example/air-welfare.jpg");
 		when(welfareRepository.saveAndFlush(any(WelfareEvidence.class)))
-				.thenAnswer(invocation -> invocation.getArgument(0));
+				.thenAnswer(invocation -> persistedEvidence(invocation.getArgument(0)));
 		when(executionRepository.saveAndFlush(execution)).thenReturn(execution);
 		RouteLeg nextLeg = new RouteLeg(PLAN_ID, 2, RouteLegType.ROAD, "Destination", "Final",
 				NOW.plusHours(2), NOW.plusHours(5), null, null, null, "Truck", null);
@@ -203,6 +217,7 @@ class AirJourneyServiceTest {
 		assertThat(response.note()).isEqualTo("Horse is well");
 		assertThat(execution.getStatus()).isEqualTo(ExecutionStatus.COMPLETED);
 		assertThat(execution.getCompletedAt()).isEqualTo(NOW);
+		verify(notificationService).createWelfareUpdated(CUSTOMER_ID, ORDER_ID, EVIDENCE_ID);
 		verify(coordinator).completeNonFinalLeg(LEG_ID);
 	}
 
@@ -216,7 +231,7 @@ class AirJourneyServiceTest {
 		when(storage.upload(any(byte[].class), any(String.class), any(String.class), anyBoolean()))
 				.thenReturn("https://storage.example/air-welfare.jpg");
 		when(welfareRepository.saveAndFlush(any(WelfareEvidence.class)))
-				.thenAnswer(invocation -> invocation.getArgument(0));
+				.thenAnswer(invocation -> persistedEvidence(invocation.getArgument(0)));
 		when(routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(PLAN_ID))
 				.thenReturn(List.of(leg));
 
@@ -226,6 +241,7 @@ class AirJourneyServiceTest {
 		assertThat(response.eventType()).isEqualTo(WelfareEventType.FINAL_DESTINATION);
 		assertThat(execution.getStatus()).isEqualTo(ExecutionStatus.DESTINATION);
 		assertThat(leg.getStatus()).isEqualTo(RouteLegStatus.IN_PROGRESS);
+		verify(notificationService).createWelfareUpdated(CUSTOMER_ID, ORDER_ID, EVIDENCE_ID);
 		verify(executionRepository, never()).saveAndFlush(execution);
 		verify(coordinator, never()).completeNonFinalLeg(LEG_ID);
 	}
@@ -245,6 +261,7 @@ class AirJourneyServiceTest {
 				LEG_ID, validJpeg(), "Duplicate request");
 
 		assertThat(response.photoUrl()).isEqualTo("https://storage.example/existing.jpg");
+		verify(notificationService, never()).createWelfareUpdated(any(), any(), any());
 		verify(storage, never()).upload(any(byte[].class), any(String.class), any(String.class), anyBoolean());
 		verify(coordinator, never()).completeNonFinalLeg(LEG_ID);
 	}
@@ -314,6 +331,11 @@ class AirJourneyServiceTest {
 		leg.start();
 		execution.start(NOW.minusHours(6));
 		execution.arriveAtDestination(NOW.minusMinutes(10));
+	}
+
+	private WelfareEvidence persistedEvidence(WelfareEvidence evidence) {
+		ReflectionTestUtils.setField(evidence, "id", EVIDENCE_ID);
+		return evidence;
 	}
 
 	private MockMultipartFile validJpeg() {

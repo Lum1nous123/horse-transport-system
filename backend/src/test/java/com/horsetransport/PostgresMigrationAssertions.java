@@ -93,6 +93,17 @@ final class PostgresMigrationAssertions {
 				assertThat(definition).contains("CREATE UNIQUE INDEX", "WHERE"));
 	}
 
+	static void assertNotificationSchema(JdbcTemplate jdbcTemplate) {
+		List<String> uniqueConstraints = jdbcTemplate.queryForList("""
+				select pg_get_constraintdef(oid)
+				from pg_constraint
+				where conrelid = 'notifications'::regclass
+					and contype = 'u'
+				""", String.class);
+		assertThat(uniqueConstraints).anySatisfy(definition ->
+				assertThat(definition).contains("recipient_user_id", "source_event_key"));
+	}
+
 	static void assertFrcEligibleColumnIsAbsent(JdbcTemplate jdbcTemplate) {
 		Integer frcEligibleColumns = jdbcTemplate.queryForObject("""
 				select count(*)

@@ -8,6 +8,7 @@ import java.util.UUID;
 import com.horsetransport.audit.AuditEntityType;
 import com.horsetransport.audit.StatusAuditLog;
 import com.horsetransport.audit.StatusAuditLogRepository;
+import com.horsetransport.notification.NotificationService;
 import com.horsetransport.order.OrderNotFoundException;
 import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
@@ -38,13 +39,15 @@ public class DepositPaymentTransactionService {
 	private final CurrentUserProvider currentUserProvider;
 	private final DocumentPhaseStarter documentPhaseStarter;
 	private final DepositRefundRepository refundRepository;
+	private final NotificationService notificationService;
 
 	@Autowired
 	public DepositPaymentTransactionService(PaymentRepository paymentRepository,
 			PaymentAttemptRepository attemptRepository, PaymentProviderEventRepository eventRepository,
 			TransportOrderRepository orderRepository, QuotationRepository quotationRepository,
 			StatusAuditLogRepository auditLogRepository, CurrentUserProvider currentUserProvider,
-			DocumentPhaseStarter documentPhaseStarter, DepositRefundRepository refundRepository) {
+			DocumentPhaseStarter documentPhaseStarter, DepositRefundRepository refundRepository,
+			NotificationService notificationService) {
 		this.paymentRepository = paymentRepository;
 		this.attemptRepository = attemptRepository;
 		this.eventRepository = eventRepository;
@@ -54,15 +57,7 @@ public class DepositPaymentTransactionService {
 		this.currentUserProvider = currentUserProvider;
 		this.documentPhaseStarter = documentPhaseStarter;
 		this.refundRepository = refundRepository;
-	}
-
-	DepositPaymentTransactionService(PaymentRepository paymentRepository,
-			PaymentAttemptRepository attemptRepository, PaymentProviderEventRepository eventRepository,
-			TransportOrderRepository orderRepository, QuotationRepository quotationRepository,
-			StatusAuditLogRepository auditLogRepository, CurrentUserProvider currentUserProvider,
-			DocumentPhaseStarter documentPhaseStarter) {
-		this(paymentRepository, attemptRepository, eventRepository, orderRepository, quotationRepository,
-				auditLogRepository, currentUserProvider, documentPhaseStarter, null);
+		this.notificationService = notificationService;
 	}
 
 	@Transactional
@@ -142,7 +137,7 @@ public class DepositPaymentTransactionService {
 				.orElseThrow(DepositPaymentNotFoundException::new);
 		PaymentAttempt latest = attemptRepository.findFirstByPaymentIdOrderByAttemptNoDesc(payment.getId())
 				.orElse(null);
-		DepositRefund refund = refundRepository == null ? null : refundRepository.findByPaymentId(payment.getId()).orElse(null);
+		DepositRefund refund = refundRepository.findByPaymentId(payment.getId()).orElse(null);
 		return DepositPaymentResponse.from(payment, latest, refund);
 	}
 
@@ -235,6 +230,8 @@ public class DepositPaymentTransactionService {
 			auditLogRepository.saveAndFlush(StatusAuditLog.systemTransition(AuditEntityType.TRANSPORT_ORDER,
 					order.getId(), OrderStatus.QUOTATION_SENT.name(), OrderStatus.APPROVED.name()));
 			documentPhaseStarter.startForOrder(order.getId());
+			notificationService.createPaymentResult(order.getCustomerId(), order.getId(),
+					payment.getId(), payment.getPaymentType());
 		}
 		catch (RuntimeException exception) {
 			payment.restorePendingAfterApprovalFailure();

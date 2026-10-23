@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.horsetransport.notification.NotificationService;
 import com.horsetransport.order.OrderNotFoundException;
 import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
@@ -44,13 +45,14 @@ class RemainingBalancePaymentTransactionServiceTest {
 	@Mock private TransportOrderRepository orderRepository;
 	@Mock private QuotationRepository quotationRepository;
 	@Mock private CurrentUserProvider currentUserProvider;
+	@Mock private NotificationService notificationService;
 
 	private RemainingBalancePaymentTransactionService service;
 
 	@BeforeEach
 	void setUp() {
 		service = new RemainingBalancePaymentTransactionService(paymentRepository, attemptRepository, eventRepository,
-				orderRepository, quotationRepository, currentUserProvider);
+				orderRepository, quotationRepository, currentUserProvider, notificationService);
 		lenient().when(currentUserProvider.getCurrentUserId()).thenReturn(CUSTOMER_ID);
 	}
 
@@ -108,6 +110,8 @@ class RemainingBalancePaymentTransactionServiceTest {
 		assertThat(fixture.attempt().getProviderStatus()).isEqualTo(PaymentAttemptStatus.SUCCEEDED);
 		assertThat(fixture.order().getStatus()).isEqualTo(OrderStatus.APPROVED);
 		verify(orderRepository, never()).save(any());
+		verify(notificationService).createPaymentResult(CUSTOMER_ID, ORDER_ID,
+				fixture.payment().getId(), PaymentType.REMAINING_BALANCE);
 	}
 
 	@Test
@@ -123,6 +127,7 @@ class RemainingBalancePaymentTransactionServiceTest {
 		assertThat(fixture.attempt().getProviderStatus()).isEqualTo(PaymentAttemptStatus.OPEN);
 		verify(paymentRepository, never()).save(any());
 		verify(attemptRepository, never()).save(any());
+		verify(notificationService, never()).createPaymentResult(any(), any(), any(), any());
 	}
 
 	@Test

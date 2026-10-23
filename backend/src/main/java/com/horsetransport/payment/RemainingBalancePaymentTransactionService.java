@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.horsetransport.notification.NotificationService;
 import com.horsetransport.order.OrderNotFoundException;
 import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
@@ -32,17 +33,19 @@ public class RemainingBalancePaymentTransactionService {
 	private final TransportOrderRepository orderRepository;
 	private final QuotationRepository quotationRepository;
 	private final CurrentUserProvider currentUserProvider;
+	private final NotificationService notificationService;
 
 	public RemainingBalancePaymentTransactionService(PaymentRepository paymentRepository,
 			PaymentAttemptRepository attemptRepository, PaymentProviderEventRepository eventRepository,
 			TransportOrderRepository orderRepository, QuotationRepository quotationRepository,
-			CurrentUserProvider currentUserProvider) {
+			CurrentUserProvider currentUserProvider, NotificationService notificationService) {
 		this.paymentRepository = paymentRepository;
 		this.attemptRepository = attemptRepository;
 		this.eventRepository = eventRepository;
 		this.orderRepository = orderRepository;
 		this.quotationRepository = quotationRepository;
 		this.currentUserProvider = currentUserProvider;
+		this.notificationService = notificationService;
 	}
 
 	@Transactional
@@ -134,6 +137,8 @@ public class RemainingBalancePaymentTransactionService {
 		paymentRepository.save(payment);
 		attemptRepository.save(attempt);
 		eventRepository.saveAndFlush(event);
+		notificationService.createPaymentResult(order.getCustomerId(), order.getId(),
+				payment.getId(), payment.getPaymentType());
 
 		return new WebhookProcessingResult(true, false, false);
 	}

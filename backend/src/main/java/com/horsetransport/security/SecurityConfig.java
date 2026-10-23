@@ -74,6 +74,8 @@ public class SecurityConfig {
 						.requestMatchers("/api/v1/documents/**").hasRole("CUSTOMER")
 						.requestMatchers(HttpMethod.GET, "/api/v1/orders/{orderId}")
 								.hasAnyRole("CUSTOMER", "LOGISTICS_MANAGER")
+						.requestMatchers(HttpMethod.GET, "/api/v1/orders/{orderId}/tracking")
+								.hasAnyRole("CUSTOMER", "LOGISTICS_MANAGER")
 						.requestMatchers("/api/v1/orders/**").hasRole("CUSTOMER")
 						.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/v1/frc/planning-queue")

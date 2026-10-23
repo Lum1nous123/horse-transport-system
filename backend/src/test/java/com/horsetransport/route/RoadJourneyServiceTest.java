@@ -19,6 +19,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 
 import com.horsetransport.document.DocumentStorage;
+import com.horsetransport.notification.NotificationService;
+import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderRepository;
 import com.horsetransport.security.CurrentUserProvider;
 import com.horsetransport.user.UserAccount;
@@ -45,6 +47,7 @@ class RoadJourneyServiceTest {
 	private static final UUID CHECKPOINT_ID = UUID.randomUUID();
 	private static final UUID DRIVER_ID = UUID.randomUUID();
 	private static final UUID ESCORT_ID = UUID.randomUUID();
+	private static final UUID CUSTOMER_ID = UUID.randomUUID();
 	private static final LocalDateTime NOW = LocalDateTime.of(2026, 10, 20, 3, 0);
 
 	@Mock private RoadLegVehicleRepository roadVehicleRepository;
@@ -54,9 +57,11 @@ class RoadJourneyServiceTest {
 	@Mock private CheckpointRepository checkpointRepository;
 	@Mock private VehicleCheckpointArrivalRepository arrivalRepository;
 	@Mock private WelfareEvidenceRepository welfareRepository;
+	@Mock private TransportOrderRepository orderRepository;
 	@Mock private UserRepository userRepository;
 	@Mock private CurrentUserProvider currentUserProvider;
 	@Mock private RouteLegExecutionCoordinator coordinator;
+	@Mock private NotificationService notificationService;
 	@Mock private DocumentStorage storage;
 
 	private RoadJourneyService service;
@@ -70,7 +75,7 @@ class RoadJourneyServiceTest {
 	void setUp() {
 		service = new RoadJourneyService(roadVehicleRepository, executionRepository, routeLegRepository,
 				routePlanRepository, checkpointRepository, arrivalRepository, welfareRepository,
-				userRepository, currentUserProvider, coordinator, storage,
+				orderRepository, userRepository, currentUserProvider, coordinator, notificationService, storage,
 				Clock.fixed(Instant.parse("2026-10-20T03:00:00Z"), ZoneOffset.UTC));
 		plan = new RoutePlan(ORDER_ID, UUID.randomUUID());
 		ReflectionTestUtils.setField(plan, "id", PLAN_ID);
@@ -92,6 +97,10 @@ class RoadJourneyServiceTest {
 				.thenReturn(Optional.of(execution));
 		when(routeLegRepository.findById(LEG_ID)).thenReturn(Optional.of(leg));
 		when(routePlanRepository.findById(PLAN_ID)).thenReturn(Optional.of(plan));
+		TransportOrder order = org.mockito.Mockito.mock(TransportOrder.class);
+		when(order.getId()).thenReturn(ORDER_ID);
+		when(order.getCustomerId()).thenReturn(CUSTOMER_ID);
+		when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
 	}
 
 	@Test
@@ -128,6 +137,7 @@ class RoadJourneyServiceTest {
 		assertThat(response.checkpointId()).isEqualTo(CHECKPOINT_ID);
 		assertThat(response.recordedByDriverId()).isEqualTo(DRIVER_ID);
 		assertThat(response.arrivedAt()).isEqualTo(NOW);
+		verify(notificationService).createCheckpointReached(CUSTOMER_ID, ORDER_ID, response.id());
 
 		UUID secondVehicleId = UUID.randomUUID();
 		UUID secondExecutionId = UUID.randomUUID();
@@ -150,6 +160,22 @@ class RoadJourneyServiceTest {
 		CheckpointArrivalResponse secondArrival = service.arriveAtCheckpoint(secondVehicleId, CHECKPOINT_ID);
 		assertThat(secondArrival.executionId()).isEqualTo(secondExecutionId);
 		assertThat(secondArrival.checkpointId()).isEqualTo(response.checkpointId());
+		verify(notificationService).createCheckpointReached(CUSTOMER_ID, ORDER_ID, secondArrival.id());
+	}
+
+	@Test
+	void checkpointRetryReturnsPersistedArrivalWithoutCreatingAnotherNotification() {
+		actAs(DRIVER_ID, UserRole.DRIVER);
+		VehicleCheckpointArrival existing = new VehicleCheckpointArrival(
+				EXECUTION_ID, CHECKPOINT_ID, DRIVER_ID, NOW.minusMinutes(1));
+		when(arrivalRepository.findByRoadVehicleExecutionIdAndCheckpointId(EXECUTION_ID, CHECKPOINT_ID))
+				.thenReturn(Optional.of(existing));
+
+		CheckpointArrivalResponse response = service.arriveAtCheckpoint(VEHICLE_LINK_ID, CHECKPOINT_ID);
+
+		assertThat(response.id()).isEqualTo(existing.getId());
+		verify(notificationService, never()).createCheckpointReached(any(), any(), any());
+		verify(arrivalRepository, never()).saveAndFlush(any());
 	}
 
 	@Test
@@ -204,6 +230,7 @@ class RoadJourneyServiceTest {
 		assertThat(response.destinationArrivedAt()).isEqualTo(NOW);
 		verify(arrivalRepository).findAllByRoadVehicleExecutionId(EXECUTION_ID);
 		verify(arrivalRepository, never()).saveAndFlush(any(VehicleCheckpointArrival.class));
+		verify(notificationService).createRoadFinalDestinationReached(CUSTOMER_ID, ORDER_ID, EXECUTION_ID);
 	}
 
 	@Test
@@ -264,7 +291,26 @@ class RoadJourneyServiceTest {
 		assertThat(response.recordedByEscortId()).isEqualTo(ESCORT_ID);
 		assertThat(execution.getStatus()).isEqualTo(ExecutionStatus.COMPLETED);
 		assertThat(ready).isTrue();
+		verify(notificationService).createWelfareUpdated(CUSTOMER_ID, ORDER_ID, response.id());
 		verify(coordinator).completeNonFinalLegWhenReady(any(), any());
+	}
+
+	@Test
+	void roadWelfareRetryReturnsPersistedEvidenceWithoutCreatingAnotherNotification() {
+		execution.arriveAtDestination(NOW.minusMinutes(2));
+		actAs(ESCORT_ID, UserRole.ESCORT);
+		WelfareEvidence existing = new WelfareEvidence(EXECUTION_ID, null,
+				WelfareEventType.FINAL_DESTINATION, "https://storage.example/existing.jpg",
+				"Already recorded", ESCORT_ID, NOW.minusMinutes(1));
+		when(welfareRepository.findByRoadVehicleExecutionIdAndEventType(
+				EXECUTION_ID, WelfareEventType.FINAL_DESTINATION)).thenReturn(Optional.of(existing));
+
+		WelfareEvidenceResponse response = service.recordFinalWelfare(VEHICLE_LINK_ID,
+				new MockMultipartFile("photo", new byte[0]), "Duplicate");
+
+		assertThat(response.id()).isEqualTo(existing.getId());
+		verify(notificationService, never()).createWelfareUpdated(any(), any(), any());
+		verify(storage, never()).upload(any(), any(), any(), anyBoolean());
 	}
 
 	private void actAs(UUID actorId, UserRole role) {

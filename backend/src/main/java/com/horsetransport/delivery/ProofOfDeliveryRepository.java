@@ -14,4 +14,6 @@ public interface ProofOfDeliveryRepository extends JpaRepository<ProofOfDelivery
 	Optional<ProofOfDelivery> findByAirLegExecutionId(UUID airLegExecutionId);
 
 	List<ProofOfDelivery> findAllByRoadVehicleExecutionIdIn(Collection<UUID> roadVehicleExecutionIds);
+
+	List<ProofOfDelivery> findAllByAirLegExecutionIdIn(Collection<UUID> airLegExecutionIds);
 }
