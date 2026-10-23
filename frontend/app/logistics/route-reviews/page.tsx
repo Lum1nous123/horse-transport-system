@@ -118,7 +118,7 @@ function ReviewSection({ title, description, orders, preview, empty, locked = fa
                 <td data-label="Mode"><span className="route-review-mode">{order.transportMode}</span></td>
                 <td data-label="FRC">{order.assignedFleetRouteCoordinatorName}</td>
                 <td data-label={locked ? "Reviewed" : "Submitted"}>{formatDateTime(locked && order.reviewedAt ? order.reviewedAt : order.submittedAt)}</td>
-                <td data-label="Action"><Link className="route-review-open" href={`/logistics/route-reviews/${order.orderId}${query}`}>{locked ? "View result" : "Review"}<span aria-hidden="true">→</span></Link></td>
+                <td data-label="Action"><Link className="route-review-open" href={`/logistics/route-reviews/${order.orderId}${query}`}>{locked ? "View result" : "Review"}<span aria-hidden="true">→</span></Link>{locked && <Link className="route-review-open" href={`/logistics/orders/${order.orderId}/tracking${query}`}>Track journey <span aria-hidden="true">→</span></Link>}</td>
               </tr>;
             })}</tbody>
           </table>
