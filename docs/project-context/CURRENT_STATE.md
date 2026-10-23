@@ -159,6 +159,35 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### S3-017-FE-01 Escort AIR execution — local mock-first implementation (2026-10-22)
+
+- Local branch `feature/s3-017-fe-01-air-welfare` in the FE15 worktree adds a
+  shared ROAD/AIR Escort queue and `/escort/air-executions/[executionId]`.
+- The AIR detail follows service-provided capabilities through Start,
+  destination arrival, required welfare photo/note, non-final completion, and
+  final-leg `Awaiting PoD`. Mutations are single-flight and read persisted state
+  back through the service boundary.
+- Review hardening locks all mutations when a successful write or stale-state
+  response cannot be reconciled by read-back; retries only reload state and
+  never replay the write. Preview-only ROAD/AIR execution and RouteLeg
+  progression now persist through one authoritative snapshot per logical
+  mutation, covering AIR-to-AIR, AIR-to-ROAD, and ROAD-to-AIR sequencing
+  without multi-key rollback.
+- AIR preview data is development-only (`preview=1`) and uses sessionStorage.
+  Backend AIR implementation and contract have been merged via PR #123, and
+  Backend Issue #113 is closed. This frontend PR remains mock-first;
+  integration with the merged Backend contract is pending. Production remains
+  fail-closed until that integration is implemented and verified.
+- Development mocks are lazy-loaded behind the preview adapter. Production
+  client/static artifacts and executable server JavaScript contain no preview
+  storage keys or fixture signatures. Server source maps may retain dynamic
+  import module names and are not evidence of a production mock execution path.
+- Repeated frontend tests, lint, and production build pass locally at the latest
+  verification checkpoint. This establishes mock-first review readiness only.
+  The AIR mock-first implementation is committed as `a8dd6474`, and PR #125 is
+  open against `main`. Frontend integration with the merged Backend contract
+  remains pending, and Issue #117 remains OPEN.
+
 ### FE-14 Driver execution — local work, not merged (2026-10-20)
 
 - User-approved design: assigned ROAD workspace before Start, then a separate

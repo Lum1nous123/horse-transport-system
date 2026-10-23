@@ -70,6 +70,49 @@ export type AssignedRoadWorkQueue = {
   executions: AssignedRoadExecutionSummary[];
 };
 
+export type AirExecutionAvailableActions = {
+  start: boolean;
+  arriveAtDestination: boolean;
+  recordWelfare: boolean;
+  complete: boolean;
+};
+
+export type AssignedAirExecutionSummary = {
+  executionId: string;
+  orderId: string;
+  orderCode: string;
+  routeLegId: string;
+  routeLegSequenceNo: number;
+  routeLegStatus: RouteLegStatus;
+  isFinalLeg: boolean;
+  origin: string;
+  destination: string;
+  plannedDepartureAt: string;
+  plannedArrivalAt: string;
+  status: ExecutionStatus;
+  welfareRecorded: boolean;
+  availableActions: AirExecutionAvailableActions;
+};
+
+export type AssignedAirExecutionDetail = AssignedAirExecutionSummary & {
+  assignedEscortId: string;
+  assignedEscortName: string;
+  startedAt: string | null;
+  destinationArrivedAt: string | null;
+  completedAt: string | null;
+  welfareEvidence: WelfareEvidence | null;
+  lastUpdatedAt: string;
+};
+
+export type AssignedAirWorkQueue = {
+  executions: AssignedAirExecutionSummary[];
+};
+
+export type RecordAirWelfareInput = {
+  photo: File;
+  note: string;
+};
+
 export type RecordRoadWelfareInput =
   | {
       eventType: "CHECKPOINT";
@@ -84,11 +127,22 @@ export type RecordRoadWelfareInput =
       note: string;
     };
 
-export type EscortExecutionService = {
+export type RoadEscortExecutionService = {
   listAssignedRoadWork(): Promise<AssignedRoadWorkQueue>;
   getAssignedRoadExecution(executionId: string): Promise<AssignedRoadExecutionDetail>;
   recordRoadWelfare(executionId: string, input: RecordRoadWelfareInput): Promise<void>;
 };
+
+export type AirEscortExecutionService = {
+  listAssignedAirWork(): Promise<AssignedAirWorkQueue>;
+  getAssignedAirExecution(executionId: string): Promise<AssignedAirExecutionDetail>;
+  startAirExecution(executionId: string): Promise<void>;
+  recordAirDestinationArrival(executionId: string): Promise<void>;
+  recordAirWelfare(executionId: string, input: RecordAirWelfareInput): Promise<void>;
+  completeAirExecution(executionId: string): Promise<void>;
+};
+
+export type EscortExecutionService = RoadEscortExecutionService & AirEscortExecutionService;
 
 export type EscortExecutionErrorCode =
   | "FORBIDDEN"

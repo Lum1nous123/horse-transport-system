@@ -1,18 +1,22 @@
 import { getPreviewEscortIdentity } from "./use-escort-access";
 import {
+  commitPreviewMutation,
+  completePreviewRouteLeg,
+  getPreviewRouteLegStatus,
+  readPreviewSlice,
+} from "./mock-preview-progression";
+import {
   EscortExecutionError,
   type AssignedHorse,
   type AssignedRoadExecutionDetail,
   type AssignedRoadExecutionSummary,
-  type EscortExecutionService,
+  type RoadEscortExecutionService,
   type ExecutionStatus,
   type RecordRoadWelfareInput,
   type RoadCheckpointType,
   type RouteLegStatus,
   type WelfareEvidence,
 } from "./types";
-
-const STORAGE_KEY = "horse-transport-escort-road-preview-v1";
 
 type MockCheckpointDefinition = {
   id: string;
@@ -83,6 +87,26 @@ const initialState: MockState = {
       plannedDepartureAt: "2026-10-30T08:00:00+01:00",
       checkpoints: [],
     },
+    {
+      id: "road-leg-3007-2",
+      sequenceNo: 2,
+      status: "PLANNED",
+      isFinalLeg: false,
+      origin: "London Heathrow Animal Reception Centre",
+      destination: "Newmarket Equine Centre",
+      plannedDepartureAt: "2026-11-03T12:00:00Z",
+      checkpoints: [],
+    },
+    {
+      id: "road-leg-3008-1",
+      sequenceNo: 1,
+      status: "IN_PROGRESS",
+      isFinalLeg: false,
+      origin: "Lexington, United States",
+      destination: "Chicago O'Hare Cargo Terminal",
+      plannedDepartureAt: "2026-11-05T08:00:00-05:00",
+      checkpoints: [],
+    },
   ],
   executions: [
     {
@@ -150,6 +174,60 @@ const initialState: MockState = {
       finalWelfareEvidence: null,
       lastUpdatedAt: "2026-10-28T17:06:00-05:00",
     },
+    {
+      id: "road-execution-after-air",
+      orderId: "order-3007",
+      orderCode: "ORD-3007",
+      routeLegId: "road-leg-3007-2",
+      assignedEscortId: "escort-mia",
+      assignedEscortName: "Mia Laurent",
+      driverName: "Avery Thomas",
+      vehiclePlateNumber: "UK-307",
+      vehicleName: "Newmarket Connector",
+      horses: [{ id: "horse-3007", name: "Northern Light", microchipId: "985141000123007" }],
+      status: "NOT_STARTED",
+      checkpointArrivals: {},
+      checkpointWelfare: {},
+      destinationArrivedAt: null,
+      finalWelfareEvidence: null,
+      lastUpdatedAt: "2026-11-03T09:25:00Z",
+    },
+    {
+      id: "road-execution-to-air",
+      orderId: "order-3008",
+      orderCode: "ORD-3008",
+      routeLegId: "road-leg-3008-1",
+      assignedEscortId: "escort-mia",
+      assignedEscortName: "Mia Laurent",
+      driverName: "Jordan Miller",
+      vehiclePlateNumber: "US-308",
+      vehicleName: "Midwest Equine Transfer",
+      horses: [{ id: "horse-3008", name: "Blue Horizon", microchipId: "985141000123008" }],
+      status: "DESTINATION",
+      checkpointArrivals: {},
+      checkpointWelfare: {},
+      destinationArrivedAt: "2026-11-05T14:50:00-06:00",
+      finalWelfareEvidence: null,
+      lastUpdatedAt: "2026-11-05T14:50:00-06:00",
+    },
+    {
+      id: "road-execution-to-air-b",
+      orderId: "order-3008",
+      orderCode: "ORD-3008",
+      routeLegId: "road-leg-3008-1",
+      assignedEscortId: "escort-liam",
+      assignedEscortName: "Liam Foster",
+      driverName: "Taylor Anderson",
+      vehiclePlateNumber: "US-309",
+      vehicleName: "Midwest Equine Transfer 2",
+      horses: [{ id: "horse-3009", name: "Prairie Star", microchipId: "985141000123009" }],
+      status: "DESTINATION",
+      checkpointArrivals: {},
+      checkpointWelfare: {},
+      destinationArrivedAt: "2026-11-05T14:57:00-06:00",
+      finalWelfareEvidence: null,
+      lastUpdatedAt: "2026-11-05T14:57:00-06:00",
+    },
   ],
 };
 
@@ -171,24 +249,7 @@ function pause() {
 }
 
 function readState(): MockState {
-  const saved = window.sessionStorage.getItem(STORAGE_KEY);
-  if (!saved) return clone(initialState);
-  try {
-    return JSON.parse(saved) as MockState;
-  } catch {
-    throw new EscortExecutionError("We couldn't read the saved preview state. Refresh and try again.", "REQUEST_FAILED");
-  }
-}
-
-function writeState(state: MockState) {
-  try {
-    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    throw new EscortExecutionError(
-      "The preview state could not be saved in this browser session. Choose a smaller photo or clear the preview state and try again.",
-      "REQUEST_FAILED",
-    );
-  }
+  return readPreviewSlice("road", initialState);
 }
 
 function maybeThrowScenarioFailure() {
@@ -225,7 +286,7 @@ function summary(state: MockState, execution: MockRoadExecution): AssignedRoadEx
     orderCode: execution.orderCode,
     routeLegId: routeLeg.id,
     routeLegSequenceNo: routeLeg.sequenceNo,
-    routeLegStatus: routeLeg.status,
+    routeLegStatus: getPreviewRouteLegStatus(routeLeg.id, routeLeg.status),
     isFinalLeg: routeLeg.isFinalLeg,
     origin: routeLeg.origin,
     destination: routeLeg.destination,
@@ -284,7 +345,7 @@ function validateInput(input: RecordRoadWelfareInput) {
   }
 }
 
-export const mockEscortExecutionService: EscortExecutionService = {
+export const mockEscortExecutionService: RoadEscortExecutionService = {
   async listAssignedRoadWork() {
     await pause();
     maybeThrowScenarioFailure();
@@ -295,6 +356,7 @@ export const mockEscortExecutionService: EscortExecutionService = {
       executions: state.executions
         .filter((execution) => execution.assignedEscortId === escort.id && execution.status !== "COMPLETED")
         .map((execution) => summary(state, execution))
+        .filter((execution) => execution.routeLegStatus !== "PLANNED")
         .sort((left, right) => left.plannedDepartureAt.localeCompare(right.plannedDepartureAt)),
     };
   },
@@ -310,53 +372,61 @@ export const mockEscortExecutionService: EscortExecutionService = {
     await pause();
     maybeThrowScenarioFailure();
     validateInput(input);
-    const state = readState();
-    const execution = findAssignedExecution(state, executionId);
-    const routeLeg = findRouteLeg(state, execution.routeLegId);
     const now = new Date().toISOString();
     const photoUrl = await fileToDataUrl(input.photo);
+    commitPreviewMutation("road", initialState, (state, progression) => {
+      const execution = findAssignedExecution(state, executionId);
+      const routeLeg = findRouteLeg(state, execution.routeLegId);
 
-    if (input.eventType === "CHECKPOINT") {
-      const checkpoint = routeLeg.checkpoints.find((candidate) => candidate.id === input.checkpointId);
-      if (!checkpoint || !execution.checkpointArrivals[checkpoint.id]) {
-        throw new EscortExecutionError("Welfare can only be recorded for a checkpoint this Vehicle has reached.", "VALIDATION_ERROR");
+      if (input.eventType === "CHECKPOINT") {
+        const checkpoint = routeLeg.checkpoints.find((candidate) => candidate.id === input.checkpointId);
+        if (!checkpoint || !execution.checkpointArrivals[checkpoint.id]) {
+          throw new EscortExecutionError("Welfare can only be recorded for a checkpoint this Vehicle has reached.", "VALIDATION_ERROR");
+        }
+        if (execution.checkpointWelfare[checkpoint.id]) {
+          throw new EscortExecutionError("Welfare was already recorded for this Vehicle checkpoint. The saved state was refreshed.", "STALE_STATE");
+        }
+        execution.checkpointWelfare[checkpoint.id] = {
+          id: `welfare-${execution.id}-${checkpoint.id}`,
+          eventType: "CHECKPOINT",
+          checkpointId: checkpoint.id,
+          photoUrl,
+          photoName: input.photo.name,
+          note: input.note.trim(),
+          recordedAt: now,
+        };
+      } else {
+        if (!execution.destinationArrivedAt) {
+          throw new EscortExecutionError("Final welfare is available only after the Driver records destination arrival.", "VALIDATION_ERROR");
+        }
+        if (execution.finalWelfareEvidence) {
+          throw new EscortExecutionError("Final welfare was already recorded. The saved state was refreshed.", "STALE_STATE");
+        }
+        execution.finalWelfareEvidence = {
+          id: `welfare-${execution.id}-final`,
+          eventType: "FINAL_DESTINATION",
+          checkpointId: null,
+          photoUrl,
+          photoName: input.photo.name,
+          note: input.note.trim(),
+          recordedAt: now,
+        };
+        execution.status = "COMPLETED";
       }
-      if (execution.checkpointWelfare[checkpoint.id]) {
-        throw new EscortExecutionError("Welfare was already recorded for this Vehicle checkpoint. The saved state was refreshed.", "STALE_STATE");
-      }
-      execution.checkpointWelfare[checkpoint.id] = {
-        id: `welfare-${execution.id}-${checkpoint.id}`,
-        eventType: "CHECKPOINT",
-        checkpointId: checkpoint.id,
-        photoUrl,
-        photoName: input.photo.name,
-        note: input.note.trim(),
-        recordedAt: now,
-      };
-    } else {
-      if (!execution.destinationArrivedAt) {
-        throw new EscortExecutionError("Final welfare is available only after the Driver records destination arrival.", "VALIDATION_ERROR");
-      }
-      if (execution.finalWelfareEvidence) {
-        throw new EscortExecutionError("Final welfare was already recorded. The saved state was refreshed.", "STALE_STATE");
-      }
-      execution.finalWelfareEvidence = {
-        id: `welfare-${execution.id}-final`,
-        eventType: "FINAL_DESTINATION",
-        checkpointId: null,
-        photoUrl,
-        photoName: input.photo.name,
-        note: input.note.trim(),
-        recordedAt: now,
-      };
-      execution.status = "COMPLETED";
-    }
 
-    execution.lastUpdatedAt = now;
+      execution.lastUpdatedAt = now;
+      if (input.eventType === "FINAL_DESTINATION" && !routeLeg.isFinalLeg) {
+        const everyVehicleCompleted = state.executions
+          .filter((candidate) => candidate.routeLegId === routeLeg.id)
+          .every((candidate) => candidate.status === "COMPLETED");
+        if (everyVehicleCompleted) {
+          completePreviewRouteLeg(progression, routeLeg.id);
+          routeLeg.status = "COMPLETED";
+        }
+      }
+    });
     if (scenario() === "stale") {
-      writeState(state);
       throw new EscortExecutionError("The execution changed while you were saving. The persisted state was refreshed.", "STALE_STATE");
     }
-    writeState(state);
   },
 };

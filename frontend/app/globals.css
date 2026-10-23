@@ -7393,6 +7393,13 @@ button.ts-workflow-step-header:focus-visible {
 .escort-detail-heading p { color: var(--color-ink); font-size: 1rem; font-weight: 650; }
 .escort-detail-heading > div:last-child { display: flex; flex: 0 0 auto; gap: 10px; }
 .escort-page-heading > button { flex: 0 0 auto; }
+.escort-mode-section { margin-bottom: 24px; border: 1px solid var(--color-border); border-radius: 11px; padding: 24px; background: #fff; }
+.escort-mode-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; }
+.escort-mode-heading > div > span { color: var(--color-primary-hover); font-size: .7rem; font-weight: 800; letter-spacing: .08em; }
+.escort-mode-heading h2 { margin: 4px 0 0; color: var(--color-navy); font-size: 1.15rem; }
+.escort-mode-heading p { max-width: 70ch; margin: 5px 0 0; color: var(--color-body); font-size: .78rem; line-height: 1.55; }
+.escort-mode-heading > strong { flex: 0 0 auto; border-radius: 99px; padding: 6px 10px; background: #eaf3f9; color: var(--color-primary-hover); font-size: .72rem; }
+.escort-mode-section > .customer-alert,.escort-mode-section > .escort-empty-state,.escort-mode-section > .escort-queue-skeleton { margin-top: 18px; }
 .escort-queue-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin: 0 0 20px; }
 .escort-queue-summary > div { display: flex; align-items: center; justify-content: space-between; gap: 20px; border: 1px solid var(--color-border); border-radius: 10px; padding: 17px 19px; background: #fff; }
 .escort-queue-summary dt { color: var(--color-body); font-size: .8rem; font-weight: 650; }
@@ -7423,7 +7430,7 @@ button.ts-workflow-step-header:focus-visible {
 .escort-open-work { width: 100%; justify-content: center; margin-top: auto; text-decoration: none; }
 .escort-empty-state { display: flex; align-items: center; gap: 18px; border: 1px solid #cfe1d6; border-radius: 11px; padding: 28px; background: #f3fbf6; }
 .escort-empty-state > span { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 50%; background: #dff2e7; color: #16794b; font-weight: 750; }
-.escort-empty-state h2 { margin: 0; color: var(--color-navy); font-size: 1.05rem; }
+.escort-empty-state h2,.escort-empty-state h3 { margin: 0; color: var(--color-navy); font-size: 1.05rem; }
 .escort-empty-state p { margin: 5px 0 0; color: var(--color-body); font-size: .8rem; }
 .escort-queue-skeleton,.escort-detail-skeleton { display: grid; gap: 16px; }
 .escort-queue-skeleton span,.escort-detail-skeleton span { display: block; border-radius: 10px; background: #e4edf2; animation: escort-skeleton-pulse 1.4s ease-in-out infinite alternate; }
@@ -7484,11 +7491,31 @@ button.ts-workflow-step-header:focus-visible {
 .escort-no-checkpoints strong { color: var(--color-navy); font-size: .8rem; }
 .escort-no-checkpoints p { margin: 3px 0 0; }
 .escort-final-welfare.is-ready { border-color: #b7d7c5; }
+.escort-air-card { border-top: 3px solid #7aaecb; }
+.escort-air-progress,.escort-air-action { margin-bottom: 20px; border: 1px solid var(--color-border); border-radius: 11px; padding: 24px; background: #fff; }
+.escort-air-progress ol { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin: 22px 0 0; padding: 0; list-style: none; }
+.escort-air-progress li { display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 9px; align-items: start; border: 1px solid #dbe5eb; border-radius: 8px; padding: 13px; background: #fafcfd; }
+.escort-air-progress li > span { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; background: #e9eef1; color: var(--color-muted); font-size: .72rem; font-weight: 800; }
+.escort-air-progress li strong,.escort-air-progress li small { display: block; }
+.escort-air-progress li strong { color: var(--color-navy); font-size: .75rem; }
+.escort-air-progress li small { margin-top: 4px; color: var(--color-muted); font-size: .66rem; line-height: 1.4; }
+.escort-air-progress li.is-current { border-color: #dfbd70; background: #fffaf0; }
+.escort-air-progress li.is-current > span { background: #f8e8bd; color: #76520a; }
+.escort-air-progress li.is-complete { border-color: #b7d7c5; background: #f4fbf7; }
+.escort-air-progress li.is-complete > span { background: #dff2e7; color: #12653c; }
+.escort-air-action > .customer-primary-button { margin-top: 18px; }
+.escort-air-handover { margin-top: 18px; border-radius: 8px; padding: 16px; background: #fff7df; color: #76520a; }
+.escort-air-handover.is-complete { background: #eff9f3; color: #12653c; }
+.escort-air-handover strong { font-size: .84rem; }
+.escort-air-handover p { margin: 5px 0 0; font-size: .74rem; line-height: 1.5; }
+.escort-queue-skeleton.is-compact span:first-child { width: 45%; height: 44px; }
+.escort-queue-skeleton.is-compact span:nth-child(2) { height: 180px; }
 
 @media (max-width: 900px) {
   .escort-work-list,.escort-horses > div:last-child { grid-template-columns: minmax(0,1fr); }
   .escort-execution-facts { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .escort-welfare-fields { grid-template-columns: minmax(0,1fr); }
+  .escort-air-progress ol { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 
 @media (max-width: 680px) {
@@ -7500,13 +7527,14 @@ button.ts-workflow-step-header:focus-visible {
   .escort-page-heading > button,.escort-detail-heading > div:last-child,.escort-detail-heading > div:last-child > * { width: 100%; }
   .escort-detail-heading > div:last-child { flex-direction: column; }
   .escort-queue-summary,.escort-execution-facts { grid-template-columns: minmax(0,1fr); }
-  .escort-queue-panel,.escort-horses,.escort-checkpoint-section,.escort-final-welfare { padding: 18px 16px; }
-  .escort-panel-heading,.escort-section-heading,.escort-checkpoint-list > li > article > header,.escort-welfare-form-heading { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .escort-queue-panel,.escort-mode-section,.escort-horses,.escort-checkpoint-section,.escort-final-welfare,.escort-air-progress,.escort-air-action { padding: 18px 16px; }
+  .escort-panel-heading,.escort-mode-heading,.escort-section-heading,.escort-checkpoint-list > li > article > header,.escort-welfare-form-heading { align-items: flex-start; flex-direction: column; gap: 10px; }
   .escort-welfare-form-heading > span { align-self: flex-start; }
   .escort-welfare-readback { grid-template-columns: minmax(0,1fr); }
   .escort-welfare-readback img { width: 100%; height: 180px; }
   .escort-unavailable { margin: 24px auto; padding: 25px 18px; }
   .escort-unavailable > div { flex-direction: column; }
+  .escort-air-progress ol { grid-template-columns: minmax(0,1fr); }
 }
 
 @media (prefers-reduced-motion: reduce) {
