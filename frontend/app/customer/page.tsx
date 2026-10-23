@@ -72,9 +72,19 @@ const emptyOrder: OrderFields = {
 const previewHorses: Horse[] = [
   { id: "preview-horse-1", name: "Willow Creek", microchipId: "PREVIEW-2048", breed: "Thoroughbred", sex: "MARE" },
   { id: "preview-horse-2", name: "Copper Ridge", microchipId: "PREVIEW-7316", breed: "Warmblood", sex: "GELDING" },
+  { id: "preview-horse-3", name: "Commander", microchipId: "PREVIEW-7317" },
+  { id: "preview-horse-4", name: "Dakota", microchipId: "PREVIEW-7318" },
+  { id: "preview-horse-5", name: "Apollo", microchipId: "PREVIEW-7319" },
+  { id: "preview-horse-6", name: "Bella", microchipId: "PREVIEW-7320" },
 ];
 
 const previewOrders: Order[] = [
+  {
+    id: "order-2068", orderCode: "ORD-2068", originAddress: "Lexington, United States",
+    destinationAddress: "Brussels, Belgium", requestedDepartureAt: "2026-10-22T08:15:00+07:00",
+    transportMode: "COMBINED", recipientName: "Taylor Morgan", recipientPhone: "+32 2 555 2068",
+    recipientEmail: null, horseIds: ["preview-horse-5", "preview-horse-6", "preview-horse-3", "preview-horse-4"], status: "IN_PROGRESS",
+  },
   {
     id: "preview-balance-order", orderCode: "ORD-2061", originAddress: "Saumur, France",
     destinationAddress: "Amsterdam, Netherlands", requestedDepartureAt: "2026-10-22T08:30:00+07:00",
@@ -457,6 +467,7 @@ export default function CustomerPage() {
                   {!preview && remainingBalances[order.id]?.checkoutEligible && <Link className="customer-primary-button compact" href={`/customer/orders/${order.id}/remaining-balance`}>Pay remaining balance</Link>}
                   {!preview && remainingBalances[order.id]?.paymentStatus === "PAID" && <Link className="customer-secondary-button compact" href={`/customer/orders/${order.id}/remaining-balance`}>View payment</Link>}
                   {!preview && ["READY_TO_SHIP", "IN_PROGRESS", "DELIVERED"].includes(order.status) && <Link className="customer-secondary-button compact" href={`/customer/orders/${order.id}/remaining-balance`}>View payment</Link>}
+                  {["READY_TO_SHIP", "IN_PROGRESS", "DELIVERED"].includes(order.status) && (!preview || order.id === "order-2068") && <Link className="customer-secondary-button compact" href={`/customer/orders/${order.id}/tracking${preview ? "?preview=1" : ""}`}>Track journey</Link>}
                   {preview && order.status === "CANCELLED" && <Link className="customer-secondary-button compact" href={`/customer/orders/${order.id}?preview=1`}>View cancellation &amp; refund</Link>}
                   {order.status === "DRAFT" && <button className="customer-secondary-button compact" type="button" onClick={() => startEdit(order)}>Edit draft</button>}
                   {order.status === "QUOTATION_SENT" && <button className="customer-secondary-button compact" type="button" onClick={() => void openQuotation(order)}>View bill</button>}
