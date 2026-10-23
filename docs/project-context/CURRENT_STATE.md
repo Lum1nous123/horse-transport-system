@@ -183,9 +183,10 @@ These follow-ups do not change approved requirements and must not be used to inf
   storage keys or fixture signatures. Server source maps may retain dynamic
   import module names and are not evidence of a production mock execution path.
 - Repeated frontend tests, lint, and production build pass locally at the latest
-  verification checkpoint. This establishes mock-first review readiness only;
-  the implementation remains uncommitted, is not integrated with real backend
-  APIs, and Issue #117 is not Done.
+  verification checkpoint. This establishes mock-first review readiness only.
+  The AIR mock-first implementation is committed as `a8dd6474`, and PR #125 is
+  open against `main`. Frontend integration with the merged Backend contract
+  remains pending, and Issue #117 remains OPEN.
 
 ### FE-14 Driver execution — local work, not merged (2026-10-20)
 
