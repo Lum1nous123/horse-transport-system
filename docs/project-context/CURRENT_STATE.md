@@ -159,6 +159,42 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### S3-018-FE-01 Proof of Delivery — local mock-first implementation (2026-10-24)
+
+- Local branch `feature/s3-018-fe-01-pod-ui` in the isolated FE16 worktree
+  extends the shared Escort workspace with final ROAD Vehicle and final AIR
+  RouteLeg Proof of Delivery forms and persisted read-back.
+- ROAD handover remains per Vehicle and exposes the assigned Vehicle's Horses;
+  the final Vehicle proof is required before the preview service confirms the
+  final RouteLeg and Order as delivered. AIR uses one proof for the final
+  RouteLeg. Recipient name and JPEG/PNG proof photo are required, while the
+  handover note is optional and welfare evidence remains separate.
+- Preview progression, ROAD/AIR state, proofs, and Order status use the existing
+  unified session snapshot with one write per logical mutation. The UI uses
+  single-flight mutations and locks on stale or unconfirmed read-back until a
+  read-only reconciliation succeeds.
+- Final review hardening validates persisted execution membership against the
+  immutable preview assignment roster, so removing a required ROAD Vehicle or
+  AIR execution/PoD cannot leave a snapshot falsely delivered. The near-10-MiB
+  image boundary is covered by a real Chromium decode/resize/persist test using
+  a deterministic valid PNG rather than a mocked decoder.
+- The exact six-execution ROAD snapshot shape from base `ddd7bcb` has a narrow
+  deterministic migration: it adds the new required Vehicle only in a
+  non-delivered state. Current snapshots with missing executions or PoDs remain
+  invalid and are never repaired implicitly.
+- Independent-review fixes now validate proof photos from decoded JPEG/PNG
+  bytes, persist only bounded JPEG preview derivatives (not original uploads),
+  and reject malformed or internally inconsistent unified snapshots with a
+  typed service error. Adversarial coverage includes duplicate submissions,
+  concurrent final ROAD Vehicle handovers, ROAD/AIR overlap, navigation during
+  an in-flight mutation, reload persistence, and near-limit image inputs.
+- The mock adapter remains limited to explicit development preview mode;
+  production stays fail-closed pending real Backend integration. Tests, lint,
+  TypeScript, production build, repeated concurrency tests, diff check, and
+  production bundle inspection pass locally. Dependency audit findings remain
+  deferred under the approved no-upgrade scope. This work is uncommitted and
+  ready for independent re-review; Issue #118 remains open.
+
 ### S3-017-FE-01 Escort AIR execution — local mock-first implementation (2026-10-22)
 
 - Local branch `feature/s3-017-fe-01-air-welfare` in the FE15 worktree adds a
@@ -182,11 +218,10 @@ These follow-ups do not change approved requirements and must not be used to inf
   client/static artifacts and executable server JavaScript contain no preview
   storage keys or fixture signatures. Server source maps may retain dynamic
   import module names and are not evidence of a production mock execution path.
-- Repeated frontend tests, lint, and production build pass locally at the latest
-  verification checkpoint. This establishes mock-first review readiness only.
-  The AIR mock-first implementation is committed as `a8dd6474`, and PR #125 is
-  open against `main`. Frontend integration with the merged Backend contract
-  remains pending, and Issue #117 remains OPEN.
+- Repeated frontend tests, lint, and production build passed at the final review
+  checkpoint. The AIR mock-first implementation was squash-merged through PR
+  #125. Frontend integration with the merged Backend contract remains pending,
+  and Issue #117 remains OPEN.
 
 ### FE-14 Driver execution — local work, not merged (2026-10-20)
 

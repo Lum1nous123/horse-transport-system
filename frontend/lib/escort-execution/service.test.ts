@@ -8,7 +8,7 @@ describe("getEscortExecutionService", () => {
     window.sessionStorage.clear();
   });
 
-  it("fails closed outside development preview while backend contracts are unavailable", async () => {
+  it("fails closed outside development preview while real API integration is disabled", async () => {
     await expect(getEscortExecutionService(false).listAssignedRoadWork()).rejects.toMatchObject({
       name: EscortExecutionError.name,
       code: "CONTRACT_UNAVAILABLE",
@@ -23,6 +23,14 @@ describe("getEscortExecutionService", () => {
     await expect(getEscortExecutionService(true).startAirExecution("air-execution-ready")).rejects.toMatchObject({
       code: "CONTRACT_UNAVAILABLE",
     });
+    await expect(getEscortExecutionService(true).recordRoadProofOfDelivery("road-vehicle", {
+      recipientName: "Recipient",
+      photo: new File(["photo"], "proof.png", { type: "image/png" }),
+    })).rejects.toMatchObject({ code: "CONTRACT_UNAVAILABLE" });
+    await expect(getEscortExecutionService(true).recordAirProofOfDelivery("air-leg", {
+      recipientName: "Recipient",
+      photo: new File(["photo"], "proof.png", { type: "image/png" }),
+    })).rejects.toMatchObject({ code: "CONTRACT_UNAVAILABLE" });
   });
 
   it("loads the isolated mock adapter only for explicit development preview", async () => {

@@ -27,6 +27,9 @@ const lazyDevelopmentMockService: EscortExecutionService = {
   async recordRoadWelfare(executionId, input) {
     return (await loadDevelopmentMockService()).recordRoadWelfare(executionId, input);
   },
+  async recordRoadProofOfDelivery(roadLegVehicleId, input) {
+    return (await loadDevelopmentMockService()).recordRoadProofOfDelivery(roadLegVehicleId, input);
+  },
   async listAssignedAirWork() {
     return (await loadDevelopmentMockService()).listAssignedAirWork();
   },
@@ -44,6 +47,9 @@ const lazyDevelopmentMockService: EscortExecutionService = {
   },
   async completeAirExecution(executionId) {
     return (await loadDevelopmentMockService()).completeAirExecution(executionId);
+  },
+  async recordAirProofOfDelivery(routeLegId, input) {
+    return (await loadDevelopmentMockService()).recordAirProofOfDelivery(routeLegId, input);
   },
 };
 

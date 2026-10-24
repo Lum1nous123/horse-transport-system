@@ -1,7 +1,10 @@
 import { getPreviewEscortIdentity } from "./use-escort-access";
+import { preparePreviewImage } from "./preview-image";
 import {
   commitPreviewMutation,
+  completeFinalPreviewRouteLeg,
   completePreviewRouteLeg,
+  getPreviewOrderStatus,
   getPreviewRouteLegStatus,
   readPreviewSlice,
   startPreviewRouteLeg,
@@ -13,6 +16,9 @@ import {
   type AssignedAirExecutionDetail,
   type AssignedAirExecutionSummary,
   type ExecutionStatus,
+  type HandoverProgress,
+  type ProofOfDelivery,
+  type ProofOfDeliveryInput,
   type RecordAirWelfareInput,
   type RouteLegStatus,
   type WelfareEvidence,
@@ -41,6 +47,7 @@ type MockAirExecution = {
   destinationArrivedAt: string | null;
   completedAt: string | null;
   welfareEvidence: WelfareEvidence | null;
+  proofOfDelivery?: ProofOfDelivery | null;
   lastUpdatedAt: string;
 };
 
@@ -48,6 +55,10 @@ type MockAirState = {
   routeLegs: MockAirRouteLeg[];
   executions: MockAirExecution[];
 };
+
+function clone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
 
 const initialState: MockAirState = {
   routeLegs: [
@@ -382,6 +393,33 @@ function findAssignedExecution(state: MockAirState, executionId: string) {
   return execution;
 }
 
+function findAssignedRouteLegExecution(state: MockAirState, routeLegId: string) {
+  const execution = state.executions.find((candidate) => candidate.routeLegId === routeLegId);
+  if (!execution) throw new EscortExecutionError("This AIR RouteLeg is no longer available.", "NOT_FOUND");
+  if (execution.assignedEscortId !== selectedEscort().id) {
+    throw new EscortExecutionError("This AIR RouteLeg is assigned to another Escort.", "FORBIDDEN");
+  }
+  return execution;
+}
+
+function handoverProgress(routeLeg: MockAirRouteLeg, execution: MockAirExecution): HandoverProgress {
+  return {
+    completedHandovers: Number(Boolean(execution.proofOfDelivery)),
+    requiredHandovers: routeLeg.isFinalLeg ? 1 : 0,
+    routeLegStatus: getPreviewRouteLegStatus(routeLeg.id, routeLeg.status),
+    orderStatus: getPreviewOrderStatus(routeLeg.orderId),
+  };
+}
+
+function airProofAvailable(routeLeg: MockAirRouteLeg, execution: MockAirExecution) {
+  return routeLeg.isFinalLeg
+    && getPreviewRouteLegStatus(routeLeg.id, routeLeg.status) === "IN_PROGRESS"
+    && getPreviewOrderStatus(routeLeg.orderId) === "IN_PROGRESS"
+    && execution.status === "DESTINATION"
+    && Boolean(execution.welfareEvidence)
+    && !execution.proofOfDelivery;
+}
+
 function availableActions(routeLeg: MockAirRouteLeg, execution: MockAirExecution): AirExecutionAvailableActions {
   const welfareRecorded = Boolean(execution.welfareEvidence);
   const routeLegStatus = getPreviewRouteLegStatus(routeLeg.id, routeLeg.status);
@@ -409,6 +447,9 @@ function summary(state: MockAirState, execution: MockAirExecution): AssignedAirE
     plannedArrivalAt: routeLeg.plannedArrivalAt,
     status: execution.status,
     welfareRecorded: Boolean(execution.welfareEvidence),
+    proofOfDeliveryRecorded: Boolean(execution.proofOfDelivery),
+    proofOfDeliveryAvailable: airProofAvailable(routeLeg, execution),
+    handoverProgress: handoverProgress(routeLeg, execution),
     availableActions: availableActions(routeLeg, execution),
   };
 }
@@ -422,6 +463,7 @@ function detail(state: MockAirState, execution: MockAirExecution): AssignedAirEx
     destinationArrivedAt: execution.destinationArrivedAt,
     completedAt: execution.completedAt,
     welfareEvidence: execution.welfareEvidence,
+    proofOfDelivery: execution.proofOfDelivery ?? null,
     lastUpdatedAt: execution.lastUpdatedAt,
   };
 }
@@ -441,21 +483,22 @@ function throwStaleAfterPersist() {
   );
 }
 
-async function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new EscortExecutionError("We couldn't read that photo. Choose it again.", "VALIDATION_ERROR"));
-    reader.readAsDataURL(file);
-  });
-}
-
 function validateWelfare(input: RecordAirWelfareInput) {
   if (!input.photo || !input.photo.type.startsWith("image/")) {
     throw new EscortExecutionError("Choose a welfare photo before saving.", "VALIDATION_ERROR");
   }
   if (!input.note.trim()) {
     throw new EscortExecutionError("Enter a welfare note before saving.", "VALIDATION_ERROR");
+  }
+}
+
+function validateProofInput(input: ProofOfDeliveryInput) {
+  const recipientName = input.recipientName.trim();
+  if (!recipientName) {
+    throw new EscortExecutionError("Enter the recipient name before confirming handover.", "VALIDATION_ERROR");
+  }
+  if (recipientName.length > 150) {
+    throw new EscortExecutionError("Recipient name must be 150 characters or fewer.", "VALIDATION_ERROR");
   }
 }
 
@@ -519,7 +562,7 @@ export const mockAirExecutionService: AirEscortExecutionService = {
     await pause();
     maybeThrowScenarioFailure();
     validateWelfare(input);
-    const photoUrl = await fileToDataUrl(input.photo);
+    const preparedPhoto = await preparePreviewImage(input.photo, { proof: false });
     const timestamp = now();
     commitPreviewMutation("air", initialState, (state) => {
       const execution = findAssignedExecution(state, executionId);
@@ -529,8 +572,9 @@ export const mockAirExecutionService: AirEscortExecutionService = {
         id: `welfare-${execution.id}-final`,
         eventType: "FINAL_DESTINATION",
         checkpointId: null,
-        photoUrl,
-        photoName: input.photo.name,
+        photoUrl: preparedPhoto.photoUrl,
+        photoName: preparedPhoto.photoName,
+        photoIsPreview: preparedPhoto.photoIsPreview,
         note: input.note.trim(),
         recordedAt: timestamp,
       };
@@ -558,5 +602,77 @@ export const mockAirExecutionService: AirEscortExecutionService = {
     if (scenario() === "air-stale" || scenario() === "stale") {
       throw new EscortExecutionError("The AIR execution changed while you were saving. The persisted state was refreshed.", "STALE_STATE");
     }
+  },
+
+  async recordAirProofOfDelivery(routeLegId: string, input: ProofOfDeliveryInput) {
+    await pause();
+    maybeThrowScenarioFailure();
+    const before = readState();
+    const existingExecution = findAssignedRouteLegExecution(before, routeLegId);
+    if (existingExecution.proofOfDelivery) {
+      const routeLeg = findRouteLeg(before, routeLegId);
+      return { ...clone(existingExecution.proofOfDelivery), ...handoverProgress(routeLeg, existingExecution) };
+    }
+
+    validateProofInput(input);
+    const preparedPhoto = await preparePreviewImage(input.photo, { proof: true });
+    const refreshed = readState();
+    const refreshedExecution = findAssignedRouteLegExecution(refreshed, routeLegId);
+    if (refreshedExecution.proofOfDelivery) {
+      const routeLeg = findRouteLeg(refreshed, routeLegId);
+      return { ...clone(refreshedExecution.proofOfDelivery), ...handoverProgress(routeLeg, refreshedExecution) };
+    }
+
+    const proofPhotoUrl = `${preparedPhoto.photoUrl}#proof-of-delivery-${encodeURIComponent(routeLegId)}`;
+    const timestamp = now();
+    let persisted!: ProofOfDelivery;
+
+    commitPreviewMutation("air", initialState, (state, progression) => {
+      const execution = findAssignedRouteLegExecution(state, routeLegId);
+      const routeLeg = findRouteLeg(state, routeLegId);
+      if (execution.proofOfDelivery) {
+        persisted = clone(execution.proofOfDelivery);
+        return;
+      }
+      if (!routeLeg.isFinalLeg || routeLeg.status !== "IN_PROGRESS") {
+        throw new EscortExecutionError("Proof of Delivery is available only for the active final AIR RouteLeg.", "VALIDATION_ERROR");
+      }
+      if (execution.status !== "DESTINATION" || !execution.welfareEvidence) {
+        throw new EscortExecutionError("AIR handover requires destination arrival and persisted final welfare.", "VALIDATION_ERROR");
+      }
+      if (proofPhotoUrl === execution.welfareEvidence.photoUrl) {
+        throw new EscortExecutionError("Proof photo must be separate from the final welfare photo.", "VALIDATION_ERROR");
+      }
+
+      execution.proofOfDelivery = {
+        id: `pod-${execution.id}`,
+        mode: "AIR",
+        airLegExecutionId: execution.id,
+        routeLegId,
+        transportedOrderHorseIds: [],
+        recipientName: input.recipientName.trim(),
+        proofPhotoUrl,
+        proofPhotoName: preparedPhoto.photoName,
+        proofPhotoIsPreview: preparedPhoto.photoIsPreview,
+        handoverNote: input.note?.trim() || null,
+        confirmedByEscortId: execution.assignedEscortId,
+        deliveredAt: timestamp,
+        completedHandovers: 1,
+        requiredHandovers: 1,
+        routeLegStatus: "COMPLETED",
+        orderStatus: "DELIVERED",
+      };
+      execution.status = "COMPLETED";
+      execution.completedAt = timestamp;
+      execution.lastUpdatedAt = timestamp;
+      completeFinalPreviewRouteLeg(progression, routeLeg.id);
+      routeLeg.status = "COMPLETED";
+      persisted = clone(execution.proofOfDelivery);
+    });
+
+    if (scenario() === "air-stale" || scenario() === "stale" || scenario() === "pod-stale") {
+      throw new EscortExecutionError("The AIR handover changed while saving. Read back the persisted proof before continuing.", "STALE_STATE");
+    }
+    return persisted;
   },
 };

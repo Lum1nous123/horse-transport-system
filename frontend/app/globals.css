@@ -7404,7 +7404,7 @@ button.ts-workflow-step-header:focus-visible {
 .escort-queue-summary > div { display: flex; align-items: center; justify-content: space-between; gap: 20px; border: 1px solid var(--color-border); border-radius: 10px; padding: 17px 19px; background: #fff; }
 .escort-queue-summary dt { color: var(--color-body); font-size: .8rem; font-weight: 650; }
 .escort-queue-summary dd { margin: 0; color: var(--color-navy); font-size: 1.55rem; font-weight: 750; }
-.escort-queue-panel,.escort-horses,.escort-checkpoint-section,.escort-final-welfare { border: 1px solid var(--color-border); border-radius: 11px; background: #fff; }
+.escort-queue-panel,.escort-horses,.escort-checkpoint-section,.escort-final-welfare,.escort-pod-section { border: 1px solid var(--color-border); border-radius: 11px; background: #fff; }
 .escort-queue-panel { padding: 24px; }
 .escort-panel-heading,.escort-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; }
 .escort-panel-heading h2,.escort-section-heading h2 { margin: 0; color: var(--color-navy); font-size: 1.12rem; }
@@ -7448,7 +7448,7 @@ button.ts-workflow-step-header:focus-visible {
 .escort-execution-facts > div { min-width: 0; padding: 16px 18px; background: #fff; }
 .escort-execution-facts dt { color: var(--color-muted); font-size: .69rem; font-weight: 650; }
 .escort-execution-facts dd { margin: 5px 0 0; overflow-wrap: anywhere; color: var(--color-navy); font-size: .8rem; font-weight: 700; }
-.escort-horses,.escort-checkpoint-section,.escort-final-welfare { margin-bottom: 20px; padding: 24px; }
+.escort-horses,.escort-checkpoint-section,.escort-final-welfare,.escort-pod-section { margin-bottom: 20px; padding: 24px; }
 .escort-horses > div:last-child { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin-top: 18px; }
 .escort-horses article { display: grid; grid-template-columns: 36px minmax(0,1fr); align-items: center; gap: 10px; border: 1px solid #dbe5eb; border-radius: 8px; padding: 12px; }
 .escort-horses article > span { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 50%; background: #eaf3f9; color: var(--color-primary-hover); font-size: .75rem; font-weight: 750; }
@@ -7480,6 +7480,29 @@ button.ts-workflow-step-header:focus-visible {
 .escort-welfare-fields input:focus,.escort-welfare-fields textarea:focus { border-color: var(--color-primary); outline: 2px solid #66aeda33; outline-offset: 1px; }
 .escort-welfare-fields label small { color: var(--color-muted); font-size: .65rem; font-weight: 500; }
 .escort-form-error { margin: 0 0 10px; color: #a52a20; font-size: .72rem; font-weight: 650; }
+.escort-pod-section.is-ready { border-color: #dfbd70; }
+.escort-pod-section.is-complete { border-color: #89c5a2; background: #fbfefc; }
+.escort-pod-form { margin-top: 17px; border-top: 1px solid #e2eaef; padding-top: 17px; }
+.escort-pod-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; margin: 15px 0 13px; }
+.escort-pod-fields label { display: grid; align-content: start; gap: 6px; color: var(--color-ink); font-size: .72rem; font-weight: 650; }
+.escort-pod-fields label > span b { color: #a52a20; }
+.escort-pod-fields label > span small { color: var(--color-muted); font-weight: 500; }
+.escort-pod-fields input,.escort-pod-fields textarea { width: 100%; border: 1px solid #b9cbd6; border-radius: 7px; padding: 10px 11px; background: #fff; color: var(--color-ink); font: inherit; font-weight: 500; }
+.escort-pod-fields input[type="file"] { min-height: 44px; padding: 8px; }
+.escort-pod-fields textarea { resize: vertical; }
+.escort-pod-fields input:focus,.escort-pod-fields textarea:focus { border-color: var(--color-primary); outline: 2px solid #66aeda33; outline-offset: 1px; }
+.escort-pod-fields label > small { color: var(--color-muted); font-size: .65rem; font-weight: 500; }
+.escort-pod-note { grid-column: 1 / -1; }
+.escort-pod-readback { display: grid; grid-template-columns: 180px minmax(0,1fr); gap: 18px; margin-top: 17px; border-top: 1px solid #d9e9df; padding-top: 17px; }
+.escort-pod-readback > img { width: 180px; height: 126px; border-radius: 8px; object-fit: cover; background: #edf2f5; }
+.escort-pod-readback > div > span { color: #16794b; font-size: .68rem; font-weight: 800; text-transform: uppercase; }
+.escort-pod-readback h3 { margin: 4px 0 8px; color: var(--color-navy); font-size: 1rem; }
+.escort-pod-readback p { margin: 5px 0; color: var(--color-body); font-size: .74rem; line-height: 1.5; }
+.escort-pod-readback dl { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin: 12px 0; }
+.escort-pod-readback dl > div { border-radius: 6px; padding: 8px 10px; background: #f0f7f3; }
+.escort-pod-readback dt { color: var(--color-muted); font-size: .64rem; }
+.escort-pod-readback dd { margin: 2px 0 0; color: var(--color-navy); font-size: .72rem; font-weight: 750; }
+.escort-pod-readback time { color: var(--color-muted); font-size: .66rem; }
 .escort-welfare-readback { display: grid; grid-template-columns: 150px minmax(0,1fr); gap: 16px; margin-top: 17px; border-top: 1px solid #e2eaef; padding-top: 17px; }
 .escort-welfare-readback img { width: 150px; height: 104px; border-radius: 7px; object-fit: cover; background: #edf2f5; }
 .escort-welfare-readback span,.escort-welfare-readback strong,.escort-welfare-readback time { display: block; }
@@ -7530,6 +7553,10 @@ button.ts-workflow-step-header:focus-visible {
   .escort-queue-panel,.escort-mode-section,.escort-horses,.escort-checkpoint-section,.escort-final-welfare,.escort-air-progress,.escort-air-action { padding: 18px 16px; }
   .escort-panel-heading,.escort-mode-heading,.escort-section-heading,.escort-checkpoint-list > li > article > header,.escort-welfare-form-heading { align-items: flex-start; flex-direction: column; gap: 10px; }
   .escort-welfare-form-heading > span { align-self: flex-start; }
+  .escort-pod-fields,.escort-pod-readback { grid-template-columns: 1fr; }
+  .escort-pod-note { grid-column: auto; }
+  .escort-pod-readback > img { width: 100%; height: auto; max-height: 220px; }
+  .escort-pod-readback dl { grid-template-columns: 1fr; }
   .escort-welfare-readback { grid-template-columns: minmax(0,1fr); }
   .escort-welfare-readback img { width: 100%; height: 180px; }
   .escort-unavailable { margin: 24px auto; padding: 25px 18px; }

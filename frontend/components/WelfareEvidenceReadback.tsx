@@ -23,7 +23,7 @@ export default function WelfareEvidenceReadback({ evidence }: { evidence: Welfar
       />
       <div>
         <span>Saved welfare evidence</span>
-        <strong>{evidence.photoName}</strong>
+        <strong>{evidence.photoIsPreview ? `Preview image from original file: ${evidence.photoName}` : evidence.photoName}</strong>
         <p>{evidence.note}</p>
         <time dateTime={evidence.recordedAt}>{formatDateTime(evidence.recordedAt)}</time>
       </div>

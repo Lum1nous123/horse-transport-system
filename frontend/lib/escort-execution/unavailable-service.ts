@@ -5,7 +5,7 @@ import {
 
 function unavailable(): never {
   throw new EscortExecutionError(
-    "The Escort execution API contract is not available yet. Use development preview mode until the reviewed ROAD/AIR contracts are integrated.",
+    "The Escort execution API integration is not enabled in this frontend build. Use development preview mode until the reviewed ROAD/AIR/PoD contracts are integrated.",
     "CONTRACT_UNAVAILABLE",
   );
 }
@@ -18,6 +18,9 @@ export const unavailableEscortExecutionService: EscortExecutionService = {
     return unavailable();
   },
   async recordRoadWelfare() {
+    return unavailable();
+  },
+  async recordRoadProofOfDelivery() {
     return unavailable();
   },
   async listAssignedAirWork() {
@@ -36,6 +39,9 @@ export const unavailableEscortExecutionService: EscortExecutionService = {
     return unavailable();
   },
   async completeAirExecution() {
+    return unavailable();
+  },
+  async recordAirProofOfDelivery() {
     return unavailable();
   },
 };
