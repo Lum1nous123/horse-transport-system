@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import EscortWorkspaceFrame from "@/components/EscortWorkspaceFrame";
+import ProofOfDeliveryForm from "@/components/ProofOfDeliveryForm";
+import ProofOfDeliveryReadback from "@/components/ProofOfDeliveryReadback";
 import WelfareEvidenceForm from "@/components/WelfareEvidenceForm";
 import WelfareEvidenceReadback from "@/components/WelfareEvidenceReadback";
 import { resolveAirExecutionAction } from "@/lib/escort-execution/air-action";
@@ -11,6 +13,7 @@ import {
   EscortExecutionError,
   getEscortExecutionService,
   type AssignedAirExecutionDetail,
+  type ProofOfDeliveryInput,
   type RecordAirWelfareInput,
 } from "@/lib/escort-execution/service";
 import { useEscortAccess } from "@/lib/escort-execution/use-escort-access";
@@ -30,7 +33,7 @@ function label(value: string) {
   return value.toLowerCase().replaceAll("_", " ").replace(/^./, (character) => character.toUpperCase());
 }
 
-type MutationKey = "start" | "arrival" | "welfare" | "complete";
+type MutationKey = "start" | "arrival" | "welfare" | "complete" | "proof-of-delivery";
 type ReconciliationState = {
   message: string;
 };
@@ -104,7 +107,7 @@ export default function AirExecutionDetailPage() {
     }
   }
 
-  async function mutate(key: MutationKey, action: () => Promise<void>, successMessage: string) {
+  async function mutate(key: MutationKey, action: () => Promise<unknown>, successMessage: string) {
     if (mutationInFlight.current || reconciliationRequired.current) {
       throw new EscortExecutionError("An AIR execution update is already being saved.", "REQUEST_FAILED");
     }
@@ -155,6 +158,15 @@ export default function AirExecutionDetailPage() {
       "welfare",
       () => service.recordAirWelfare(params.executionId, input),
       "AIR destination welfare saved and read back from the service state.",
+    );
+  }
+
+  function recordProofOfDelivery(input: ProofOfDeliveryInput) {
+    if (!execution) return Promise.reject(new EscortExecutionError("The AIR execution is unavailable.", "STALE_STATE"));
+    return mutate(
+      "proof-of-delivery",
+      () => service.recordAirProofOfDelivery(execution.routeLegId, input),
+      "Proof of Delivery saved and final delivery state read back from the service.",
     );
   }
 
@@ -220,6 +232,7 @@ export default function AirExecutionDetailPage() {
             <div><dt>Planned departure</dt><dd>{formatDateTime(execution.plannedDepartureAt)}</dd></div>
             <div><dt>Planned arrival</dt><dd>{formatDateTime(execution.plannedArrivalAt)}</dd></div>
             <div><dt>Last saved state</dt><dd>{formatDateTime(execution.lastUpdatedAt)}</dd></div>
+            {execution.isFinalLeg && <div><dt>Order status</dt><dd>{label(execution.handoverProgress.orderStatus)}</dd></div>}
           </dl>
 
           <section className="escort-air-progress" aria-labelledby="air-progress-title">
@@ -228,7 +241,7 @@ export default function AirExecutionDetailPage() {
               <li className={execution.startedAt ? "is-complete" : nextAction.kind === "START" ? "is-current" : "is-pending"}><span aria-hidden="true">1</span><div><strong>Start AIR execution</strong><small>{execution.startedAt ? formatDateTime(execution.startedAt) : nextAction.kind === "START" ? "Ready to start" : "Waiting for RouteLeg readiness"}</small></div></li>
               <li className={execution.destinationArrivedAt ? "is-complete" : nextAction.kind === "ARRIVE_AT_DESTINATION" ? "is-current" : "is-pending"}><span aria-hidden="true">2</span><div><strong>Destination arrival</strong><small>{execution.destinationArrivedAt ? formatDateTime(execution.destinationArrivedAt) : nextAction.kind === "ARRIVE_AT_DESTINATION" ? "Ready to record" : "Available after start"}</small></div></li>
               <li className={execution.welfareEvidence ? "is-complete" : nextAction.kind === "RECORD_WELFARE" ? "is-current" : "is-pending"}><span aria-hidden="true">3</span><div><strong>Destination welfare</strong><small>{execution.welfareEvidence ? "Evidence saved" : nextAction.kind === "RECORD_WELFARE" ? "Photo and note required" : "Available after destination arrival"}</small></div></li>
-              <li className={execution.status === "COMPLETED" ? "is-complete" : nextAction.kind === "COMPLETE" || nextAction.kind === "AWAITING_POD" ? "is-current" : "is-pending"}><span aria-hidden="true">4</span><div><strong>{execution.isFinalLeg ? "Proof of Delivery handover" : "Complete AIR execution"}</strong><small>{execution.status === "COMPLETED" ? formatDateTime(execution.completedAt) : nextAction.kind === "AWAITING_POD" ? "Awaiting PoD" : nextAction.kind === "COMPLETE" ? "Ready to complete" : "Available after welfare"}</small></div></li>
+              <li className={execution.status === "COMPLETED" ? "is-complete" : nextAction.kind === "COMPLETE" || nextAction.kind === "AWAITING_POD" ? "is-current" : "is-pending"}><span aria-hidden="true">4</span><div><strong>{execution.isFinalLeg ? "Proof of Delivery handover" : "Complete AIR execution"}</strong><small>{execution.proofOfDelivery ? `${execution.handoverProgress.completedHandovers}/${execution.handoverProgress.requiredHandovers} handover confirmed` : execution.status === "COMPLETED" ? formatDateTime(execution.completedAt) : nextAction.kind === "AWAITING_POD" ? "Awaiting PoD" : nextAction.kind === "COMPLETE" ? "Ready to complete" : "Available after welfare"}</small></div></li>
             </ol>
           </section>
 
@@ -246,8 +259,17 @@ export default function AirExecutionDetailPage() {
               <WelfareEvidenceForm formId="air-destination-welfare" contextLabel={`${execution.orderCode} AIR destination`} title="Record AIR destination welfare" description="Attach one welfare photo and a meaningful note after destination arrival." busy={busy} submitLabel="Save AIR welfare" onSubmit={recordWelfare} />
             ) : nextAction.kind === "COMPLETE" ? (
               <button className="customer-primary-button" type="button" disabled={busy} onClick={() => void mutate("complete", () => service.completeAirExecution(params.executionId), "AIR execution completed and the persisted RouteLeg state was read back.").catch(() => undefined)}>{busyKey === "complete" ? "Completing and reading back..." : "Complete AIR execution"}</button>
+            ) : execution.proofOfDelivery ? (
+              <ProofOfDeliveryReadback proof={execution.proofOfDelivery} progress={execution.handoverProgress} />
+            ) : nextAction.kind === "AWAITING_POD" && execution.proofOfDeliveryAvailable ? (
+              <ProofOfDeliveryForm
+                formId="air-proof-of-delivery"
+                contextLabel={`${execution.orderCode} final AIR RouteLeg`}
+                busy={busy}
+                onSubmit={recordProofOfDelivery}
+              />
             ) : nextAction.kind === "AWAITING_POD" ? (
-              <div className="escort-air-handover" role="status"><strong>Awaiting Proof of Delivery</strong><p>Final AIR welfare is saved. Completion is intentionally unavailable in this slice and remains part of the PoD workflow.</p></div>
+              <div className="escort-air-handover" role="status"><strong>Proof of Delivery unavailable</strong><p>Refresh the persisted state before confirming this final AIR handover.</p></div>
             ) : execution.status === "COMPLETED" ? (
               <div className="escort-air-handover is-complete" role="status"><strong>AIR execution completed</strong><p>This non-final RouteLeg is complete. Any next-leg readiness is owned by the persisted service state.</p></div>
             ) : (

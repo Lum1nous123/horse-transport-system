@@ -28,12 +28,16 @@ function statusLabel(status: string) {
 }
 
 function roadActionLabel(execution: AssignedRoadExecutionSummary) {
+  if (execution.proofOfDeliveryAvailable) return "Record Proof of Delivery";
+  if (execution.proofOfDeliveryRecorded) return "View saved handover";
   if (execution.pendingCheckpointWelfareCount > 0) return "Record checkpoint welfare";
   if (execution.destinationArrivedAt && !execution.finalWelfareRecorded) return "Record final welfare";
   return "View ROAD details";
 }
 
 function airActionLabel(execution: AssignedAirExecutionSummary) {
+  if (execution.proofOfDeliveryAvailable) return "Record Proof of Delivery";
+  if (execution.proofOfDeliveryRecorded) return "View saved handover";
   const action = resolveAirExecutionAction(execution);
   if (action.kind === "START") return "Start AIR execution";
   if (action.kind === "ARRIVE_AT_DESTINATION") return "Record destination arrival";
@@ -125,9 +129,14 @@ export default function EscortQueuePage() {
   const roadWelfareDue = roadExecutions.reduce((count, execution) => (
     count + execution.pendingCheckpointWelfareCount + Number(Boolean(execution.destinationArrivedAt && !execution.finalWelfareRecorded))
   ), 0);
+  const roadHandoversDue = roadExecutions.filter((execution) => execution.proofOfDeliveryAvailable).length;
   const airActionsDue = airExecutions.filter((execution) => {
     const action = resolveAirExecutionAction(execution);
-    return action.kind === "START" || action.kind === "ARRIVE_AT_DESTINATION" || action.kind === "RECORD_WELFARE" || action.kind === "COMPLETE";
+    return execution.proofOfDeliveryAvailable
+      || action.kind === "START"
+      || action.kind === "ARRIVE_AT_DESTINATION"
+      || action.kind === "RECORD_WELFARE"
+      || action.kind === "COMPLETE";
   }).length;
   const refreshing = roadLoading || airLoading;
 
@@ -137,7 +146,7 @@ export default function EscortQueuePage() {
         <div>
           <span>Journey execution</span>
           <h1>Assigned journey work</h1>
-          <p>Review ROAD welfare and AIR execution actions assigned to your Escort account.</p>
+          <p>Review ROAD/AIR welfare, execution and final handover actions assigned to your Escort account.</p>
         </div>
         <button className="customer-secondary-button" type="button" disabled={refreshing} onClick={() => void loadAll()}>
           {refreshing ? "Refreshing..." : "Refresh saved state"}
@@ -146,8 +155,8 @@ export default function EscortQueuePage() {
 
       <section className="escort-mode-section" aria-labelledby="road-queue-title">
         <div className="escort-mode-heading">
-          <div><span>ROAD</span><h2 id="road-queue-title">Assigned Vehicle welfare</h2><p>Record welfare only after the Driver reaches the relevant checkpoint or destination.</p></div>
-          {!roadLoading && !roadError && <strong>{roadExecutions.length} active · {roadWelfareDue} due</strong>}
+          <div><span>ROAD</span><h2 id="road-queue-title">Assigned Vehicle work</h2><p>Record welfare after Driver arrival and complete final handover only for destination-ready Vehicles.</p></div>
+          {!roadLoading && !roadError && <strong>{roadExecutions.length} active · {roadWelfareDue} welfare · {roadHandoversDue} handover</strong>}
         </div>
         {roadError && <div className="customer-alert" role="alert"><span>{roadError.message}</span>{roadError.code === "REQUEST_FAILED" && <button type="button" onClick={() => void loadRoadQueue()}>Try ROAD again</button>}</div>}
         {roadLoading ? (
@@ -160,7 +169,7 @@ export default function EscortQueuePage() {
               <article className="escort-work-card" key={execution.executionId}>
                 <header><div><span>{execution.orderCode} · Leg {execution.routeLegSequenceNo}</span><h3>{execution.vehiclePlateNumber}</h3><p>{execution.vehicleName}</p></div><span className={`escort-status is-${execution.status.toLowerCase()}`}>{statusLabel(execution.status)}</span></header>
                 <div className="escort-route-line"><span>{execution.origin}</span><b aria-hidden="true">→</b><span>{execution.destination}</span></div>
-                <dl><div><dt>Horses</dt><dd>{execution.horseCount}</dd></div><div><dt>Reached checkpoints</dt><dd>{execution.reachedCheckpointCount}</dd></div><div><dt>Welfare due</dt><dd>{execution.pendingCheckpointWelfareCount + Number(Boolean(execution.destinationArrivedAt && !execution.finalWelfareRecorded))}</dd></div><div><dt>Departure</dt><dd>{formatDateTime(execution.plannedDepartureAt)}</dd></div></dl>
+                <dl><div><dt>Horses</dt><dd>{execution.horseCount}</dd></div><div><dt>Reached checkpoints</dt><dd>{execution.reachedCheckpointCount}</dd></div><div><dt>{execution.isFinalLeg ? "Handovers" : "Welfare due"}</dt><dd>{execution.isFinalLeg ? `${execution.handoverProgress.completedHandovers}/${execution.handoverProgress.requiredHandovers}` : execution.pendingCheckpointWelfareCount + Number(Boolean(execution.destinationArrivedAt && !execution.finalWelfareRecorded))}</dd></div><div><dt>Departure</dt><dd>{formatDateTime(execution.plannedDepartureAt)}</dd></div></dl>
                 <Link className="customer-primary-button escort-open-work" href={`/escort/executions/${execution.executionId}${previewSuffix}`}>{roadActionLabel(execution)} <span aria-hidden="true">→</span></Link>
               </article>
             ))}
@@ -184,7 +193,7 @@ export default function EscortQueuePage() {
               <article className="escort-work-card escort-air-card" key={execution.executionId}>
                 <header><div><span>{execution.orderCode} · Leg {execution.routeLegSequenceNo}</span><h3>AIR RouteLeg</h3><p>{execution.isFinalLeg ? "Final leg" : "Connecting leg"}</p></div><span className={`escort-status is-${execution.status.toLowerCase()}`}>{statusLabel(execution.status)}</span></header>
                 <div className="escort-route-line"><span>{execution.origin}</span><b aria-hidden="true">✈</b><span>{execution.destination}</span></div>
-                <dl><div><dt>RouteLeg</dt><dd>{statusLabel(execution.routeLegStatus)}</dd></div><div><dt>Departure</dt><dd>{formatDateTime(execution.plannedDepartureAt)}</dd></div><div><dt>Arrival</dt><dd>{formatDateTime(execution.plannedArrivalAt)}</dd></div><div><dt>Welfare</dt><dd>{execution.welfareRecorded ? "Saved" : "Not saved"}</dd></div></dl>
+                <dl><div><dt>RouteLeg</dt><dd>{statusLabel(execution.routeLegStatus)}</dd></div><div><dt>Departure</dt><dd>{formatDateTime(execution.plannedDepartureAt)}</dd></div><div><dt>Arrival</dt><dd>{formatDateTime(execution.plannedArrivalAt)}</dd></div><div><dt>{execution.isFinalLeg ? "Handover" : "Welfare"}</dt><dd>{execution.isFinalLeg ? `${execution.handoverProgress.completedHandovers}/${execution.handoverProgress.requiredHandovers}` : execution.welfareRecorded ? "Saved" : "Not saved"}</dd></div></dl>
                 <Link className="customer-primary-button escort-open-work" href={`/escort/air-executions/${execution.executionId}${previewSuffix}`}>{airActionLabel(execution)} <span aria-hidden="true">→</span></Link>
               </article>
             ))}

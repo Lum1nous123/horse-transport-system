@@ -2,6 +2,8 @@ export type ExecutionStatus = "NOT_STARTED" | "IN_PROGRESS" | "DESTINATION" | "C
 
 export type RouteLegStatus = "PLANNED" | "READY" | "IN_PROGRESS" | "COMPLETED";
 
+export type DeliveryOrderStatus = "IN_PROGRESS" | "DELIVERED";
+
 export type RoadCheckpointType = "REST_STOP" | "BORDER" | "QUARANTINE" | "OTHER";
 
 export type WelfareEventType = "CHECKPOINT" | "FINAL_DESTINATION";
@@ -18,8 +20,54 @@ export type WelfareEvidence = {
   checkpointId: string | null;
   photoUrl: string;
   photoName: string;
+  photoIsPreview?: boolean;
   note: string;
   recordedAt: string;
+};
+
+export type ProofOfDeliveryInput = {
+  recipientName: string;
+  photo: File;
+  note?: string;
+};
+
+type ProofOfDeliveryBase = {
+  id: string;
+  routeLegId: string;
+  transportedOrderHorseIds: string[];
+  recipientName: string;
+  proofPhotoUrl: string;
+  proofPhotoName: string;
+  proofPhotoIsPreview?: boolean;
+  handoverNote: string | null;
+  confirmedByEscortId: string;
+  deliveredAt: string;
+  completedHandovers: number;
+  requiredHandovers: number;
+  routeLegStatus: RouteLegStatus;
+  orderStatus: DeliveryOrderStatus;
+};
+
+export type ProofOfDelivery = ProofOfDeliveryBase & (
+  | {
+      mode: "ROAD";
+      roadLegVehicleId: string;
+      roadVehicleExecutionId: string;
+      airLegExecutionId?: never;
+    }
+  | {
+      mode: "AIR";
+      roadLegVehicleId?: never;
+      roadVehicleExecutionId?: never;
+      airLegExecutionId: string;
+    }
+);
+
+export type HandoverProgress = {
+  completedHandovers: number;
+  requiredHandovers: number;
+  routeLegStatus: RouteLegStatus;
+  orderStatus: DeliveryOrderStatus;
 };
 
 export type RoadCheckpointProgress = {
@@ -33,6 +81,7 @@ export type RoadCheckpointProgress = {
 
 export type AssignedRoadExecutionSummary = {
   executionId: string;
+  roadLegVehicleId: string;
   orderId: string;
   orderCode: string;
   routeLegId: string;
@@ -50,6 +99,9 @@ export type AssignedRoadExecutionSummary = {
   pendingCheckpointWelfareCount: number;
   destinationArrivedAt: string | null;
   finalWelfareRecorded: boolean;
+  proofOfDeliveryRecorded: boolean;
+  proofOfDeliveryAvailable: boolean;
+  handoverProgress: HandoverProgress;
 };
 
 export type AssignedRoadExecutionDetail = AssignedRoadExecutionSummary & {
@@ -59,9 +111,11 @@ export type AssignedRoadExecutionDetail = AssignedRoadExecutionSummary & {
   horses: AssignedHorse[];
   checkpoints: RoadCheckpointProgress[];
   finalWelfareEvidence: WelfareEvidence | null;
+  proofOfDelivery: ProofOfDelivery | null;
   availableActions: {
     checkpointWelfareIds: string[];
     finalWelfare: boolean;
+    proofOfDelivery: boolean;
   };
   lastUpdatedAt: string;
 };
@@ -91,6 +145,9 @@ export type AssignedAirExecutionSummary = {
   plannedArrivalAt: string;
   status: ExecutionStatus;
   welfareRecorded: boolean;
+  proofOfDeliveryRecorded: boolean;
+  proofOfDeliveryAvailable: boolean;
+  handoverProgress: HandoverProgress;
   availableActions: AirExecutionAvailableActions;
 };
 
@@ -101,6 +158,7 @@ export type AssignedAirExecutionDetail = AssignedAirExecutionSummary & {
   destinationArrivedAt: string | null;
   completedAt: string | null;
   welfareEvidence: WelfareEvidence | null;
+  proofOfDelivery: ProofOfDelivery | null;
   lastUpdatedAt: string;
 };
 
@@ -131,6 +189,7 @@ export type RoadEscortExecutionService = {
   listAssignedRoadWork(): Promise<AssignedRoadWorkQueue>;
   getAssignedRoadExecution(executionId: string): Promise<AssignedRoadExecutionDetail>;
   recordRoadWelfare(executionId: string, input: RecordRoadWelfareInput): Promise<void>;
+  recordRoadProofOfDelivery(roadLegVehicleId: string, input: ProofOfDeliveryInput): Promise<ProofOfDelivery>;
 };
 
 export type AirEscortExecutionService = {
@@ -140,6 +199,7 @@ export type AirEscortExecutionService = {
   recordAirDestinationArrival(executionId: string): Promise<void>;
   recordAirWelfare(executionId: string, input: RecordAirWelfareInput): Promise<void>;
   completeAirExecution(executionId: string): Promise<void>;
+  recordAirProofOfDelivery(routeLegId: string, input: ProofOfDeliveryInput): Promise<ProofOfDelivery>;
 };
 
 export type EscortExecutionService = RoadEscortExecutionService & AirEscortExecutionService;

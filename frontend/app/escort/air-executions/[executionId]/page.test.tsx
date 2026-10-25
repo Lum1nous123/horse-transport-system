@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AssignedAirExecutionDetail, WelfareEvidence } from "@/lib/escort-execution/types";
+import type { AssignedAirExecutionDetail, ProofOfDelivery, WelfareEvidence } from "@/lib/escort-execution/types";
 import AirExecutionDetailPage from "./page";
 
 const detailMocks = vi.hoisted(() => ({
@@ -21,6 +21,7 @@ const detailMocks = vi.hoisted(() => ({
   recordAirDestinationArrival: vi.fn(),
   recordAirWelfare: vi.fn(),
   completeAirExecution: vi.fn(),
+  recordAirProofOfDelivery: vi.fn(),
   replace: vi.fn(),
 }));
 
@@ -56,6 +57,7 @@ vi.mock("@/lib/escort-execution/service", async () => {
       recordAirDestinationArrival: detailMocks.recordAirDestinationArrival,
       recordAirWelfare: detailMocks.recordAirWelfare,
       completeAirExecution: detailMocks.completeAirExecution,
+      recordAirProofOfDelivery: detailMocks.recordAirProofOfDelivery,
     }),
   };
 });
@@ -82,6 +84,27 @@ function evidence(): WelfareEvidence {
   };
 }
 
+function proof(): ProofOfDelivery {
+  return {
+    id: "pod-air-1",
+    mode: "AIR",
+    airLegExecutionId: "air-execution-ready",
+    routeLegId: "air-leg-3002-1",
+    transportedOrderHorseIds: [],
+    recipientName: "Aiko Tanaka",
+    proofPhotoUrl: "data:image/png;base64,cHJvb2Y=",
+    proofPhotoName: "air-proof.png",
+    proofPhotoIsPreview: true,
+    handoverNote: "Received safely.",
+    confirmedByEscortId: "escort-mia",
+    deliveredAt: "2026-11-01T06:10:00Z",
+    completedHandovers: 1,
+    requiredHandovers: 1,
+    routeLegStatus: "COMPLETED",
+    orderStatus: "DELIVERED",
+  };
+}
+
 function execution(overrides: Partial<AssignedAirExecutionDetail> = {}): AssignedAirExecutionDetail {
   return {
     executionId: "air-execution-ready",
@@ -97,6 +120,9 @@ function execution(overrides: Partial<AssignedAirExecutionDetail> = {}): Assigne
     plannedArrivalAt: "2026-11-01T06:40:00+01:00",
     status: "NOT_STARTED",
     welfareRecorded: false,
+    proofOfDeliveryRecorded: false,
+    proofOfDeliveryAvailable: false,
+    handoverProgress: { completedHandovers: 0, requiredHandovers: 0, routeLegStatus: "READY", orderStatus: "IN_PROGRESS" },
     availableActions: { start: true, arriveAtDestination: false, recordWelfare: false, complete: false },
     assignedEscortId: "escort-mia",
     assignedEscortName: "Mia Laurent",
@@ -104,6 +130,7 @@ function execution(overrides: Partial<AssignedAirExecutionDetail> = {}): Assigne
     destinationArrivedAt: null,
     completedAt: null,
     welfareEvidence: null,
+    proofOfDelivery: null,
     lastUpdatedAt: "2026-10-30T10:00:00Z",
     ...overrides,
   };
@@ -264,14 +291,64 @@ describe("AirExecutionDetailPage", () => {
       startedAt: "2026-10-30T20:02:00Z",
       destinationArrivedAt: "2026-10-31T08:23:00Z",
       welfareRecorded: true,
+      proofOfDeliveryAvailable: true,
+      handoverProgress: { completedHandovers: 0, requiredHandovers: 1, routeLegStatus: "IN_PROGRESS", orderStatus: "IN_PROGRESS" },
       welfareEvidence: evidence(),
       availableActions: { start: false, arriveAtDestination: false, recordWelfare: false, complete: false },
     }));
     render(<AirExecutionDetailPage />);
 
-    expect(await screen.findByText("Awaiting Proof of Delivery")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Confirm handover" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Complete AIR execution" })).not.toBeInTheDocument();
     expect(screen.getByText("air-arrival.png")).toBeInTheDocument();
+  });
+
+  it("single-flights final AIR PoD and renders service-confirmed delivery read-back", async () => {
+    const ready = execution({
+      isFinalLeg: true,
+      routeLegStatus: "IN_PROGRESS",
+      status: "DESTINATION",
+      startedAt: "2026-10-30T20:02:00Z",
+      destinationArrivedAt: "2026-10-31T08:23:00Z",
+      welfareRecorded: true,
+      proofOfDeliveryAvailable: true,
+      handoverProgress: { completedHandovers: 0, requiredHandovers: 1, routeLegStatus: "IN_PROGRESS", orderStatus: "IN_PROGRESS" },
+      welfareEvidence: evidence(),
+      availableActions: { start: false, arriveAtDestination: false, recordWelfare: false, complete: false },
+    });
+    const delivered = execution({
+      ...ready,
+      routeLegStatus: "COMPLETED",
+      status: "COMPLETED",
+      completedAt: proof().deliveredAt,
+      proofOfDeliveryRecorded: true,
+      proofOfDeliveryAvailable: false,
+      proofOfDelivery: proof(),
+      handoverProgress: { completedHandovers: 1, requiredHandovers: 1, routeLegStatus: "COMPLETED", orderStatus: "DELIVERED" },
+    });
+    const mutation = deferred<ProofOfDelivery>();
+    detailMocks.getAssignedAirExecution.mockResolvedValueOnce(ready).mockResolvedValueOnce(delivered);
+    detailMocks.recordAirProofOfDelivery.mockReturnValueOnce(mutation.promise);
+    const user = userEvent.setup();
+    const { container } = render(<AirExecutionDetailPage />);
+
+    await user.type(await screen.findByLabelText(/Recipient name/), "Aiko Tanaka");
+    await user.upload(screen.getByLabelText(/Proof photo for/), new File(["proof"], "air-proof.png", { type: "image/png" }));
+    await user.type(screen.getByLabelText(/Handover note/), "Received safely.");
+    await user.click(screen.getByRole("button", { name: "Confirm handover" }));
+    expect(detailMocks.recordAirProofOfDelivery).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "Refresh" })).toBeDisabled();
+    fireEvent.submit(container.querySelector(".escort-pod-form")!);
+    expect(detailMocks.recordAirProofOfDelivery).toHaveBeenCalledOnce();
+
+    await act(async () => mutation.resolve(proof()));
+    expect(await screen.findByText("Saved Proof of Delivery")).toBeInTheDocument();
+    expect(screen.getByText("Aiko Tanaka")).toBeInTheDocument();
+    expect(screen.getByText(/Preview image from original file/)).toBeInTheDocument();
+    expect(detailMocks.recordAirProofOfDelivery).toHaveBeenCalledWith("air-leg-3002-1", expect.objectContaining({
+      recipientName: "Aiko Tanaka",
+      note: "Received safely.",
+    }));
   });
 
   it("recovers persisted state after a stale mutation response", async () => {

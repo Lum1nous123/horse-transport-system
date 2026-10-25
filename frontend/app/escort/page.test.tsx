@@ -38,12 +38,14 @@ vi.mock("@/lib/escort-execution/service", async () => {
       listAssignedRoadWork: queueMocks.listAssignedRoadWork,
       getAssignedRoadExecution: vi.fn(),
       recordRoadWelfare: vi.fn(),
+      recordRoadProofOfDelivery: vi.fn(),
       listAssignedAirWork: queueMocks.listAssignedAirWork,
       getAssignedAirExecution: vi.fn(),
       startAirExecution: vi.fn(),
       recordAirDestinationArrival: vi.fn(),
       recordAirWelfare: vi.fn(),
       completeAirExecution: vi.fn(),
+      recordAirProofOfDelivery: vi.fn(),
     }),
   };
 });
@@ -58,9 +60,10 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-function assignedExecution(): AssignedRoadExecutionSummary {
+function assignedExecution(overrides: Partial<AssignedRoadExecutionSummary> = {}): AssignedRoadExecutionSummary {
   return {
     executionId: "road-execution-2074-a",
+    roadLegVehicleId: "road-vehicle-2074-a",
     orderId: "order-2074",
     orderCode: "ORD-2074",
     routeLegId: "leg-2074-1",
@@ -78,6 +81,10 @@ function assignedExecution(): AssignedRoadExecutionSummary {
     pendingCheckpointWelfareCount: 1,
     destinationArrivedAt: null,
     finalWelfareRecorded: false,
+    proofOfDeliveryRecorded: false,
+    proofOfDeliveryAvailable: false,
+    handoverProgress: { completedHandovers: 0, requiredHandovers: 0, routeLegStatus: "IN_PROGRESS", orderStatus: "IN_PROGRESS" },
+    ...overrides,
   };
 }
 
@@ -96,6 +103,9 @@ function assignedAirExecution(overrides: Partial<AssignedAirExecutionSummary> = 
     plannedArrivalAt: "2026-11-02T23:10:00+01:00",
     status: "NOT_STARTED",
     welfareRecorded: false,
+    proofOfDeliveryRecorded: false,
+    proofOfDeliveryAvailable: false,
+    handoverProgress: { completedHandovers: 0, requiredHandovers: 0, routeLegStatus: "PLANNED", orderStatus: "IN_PROGRESS" },
     availableActions: { start: false, arriveAtDestination: false, recordWelfare: false, complete: false },
     ...overrides,
   };
@@ -181,6 +191,29 @@ describe("EscortQueuePage", () => {
     expect(await screen.findByText("ORD-3001 · Leg 2")).toBeInTheDocument();
     expect(queueMocks.listAssignedRoadWork).toHaveBeenCalledOnce();
     expect(queueMocks.listAssignedAirWork).toHaveBeenCalledTimes(2);
+  });
+
+  it("surfaces final ROAD and AIR handover actions from service capabilities", async () => {
+    queueMocks.listAssignedRoadWork.mockResolvedValueOnce({ executions: [assignedExecution({
+      isFinalLeg: true,
+      status: "COMPLETED",
+      finalWelfareRecorded: true,
+      proofOfDeliveryAvailable: true,
+      handoverProgress: { completedHandovers: 1, requiredHandovers: 2, routeLegStatus: "IN_PROGRESS", orderStatus: "IN_PROGRESS" },
+    })] });
+    queueMocks.listAssignedAirWork.mockResolvedValueOnce({ executions: [assignedAirExecution({
+      isFinalLeg: true,
+      routeLegStatus: "IN_PROGRESS",
+      status: "DESTINATION",
+      welfareRecorded: true,
+      proofOfDeliveryAvailable: true,
+      handoverProgress: { completedHandovers: 0, requiredHandovers: 1, routeLegStatus: "IN_PROGRESS", orderStatus: "IN_PROGRESS" },
+    })] });
+    render(<EscortQueuePage />);
+
+    expect((await screen.findAllByText("Record Proof of Delivery"))).toHaveLength(2);
+    expect(screen.getByText("1/2")).toBeInTheDocument();
+    expect(screen.getByText("0/1")).toBeInTheDocument();
   });
 
   it("does not load work when Escort workspace access is forbidden", () => {

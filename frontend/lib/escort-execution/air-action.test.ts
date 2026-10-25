@@ -19,6 +19,9 @@ function summary(overrides: Partial<AssignedAirExecutionSummary> = {}): Assigned
     plannedArrivalAt: "2026-10-31T12:00:00Z",
     status: "NOT_STARTED",
     welfareRecorded: false,
+    proofOfDeliveryRecorded: false,
+    proofOfDeliveryAvailable: false,
+    handoverProgress: { completedHandovers: 0, requiredHandovers: 0, routeLegStatus: "READY", orderStatus: "IN_PROGRESS" },
     availableActions: noActions,
     ...overrides,
   };
@@ -43,6 +46,7 @@ function detail(overrides: Partial<AssignedAirExecutionDetail> = {}): AssignedAi
     destinationArrivedAt: null,
     completedAt: null,
     welfareEvidence: null,
+    proofOfDelivery: null,
     lastUpdatedAt: "2026-10-31T07:00:00Z",
     ...overrides,
   };
@@ -88,6 +92,14 @@ describe("resolveAirExecutionAction", () => {
       status: "DESTINATION",
       welfareRecorded: true,
       availableActions: { ...noActions, complete: true },
+    })],
+    ["NONE", summary({
+      routeLegStatus: "COMPLETED",
+      isFinalLeg: true,
+      status: "COMPLETED",
+      welfareRecorded: true,
+      proofOfDeliveryRecorded: true,
+      handoverProgress: { completedHandovers: 1, requiredHandovers: 1, routeLegStatus: "COMPLETED", orderStatus: "DELIVERED" },
     })],
   ])("resolves valid %s lifecycle data", (kind, execution) => {
     expect(resolveAirExecutionAction(execution).kind).toBe(kind);
@@ -140,6 +152,19 @@ describe("resolveAirExecutionAction", () => {
     })],
     ["Multiple simultaneous capabilities", summary({
       availableActions: { ...noActions, start: true, arriveAtDestination: true },
+    })],
+    ["Completed final AIR leg without Proof of Delivery", summary({
+      routeLegStatus: "COMPLETED",
+      isFinalLeg: true,
+      status: "COMPLETED",
+      welfareRecorded: true,
+    })],
+    ["Proof of Delivery on a non-final AIR leg", summary({
+      routeLegStatus: "COMPLETED",
+      status: "COMPLETED",
+      welfareRecorded: true,
+      proofOfDeliveryRecorded: true,
+      handoverProgress: { completedHandovers: 1, requiredHandovers: 1, routeLegStatus: "COMPLETED", orderStatus: "DELIVERED" },
     })],
   ])("fails safely for %s", (_label, execution) => {
     expect(resolveAirExecutionAction(execution).kind).toBe("INVALID");

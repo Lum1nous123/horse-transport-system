@@ -19,6 +19,23 @@ function lifecycleIsConsistent(execution: AssignedAirExecutionSummary) {
   if ("welfareEvidence" in execution && Boolean(detail.welfareEvidence) !== execution.welfareRecorded) {
     return false;
   }
+  if ("proofOfDelivery" in execution && Boolean(detail.proofOfDelivery) !== execution.proofOfDeliveryRecorded) {
+    return false;
+  }
+  if (execution.proofOfDeliveryAvailable && (
+    !execution.isFinalLeg
+    || execution.status !== "DESTINATION"
+    || execution.routeLegStatus !== "IN_PROGRESS"
+    || !execution.welfareRecorded
+    || execution.proofOfDeliveryRecorded
+    || execution.handoverProgress.orderStatus !== "IN_PROGRESS"
+  )) return false;
+  if (execution.proofOfDeliveryRecorded && (
+    !execution.isFinalLeg
+    || execution.status !== "COMPLETED"
+    || execution.routeLegStatus !== "COMPLETED"
+    || execution.handoverProgress.orderStatus !== "DELIVERED"
+  )) return false;
 
   if (execution.status === "NOT_STARTED") {
     if (execution.routeLegStatus !== "PLANNED" && execution.routeLegStatus !== "READY") return false;
@@ -52,6 +69,7 @@ function lifecycleIsConsistent(execution: AssignedAirExecutionSummary) {
 
   if (execution.status === "COMPLETED") {
     if (execution.routeLegStatus !== "COMPLETED" || !execution.welfareRecorded) return false;
+    if (execution.isFinalLeg !== execution.proofOfDeliveryRecorded) return false;
     return !hasDetailMetadata || (
       Boolean(detail.startedAt)
       && Boolean(detail.destinationArrivedAt)

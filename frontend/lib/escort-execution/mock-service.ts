@@ -1,7 +1,10 @@
 import { getPreviewEscortIdentity } from "./use-escort-access";
+import { preparePreviewImage } from "./preview-image";
 import {
   commitPreviewMutation,
+  completeFinalPreviewRouteLeg,
   completePreviewRouteLeg,
+  getPreviewOrderStatus,
   getPreviewRouteLegStatus,
   readPreviewSlice,
 } from "./mock-preview-progression";
@@ -12,6 +15,9 @@ import {
   type AssignedRoadExecutionSummary,
   type RoadEscortExecutionService,
   type ExecutionStatus,
+  type HandoverProgress,
+  type ProofOfDelivery,
+  type ProofOfDeliveryInput,
   type RecordRoadWelfareInput,
   type RoadCheckpointType,
   type RouteLegStatus,
@@ -38,6 +44,7 @@ type MockRouteLeg = {
 
 type MockRoadExecution = {
   id: string;
+  roadLegVehicleId: string;
   orderId: string;
   orderCode: string;
   routeLegId: string;
@@ -52,6 +59,7 @@ type MockRoadExecution = {
   checkpointWelfare: Record<string, WelfareEvidence>;
   destinationArrivedAt: string | null;
   finalWelfareEvidence: WelfareEvidence | null;
+  proofOfDelivery: ProofOfDelivery | null;
   lastUpdatedAt: string;
 };
 
@@ -111,6 +119,7 @@ const initialState: MockState = {
   executions: [
     {
       id: "road-execution-2074-a",
+      roadLegVehicleId: "road-vehicle-2074-a",
       orderId: "order-2074",
       orderCode: "ORD-2074",
       routeLegId: "leg-2074-1",
@@ -128,10 +137,12 @@ const initialState: MockState = {
       checkpointWelfare: {},
       destinationArrivedAt: null,
       finalWelfareEvidence: null,
+      proofOfDelivery: null,
       lastUpdatedAt: "2026-10-28T14:18:00-04:00",
     },
     {
       id: "road-execution-2108-final",
+      roadLegVehicleId: "road-vehicle-2108-final",
       orderId: "order-2108",
       orderCode: "ORD-2108",
       routeLegId: "leg-2108-3",
@@ -148,10 +159,35 @@ const initialState: MockState = {
       checkpointWelfare: {},
       destinationArrivedAt: "2026-10-30T11:42:00+01:00",
       finalWelfareEvidence: null,
+      proofOfDelivery: null,
       lastUpdatedAt: "2026-10-30T11:42:00+01:00",
     },
     {
+      id: "road-execution-2108-final-b",
+      roadLegVehicleId: "road-vehicle-2108-final-b",
+      orderId: "order-2108",
+      orderCode: "ORD-2108",
+      routeLegId: "leg-2108-3",
+      assignedEscortId: "escort-mia",
+      assignedEscortName: "Mia Laurent",
+      driverName: "Sophie Dubois",
+      vehiclePlateNumber: "BE-211",
+      vehicleName: "Brussels Equine Van 2",
+      horses: [
+        { id: "horse-luna", name: "Luna Vale", microchipId: "985141000120211" },
+        { id: "horse-orion", name: "Orion", microchipId: "985141000120212" },
+      ],
+      status: "DESTINATION",
+      checkpointArrivals: {},
+      checkpointWelfare: {},
+      destinationArrivedAt: "2026-10-30T11:49:00+01:00",
+      finalWelfareEvidence: null,
+      proofOfDelivery: null,
+      lastUpdatedAt: "2026-10-30T11:49:00+01:00",
+    },
+    {
       id: "road-execution-2074-b",
+      roadLegVehicleId: "road-vehicle-2074-b",
       orderId: "order-2074",
       orderCode: "ORD-2074",
       routeLegId: "leg-2074-1",
@@ -172,10 +208,12 @@ const initialState: MockState = {
       checkpointWelfare: {},
       destinationArrivedAt: null,
       finalWelfareEvidence: null,
+      proofOfDelivery: null,
       lastUpdatedAt: "2026-10-28T17:06:00-05:00",
     },
     {
       id: "road-execution-after-air",
+      roadLegVehicleId: "road-vehicle-3007",
       orderId: "order-3007",
       orderCode: "ORD-3007",
       routeLegId: "road-leg-3007-2",
@@ -190,10 +228,12 @@ const initialState: MockState = {
       checkpointWelfare: {},
       destinationArrivedAt: null,
       finalWelfareEvidence: null,
+      proofOfDelivery: null,
       lastUpdatedAt: "2026-11-03T09:25:00Z",
     },
     {
       id: "road-execution-to-air",
+      roadLegVehicleId: "road-vehicle-3008-a",
       orderId: "order-3008",
       orderCode: "ORD-3008",
       routeLegId: "road-leg-3008-1",
@@ -208,10 +248,12 @@ const initialState: MockState = {
       checkpointWelfare: {},
       destinationArrivedAt: "2026-11-05T14:50:00-06:00",
       finalWelfareEvidence: null,
+      proofOfDelivery: null,
       lastUpdatedAt: "2026-11-05T14:50:00-06:00",
     },
     {
       id: "road-execution-to-air-b",
+      roadLegVehicleId: "road-vehicle-3008-b",
       orderId: "order-3008",
       orderCode: "ORD-3008",
       routeLegId: "road-leg-3008-1",
@@ -226,6 +268,7 @@ const initialState: MockState = {
       checkpointWelfare: {},
       destinationArrivedAt: "2026-11-05T14:57:00-06:00",
       finalWelfareEvidence: null,
+      proofOfDelivery: null,
       lastUpdatedAt: "2026-11-05T14:57:00-06:00",
     },
   ],
@@ -273,6 +316,44 @@ function findAssignedExecution(state: MockState, executionId: string) {
   return execution;
 }
 
+function findAssignedRoadVehicle(state: MockState, roadLegVehicleId: string) {
+  const execution = state.executions.find((candidate) => candidate.roadLegVehicleId === roadLegVehicleId);
+  if (!execution) throw new EscortExecutionError("This ROAD Vehicle is no longer available.", "NOT_FOUND");
+  if (execution.assignedEscortId !== selectedEscort().id) {
+    throw new EscortExecutionError("This Vehicle is assigned to another Escort.", "FORBIDDEN");
+  }
+  return execution;
+}
+
+function handoverProgress(state: MockState, execution: MockRoadExecution): HandoverProgress {
+  const routeLeg = findRouteLeg(state, execution.routeLegId);
+  if (!routeLeg.isFinalLeg) {
+    return {
+      completedHandovers: 0,
+      requiredHandovers: 0,
+      routeLegStatus: getPreviewRouteLegStatus(routeLeg.id, routeLeg.status),
+      orderStatus: getPreviewOrderStatus(execution.orderId),
+    };
+  }
+  const vehicles = state.executions.filter((candidate) => candidate.routeLegId === routeLeg.id);
+  return {
+    completedHandovers: vehicles.filter((candidate) => Boolean(candidate.proofOfDelivery)).length,
+    requiredHandovers: vehicles.length,
+    routeLegStatus: getPreviewRouteLegStatus(routeLeg.id, routeLeg.status),
+    orderStatus: getPreviewOrderStatus(execution.orderId),
+  };
+}
+
+function roadProofAvailable(state: MockState, execution: MockRoadExecution) {
+  const routeLeg = findRouteLeg(state, execution.routeLegId);
+  return routeLeg.isFinalLeg
+    && getPreviewRouteLegStatus(routeLeg.id, routeLeg.status) === "IN_PROGRESS"
+    && getPreviewOrderStatus(execution.orderId) === "IN_PROGRESS"
+    && execution.status === "COMPLETED"
+    && Boolean(execution.finalWelfareEvidence)
+    && !execution.proofOfDelivery;
+}
+
 function summary(state: MockState, execution: MockRoadExecution): AssignedRoadExecutionSummary {
   const routeLeg = findRouteLeg(state, execution.routeLegId);
   const reachedCheckpointIds = routeLeg.checkpoints
@@ -282,6 +363,7 @@ function summary(state: MockState, execution: MockRoadExecution): AssignedRoadEx
     .filter((checkpointId) => !execution.checkpointWelfare[checkpointId]).length;
   return {
     executionId: execution.id,
+    roadLegVehicleId: execution.roadLegVehicleId,
     orderId: execution.orderId,
     orderCode: execution.orderCode,
     routeLegId: routeLeg.id,
@@ -299,6 +381,9 @@ function summary(state: MockState, execution: MockRoadExecution): AssignedRoadEx
     pendingCheckpointWelfareCount,
     destinationArrivedAt: execution.destinationArrivedAt,
     finalWelfareRecorded: Boolean(execution.finalWelfareEvidence),
+    proofOfDeliveryRecorded: Boolean(execution.proofOfDelivery),
+    proofOfDeliveryAvailable: roadProofAvailable(state, execution),
+    handoverProgress: handoverProgress(state, execution),
   };
 }
 
@@ -317,23 +402,16 @@ function detail(state: MockState, execution: MockRoadExecution): AssignedRoadExe
     horses: clone(execution.horses),
     checkpoints,
     finalWelfareEvidence: execution.finalWelfareEvidence,
+    proofOfDelivery: currentProof(state, execution),
     availableActions: {
       checkpointWelfareIds: checkpoints
         .filter((checkpoint) => checkpoint.arrivedAt && !checkpoint.welfareEvidence)
         .map((checkpoint) => checkpoint.id),
       finalWelfare: Boolean(execution.destinationArrivedAt && !execution.finalWelfareEvidence),
+      proofOfDelivery: roadProofAvailable(state, execution),
     },
     lastUpdatedAt: execution.lastUpdatedAt,
   };
-}
-
-async function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new EscortExecutionError("We couldn't read that photo. Choose it again.", "VALIDATION_ERROR"));
-    reader.readAsDataURL(file);
-  });
 }
 
 function validateInput(input: RecordRoadWelfareInput) {
@@ -345,6 +423,22 @@ function validateInput(input: RecordRoadWelfareInput) {
   }
 }
 
+function validateProofInput(input: ProofOfDeliveryInput) {
+  const recipientName = input.recipientName.trim();
+  if (!recipientName) {
+    throw new EscortExecutionError("Enter the recipient name before confirming handover.", "VALIDATION_ERROR");
+  }
+  if (recipientName.length > 150) {
+    throw new EscortExecutionError("Recipient name must be 150 characters or fewer.", "VALIDATION_ERROR");
+  }
+}
+
+function currentProof(state: MockState, execution: MockRoadExecution) {
+  if (!execution.proofOfDelivery) return null;
+  const progress = handoverProgress(state, execution);
+  return { ...clone(execution.proofOfDelivery), ...progress };
+}
+
 export const mockEscortExecutionService: RoadEscortExecutionService = {
   async listAssignedRoadWork() {
     await pause();
@@ -354,9 +448,11 @@ export const mockEscortExecutionService: RoadEscortExecutionService = {
     const escort = selectedEscort();
     return {
       executions: state.executions
-        .filter((execution) => execution.assignedEscortId === escort.id && execution.status !== "COMPLETED")
+        .filter((execution) => execution.assignedEscortId === escort.id)
         .map((execution) => summary(state, execution))
-        .filter((execution) => execution.routeLegStatus !== "PLANNED")
+        .filter((execution) => execution.routeLegStatus !== "PLANNED"
+          && (execution.status !== "COMPLETED"
+            || (execution.isFinalLeg && execution.handoverProgress.orderStatus !== "DELIVERED")))
         .sort((left, right) => left.plannedDepartureAt.localeCompare(right.plannedDepartureAt)),
     };
   },
@@ -373,7 +469,7 @@ export const mockEscortExecutionService: RoadEscortExecutionService = {
     maybeThrowScenarioFailure();
     validateInput(input);
     const now = new Date().toISOString();
-    const photoUrl = await fileToDataUrl(input.photo);
+    const preparedPhoto = await preparePreviewImage(input.photo, { proof: false });
     commitPreviewMutation("road", initialState, (state, progression) => {
       const execution = findAssignedExecution(state, executionId);
       const routeLeg = findRouteLeg(state, execution.routeLegId);
@@ -390,8 +486,9 @@ export const mockEscortExecutionService: RoadEscortExecutionService = {
           id: `welfare-${execution.id}-${checkpoint.id}`,
           eventType: "CHECKPOINT",
           checkpointId: checkpoint.id,
-          photoUrl,
-          photoName: input.photo.name,
+          photoUrl: preparedPhoto.photoUrl,
+          photoName: preparedPhoto.photoName,
+          photoIsPreview: preparedPhoto.photoIsPreview,
           note: input.note.trim(),
           recordedAt: now,
         };
@@ -406,8 +503,9 @@ export const mockEscortExecutionService: RoadEscortExecutionService = {
           id: `welfare-${execution.id}-final`,
           eventType: "FINAL_DESTINATION",
           checkpointId: null,
-          photoUrl,
-          photoName: input.photo.name,
+          photoUrl: preparedPhoto.photoUrl,
+          photoName: preparedPhoto.photoName,
+          photoIsPreview: preparedPhoto.photoIsPreview,
           note: input.note.trim(),
           recordedAt: now,
         };
@@ -428,5 +526,95 @@ export const mockEscortExecutionService: RoadEscortExecutionService = {
     if (scenario() === "stale") {
       throw new EscortExecutionError("The execution changed while you were saving. The persisted state was refreshed.", "STALE_STATE");
     }
+  },
+
+  async recordRoadProofOfDelivery(roadLegVehicleId: string, input: ProofOfDeliveryInput) {
+    await pause();
+    maybeThrowScenarioFailure();
+    const before = readState();
+    const existingExecution = findAssignedRoadVehicle(before, roadLegVehicleId);
+    const existingProof = currentProof(before, existingExecution);
+    if (existingProof) return existingProof;
+
+    validateProofInput(input);
+    const preparedPhoto = await preparePreviewImage(input.photo, { proof: true });
+    const refreshed = readState();
+    const refreshedExecution = findAssignedRoadVehicle(refreshed, roadLegVehicleId);
+    const refreshedProof = currentProof(refreshed, refreshedExecution);
+    if (refreshedProof) return refreshedProof;
+
+    const proofPhotoUrl = `${preparedPhoto.photoUrl}#proof-of-delivery-${encodeURIComponent(roadLegVehicleId)}`;
+    const timestamp = new Date().toISOString();
+    let persisted!: ProofOfDelivery;
+
+    commitPreviewMutation("road", initialState, (state, progression) => {
+      const execution = findAssignedRoadVehicle(state, roadLegVehicleId);
+      const routeLeg = findRouteLeg(state, execution.routeLegId);
+      if (execution.proofOfDelivery) {
+        persisted = clone(execution.proofOfDelivery);
+        return;
+      }
+      if (!routeLeg.isFinalLeg || routeLeg.status !== "IN_PROGRESS") {
+        throw new EscortExecutionError("Proof of Delivery is available only for the active final ROAD RouteLeg.", "VALIDATION_ERROR");
+      }
+      if (execution.status !== "COMPLETED" || !execution.finalWelfareEvidence) {
+        throw new EscortExecutionError("ROAD handover requires destination arrival and persisted final welfare.", "VALIDATION_ERROR");
+      }
+      if (proofPhotoUrl === execution.finalWelfareEvidence.photoUrl) {
+        throw new EscortExecutionError("Proof photo must be separate from the final welfare photo.", "VALIDATION_ERROR");
+      }
+
+      const vehicles = state.executions.filter((candidate) => candidate.routeLegId === routeLeg.id);
+      execution.proofOfDelivery = {
+        id: `pod-${execution.id}`,
+        mode: "ROAD",
+        roadLegVehicleId: execution.roadLegVehicleId,
+        roadVehicleExecutionId: execution.id,
+        routeLegId: routeLeg.id,
+        transportedOrderHorseIds: execution.horses.map((horse) => horse.id),
+        recipientName: input.recipientName.trim(),
+        proofPhotoUrl,
+        proofPhotoName: preparedPhoto.photoName,
+        proofPhotoIsPreview: preparedPhoto.photoIsPreview,
+        handoverNote: input.note?.trim() || null,
+        confirmedByEscortId: execution.assignedEscortId,
+        deliveredAt: timestamp,
+        completedHandovers: 0,
+        requiredHandovers: vehicles.length,
+        routeLegStatus: "IN_PROGRESS",
+        orderStatus: "IN_PROGRESS",
+      };
+      execution.lastUpdatedAt = timestamp;
+
+      const ready = vehicles.every((candidate) => (
+        candidate.status === "COMPLETED"
+        && Boolean(candidate.finalWelfareEvidence)
+        && Boolean(candidate.proofOfDelivery)
+      ));
+      if (ready) {
+        completeFinalPreviewRouteLeg(progression, routeLeg.id);
+        routeLeg.status = "COMPLETED";
+      }
+
+      const completedHandovers = vehicles.filter((candidate) => Boolean(candidate.proofOfDelivery)).length;
+      const progressionLeg = progression.routeLegs.find((candidate) => candidate.id === routeLeg.id);
+      const progressionOrder = progression.orders.find((candidate) => candidate.id === execution.orderId);
+      if (!progressionLeg || !progressionOrder) {
+        throw new EscortExecutionError("Delivery progression could not be reconciled.", "STALE_STATE");
+      }
+      for (const vehicle of vehicles) {
+        if (!vehicle.proofOfDelivery) continue;
+        vehicle.proofOfDelivery.completedHandovers = completedHandovers;
+        vehicle.proofOfDelivery.requiredHandovers = vehicles.length;
+        vehicle.proofOfDelivery.routeLegStatus = progressionLeg.status;
+        vehicle.proofOfDelivery.orderStatus = progressionOrder.status;
+      }
+      persisted = clone(execution.proofOfDelivery);
+    });
+
+    if (scenario() === "stale" || scenario() === "pod-stale") {
+      throw new EscortExecutionError("The ROAD handover changed while saving. Read back the persisted proof before continuing.", "STALE_STATE");
+    }
+    return persisted;
   },
 };
