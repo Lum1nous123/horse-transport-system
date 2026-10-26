@@ -213,7 +213,14 @@ export type EscortExecutionErrorCode =
   | "CONTRACT_UNAVAILABLE";
 
 export class EscortExecutionError extends Error {
-  constructor(message: string, public readonly code: EscortExecutionErrorCode) {
+  constructor(
+    message: string,
+    public readonly code: EscortExecutionErrorCode,
+    public readonly details?: {
+      status?: number;
+      apiCode?: string;
+    },
+  ) {
     super(message);
     this.name = "EscortExecutionError";
   }

@@ -1,5 +1,6 @@
 import { getPreviewEscortIdentity } from "./use-escort-access";
 import { preparePreviewImage } from "./preview-image";
+import { assertValidEvidencePhoto } from "./media-validation";
 import {
   commitPreviewMutation,
   completeFinalPreviewRouteLeg,
@@ -415,15 +416,14 @@ function detail(state: MockState, execution: MockRoadExecution): AssignedRoadExe
 }
 
 function validateInput(input: RecordRoadWelfareInput) {
-  if (!input.photo || !input.photo.type.startsWith("image/")) {
-    throw new EscortExecutionError("Choose a welfare photo before saving.", "VALIDATION_ERROR");
-  }
+  assertValidEvidencePhoto(input.photo, "welfare");
   if (!input.note.trim()) {
     throw new EscortExecutionError("Enter a welfare note before saving.", "VALIDATION_ERROR");
   }
 }
 
 function validateProofInput(input: ProofOfDeliveryInput) {
+  assertValidEvidencePhoto(input.photo, "proof");
   const recipientName = input.recipientName.trim();
   if (!recipientName) {
     throw new EscortExecutionError("Enter the recipient name before confirming handover.", "VALIDATION_ERROR");
