@@ -3,8 +3,8 @@
 import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { ProofOfDeliveryInput } from "@/lib/escort-execution/types";
+import { evidencePhotoValidationMessage } from "@/lib/escort-execution/media-validation";
 
-const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 type InvalidField = "recipient" | "photo" | null;
 
 type ProofOfDeliveryFormProps = {
@@ -45,18 +45,9 @@ export default function ProofOfDeliveryForm({
       setInvalidField("recipient");
       return;
     }
-    if (!photo) {
-      setValidationError("Choose a proof photo before confirming handover.");
-      setInvalidField("photo");
-      return;
-    }
-    if (photo.type !== "image/jpeg" && photo.type !== "image/png") {
-      setValidationError("Proof photo must be a JPEG or PNG image.");
-      setInvalidField("photo");
-      return;
-    }
-    if (photo.size > MAX_PHOTO_BYTES) {
-      setValidationError("Proof photo must be 10 MB or smaller.");
+    const photoError = evidencePhotoValidationMessage(photo, "proof");
+    if (photoError || !photo) {
+      setValidationError(photoError ?? "Choose a proof photo before confirming handover.");
       setInvalidField("photo");
       return;
     }

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { FormEvent } from "react";
+import { evidencePhotoValidationMessage } from "@/lib/escort-execution/media-validation";
 
 type WelfareEvidenceFormProps = {
   formId: string;
@@ -29,12 +30,16 @@ export default function WelfareEvidenceForm({
   const errorId = `${formId}-error`;
   const photoId = `${formId}-photo`;
   const noteId = `${formId}-note`;
+  const currentPhotoError = evidencePhotoValidationMessage(photo, "welfare");
+  const photoInvalid = Boolean(validationError && currentPhotoError);
+  const noteInvalid = Boolean(validationError && !currentPhotoError && !note.trim());
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmedNote = note.trim();
-    if (!photo || !photo.type.startsWith("image/")) {
-      setValidationError("Choose a welfare photo before saving.");
+    const photoError = evidencePhotoValidationMessage(photo, "welfare");
+    if (photoError || !photo) {
+      setValidationError(photoError ?? "Choose a welfare photo before saving.");
       return;
     }
     if (!trimmedNote) {
@@ -65,17 +70,17 @@ export default function WelfareEvidenceForm({
             ref={fileInput}
             id={photoId}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png"
             disabled={busy}
             aria-label={`Welfare photo for ${contextLabel}`}
-            aria-invalid={Boolean(validationError && !photo)}
-            aria-describedby={validationError ? errorId : undefined}
+            aria-invalid={photoInvalid}
+            aria-describedby={photoInvalid ? errorId : undefined}
             onChange={(event) => {
               setPhoto(event.target.files?.[0] ?? null);
               setValidationError("");
             }}
           />
-          {photo && <small>{photo.name}</small>}
+          <small>{photo ? photo.name : "JPEG or PNG, up to 10 MB"}</small>
         </label>
         <label htmlFor={noteId}>
           <span>Welfare note <b aria-hidden="true">*</b></span>
@@ -85,8 +90,8 @@ export default function WelfareEvidenceForm({
             value={note}
             disabled={busy}
             aria-label={`Welfare note for ${contextLabel}`}
-            aria-invalid={Boolean(validationError && !note.trim())}
-            aria-describedby={validationError ? errorId : undefined}
+            aria-invalid={noteInvalid}
+            aria-describedby={noteInvalid ? errorId : undefined}
             placeholder="Record the Horse condition and care provided."
             onChange={(event) => {
               setNote(event.target.value);

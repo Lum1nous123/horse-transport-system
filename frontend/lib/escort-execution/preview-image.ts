@@ -1,6 +1,6 @@
 import { EscortExecutionError } from "./types";
+import { assertValidEvidencePhoto } from "./media-validation";
 
-const MAX_PROOF_PHOTO_BYTES = 10 * 1024 * 1024;
 // A derived preview is capped at 96 KiB (including the data-URL prefix). This
 // keeps the current ROAD/AIR fixture's full evidence set below common 5 MiB
 // sessionStorage quotas while lifecycle state and previews remain one atomic write.
@@ -202,21 +202,7 @@ export async function preparePreviewImage(
   file: File,
   options: { proof: boolean },
 ): Promise<PreparedPreviewImage> {
-  if (!file || file.size === 0) {
-    throw validationError(options.proof
-      ? "Choose a proof photo before confirming handover."
-      : "Choose a welfare photo before saving.");
-  }
-  if (options.proof) {
-    if (file.type !== "image/jpeg" && file.type !== "image/png") {
-      throw validationError("Proof photo must be a JPEG or PNG image.");
-    }
-    if (file.size > MAX_PROOF_PHOTO_BYTES) {
-      throw validationError("Proof photo must be 10 MB or smaller.");
-    }
-  } else if (!file.type.startsWith("image/")) {
-    throw validationError("Choose a welfare photo before saving.");
-  }
+  assertValidEvidencePhoto(file, options.proof ? "proof" : "welfare");
 
   const bytes = await readBytes(file);
   if (options.proof) validateProofBytes(bytes, file.type);
