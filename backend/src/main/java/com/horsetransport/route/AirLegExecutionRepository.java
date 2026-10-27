@@ -17,6 +17,17 @@ public interface AirLegExecutionRepository extends JpaRepository<AirLegExecution
 
 	Optional<AirLegExecution> findByRouteLegId(UUID routeLegId);
 
+	Optional<AirLegExecution> findByIdAndEscortId(UUID id, UUID escortId);
+
+	@Query(value = """
+			select execution.* from air_leg_executions execution
+			join route_legs leg on leg.id = execution.route_leg_id
+			where execution.escort_id = :userId
+				and execution.status in ('NOT_STARTED', 'IN_PROGRESS', 'DESTINATION')
+			order by leg.planned_departure_at, leg.sequence_no, execution.id
+			""", nativeQuery = true)
+	List<AirLegExecution> findActiveAssignedToEscort(@Param("userId") UUID userId);
+
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select execution from AirLegExecution execution where execution.routeLegId = :routeLegId")
 	Optional<AirLegExecution> findByRouteLegIdForUpdate(@Param("routeLegId") UUID routeLegId);

@@ -91,16 +91,16 @@ public class RouteLegExecutionCoordinator {
 		int index = indexOf(legs, routeLegId);
 		RouteLeg leg = legs.get(index);
 		if (context.plan().getStatus() != RoutePlanStatus.APPROVED) {
-			throw new RoutePlanValidationException("Only a locked Route Plan can start execution");
+			throw new ExecutionConflictException("Only a locked Route Plan can start execution");
 		}
 		for (int prior = 0; prior < index; prior++) {
 			if (legs.get(prior).getStatus() != RouteLegStatus.COMPLETED) {
-				throw new RoutePlanValidationException("A RouteLeg cannot start before all earlier legs complete");
+				throw new ExecutionConflictException("A RouteLeg cannot start before all earlier legs complete");
 			}
 		}
 		for (int later = index + 1; later < legs.size(); later++) {
 			if (legs.get(later).getStatus() != RouteLegStatus.PLANNED) {
-				throw new RoutePlanValidationException("Only the next ordered RouteLeg can be READY");
+				throw new ExecutionConflictException("Only the next ordered RouteLeg can be READY");
 			}
 		}
 		if (leg.getStatus() == RouteLegStatus.IN_PROGRESS && allowAlreadyInProgress
@@ -109,20 +109,20 @@ public class RouteLegExecutionCoordinator {
 			return;
 		}
 		if (leg.getStatus() != RouteLegStatus.READY) {
-			throw new RoutePlanValidationException("Only the current READY RouteLeg can start");
+			throw new ExecutionConflictException("Only the current READY RouteLeg can start");
 		}
 		UUID actorId = requireAssignedActiveActor(leg);
 
 		if (index == 0) {
 			if (context.order().getStatus() != OrderStatus.READY_TO_SHIP) {
-				throw new RoutePlanValidationException("The first RouteLeg requires an Order in READY_TO_SHIP");
+				throw new ExecutionConflictException("The first RouteLeg requires an Order in READY_TO_SHIP");
 			}
 			context.order().startTransport();
 			orderRepository.save(context.order());
 			auditRecorder.recordUserTransition(AuditEntityType.TRANSPORT_ORDER, context.order().getId(),
 					OrderStatus.READY_TO_SHIP.name(), OrderStatus.IN_PROGRESS.name(), actorId, null);
 		} else if (context.order().getStatus() != OrderStatus.IN_PROGRESS) {
-			throw new RoutePlanValidationException("A later RouteLeg requires an IN_PROGRESS Order");
+			throw new ExecutionConflictException("A later RouteLeg requires an IN_PROGRESS Order");
 		}
 
 		leg.start();
@@ -150,21 +150,21 @@ public class RouteLegExecutionCoordinator {
 		List<RouteLeg> legs = context.legs();
 		int index = indexOf(legs, routeLegId);
 		if (index == legs.size() - 1) {
-			throw new RoutePlanValidationException("Final RouteLeg completion requires the PoD handover flow");
+			throw new ExecutionConflictException("Final RouteLeg completion requires the PoD handover flow");
 		}
 		RouteLeg leg = legs.get(index);
 		RouteLeg nextLeg = legs.get(index + 1);
 		if (context.plan().getStatus() != RoutePlanStatus.APPROVED
 				|| context.order().getStatus() != OrderStatus.IN_PROGRESS
 				|| leg.getStatus() != RouteLegStatus.IN_PROGRESS) {
-			throw new RoutePlanValidationException("Only the current in-progress leg can complete");
+			throw new ExecutionConflictException("Only the current in-progress leg can complete");
 		}
 		if (nextLeg.getStatus() != RouteLegStatus.PLANNED) {
-			throw new RoutePlanValidationException("The next RouteLeg is not in the expected PLANNED state");
+			throw new ExecutionConflictException("The next RouteLeg is not in the expected PLANNED state");
 		}
 		for (int later = index + 2; later < legs.size(); later++) {
 			if (legs.get(later).getStatus() != RouteLegStatus.PLANNED) {
-				throw new RoutePlanValidationException("Only the next ordered RouteLeg can be READY");
+				throw new ExecutionConflictException("Only the next ordered RouteLeg can be READY");
 			}
 		}
 		if (!completionReady.getAsBoolean()) return false;
@@ -189,13 +189,13 @@ public class RouteLegExecutionCoordinator {
 		List<RouteLeg> legs = context.legs();
 		int index = indexOf(legs, routeLegId);
 		if (index != legs.size() - 1) {
-			throw new RoutePlanValidationException("Only the final RouteLeg can complete the delivery flow");
+			throw new ExecutionConflictException("Only the final RouteLeg can complete the delivery flow");
 		}
 		RouteLeg leg = legs.get(index);
 		if (context.plan().getStatus() != RoutePlanStatus.APPROVED
 				|| context.order().getStatus() != OrderStatus.IN_PROGRESS
 				|| leg.getStatus() != RouteLegStatus.IN_PROGRESS) {
-			throw new RoutePlanValidationException("Final delivery requires an in-progress final RouteLeg and Order");
+			throw new ExecutionConflictException("Final delivery requires an in-progress final RouteLeg and Order");
 		}
 		if (!completionReady.getAsBoolean()) return false;
 

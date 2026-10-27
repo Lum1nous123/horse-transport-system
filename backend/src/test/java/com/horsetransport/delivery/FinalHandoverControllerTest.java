@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -55,6 +56,21 @@ class FinalHandoverControllerTest {
 		mockMvc.perform(multipart("/api/v1/air-executions/legs/{id}/proof-of-delivery", SCOPE_ID)
 				.file(photo()).param("recipientName", "Recipient"))
 				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.airLegExecutionId").value(SCOPE_ID.toString()));
+	}
+
+	@Test
+	void exposesRoadAndAirProofOfDeliveryReadbackEndpoints() throws Exception {
+		when(service.getRoadHandover(SCOPE_ID)).thenReturn(response(SCOPE_ID, null));
+		when(service.getAirHandover(SCOPE_ID)).thenReturn(response(null, SCOPE_ID));
+
+		mockMvc.perform(get("/api/v1/road-executions/vehicles/{id}/proof-of-delivery", SCOPE_ID))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.roadVehicleExecutionId").value(SCOPE_ID.toString()))
+				.andExpect(jsonPath("$.proofPhotoName").value("proof-of-delivery.jpg"));
+
+		mockMvc.perform(get("/api/v1/air-executions/legs/{id}/proof-of-delivery", SCOPE_ID))
+				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.airLegExecutionId").value(SCOPE_ID.toString()));
 	}
 

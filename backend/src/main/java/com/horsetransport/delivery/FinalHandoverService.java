@@ -16,6 +16,9 @@ import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderRepository;
 import com.horsetransport.route.AirLegExecution;
 import com.horsetransport.route.AirLegExecutionRepository;
+import com.horsetransport.route.EvidenceDisplayName;
+import com.horsetransport.route.ExecutionConflictException;
+import com.horsetransport.route.ExecutionNotFoundException;
 import com.horsetransport.route.ExecutionStatus;
 import com.horsetransport.route.RoadLegVehicle;
 import com.horsetransport.route.RoadLegVehicleHorseRepository;
@@ -107,12 +110,12 @@ public class FinalHandoverService {
 		requireFinalHandoverState(context.leg(), context.plan(), context.order(), RouteLegType.ROAD);
 		// BE-24 publishes ROAD readiness through this persisted execution state.
 		if (context.execution().getStatus() != ExecutionStatus.COMPLETED) {
-			throw new RoutePlanValidationException(
+			throw new ExecutionConflictException(
 					"ROAD handover requires destination arrival and final welfare completion");
 		}
 		WelfareEvidence welfare = welfareRepository.findByRoadVehicleExecutionIdAndEventType(
 				context.execution().getId(), WelfareEventType.FINAL_DESTINATION)
-				.orElseThrow(() -> new RoutePlanValidationException(
+				.orElseThrow(() -> new ExecutionConflictException(
 						"ROAD handover requires final destination welfare"));
 		List<UUID> horseIds = roadHorseIds(context.leg().getId(), roadLegVehicleId);
 		if (horseIds.isEmpty()) {
@@ -143,11 +146,11 @@ public class FinalHandoverService {
 
 		requireFinalHandoverState(context.leg(), context.plan(), context.order(), RouteLegType.AIR);
 		if (context.execution().getStatus() != ExecutionStatus.DESTINATION) {
-			throw new RoutePlanValidationException("AIR handover requires destination arrival");
+			throw new ExecutionConflictException("AIR handover requires destination arrival");
 		}
 		WelfareEvidence welfare = welfareRepository.findByAirLegExecutionIdAndEventType(
 				context.execution().getId(), WelfareEventType.FINAL_DESTINATION)
-				.orElseThrow(() -> new RoutePlanValidationException(
+				.orElseThrow(() -> new ExecutionConflictException(
 						"AIR handover requires final destination welfare"));
 
 		ValidatedProof validated = validateProof(recipientName, photo, note);
@@ -163,6 +166,24 @@ public class FinalHandoverService {
 		airExecutionRepository.saveAndFlush(context.execution());
 		coordinator.completeFinalLegWhenReady(context.leg().getId(),
 				() -> proofRepository.findByAirLegExecutionId(context.execution().getId()).isPresent());
+		return airResponse(context, proof);
+	}
+
+	@Transactional(readOnly = true)
+	public ProofOfDeliveryResponse getRoadHandover(UUID roadLegVehicleId) {
+		RoadContext context = loadRoadReadContext(roadLegVehicleId);
+		requireAssignedEscortForRead(context.execution().getEscortId());
+		ProofOfDelivery proof = proofRepository.findByRoadVehicleExecutionId(context.execution().getId())
+				.orElseThrow(ProofOfDeliveryNotFoundException::new);
+		return roadResponse(context, proof);
+	}
+
+	@Transactional(readOnly = true)
+	public ProofOfDeliveryResponse getAirHandover(UUID routeLegId) {
+		AirContext context = loadAirReadContext(routeLegId);
+		requireAssignedEscortForRead(context.execution().getEscortId());
+		ProofOfDelivery proof = proofRepository.findByAirLegExecutionId(context.execution().getId())
+				.orElseThrow(ProofOfDeliveryNotFoundException::new);
 		return airResponse(context, proof);
 	}
 
@@ -199,18 +220,46 @@ public class FinalHandoverService {
 		return new AirContext(execution, leg, plan, order);
 	}
 
+	private RoadContext loadRoadReadContext(UUID roadLegVehicleId) {
+		RoadVehicleExecution execution = roadExecutionRepository.findByRoadLegVehicleId(roadLegVehicleId)
+				.orElseThrow(ExecutionNotFoundException::new);
+		RoadLegVehicle roadVehicle = roadVehicleRepository.findById(roadLegVehicleId)
+				.orElseThrow(ExecutionNotFoundException::new);
+		RouteLeg leg = routeLegRepository.findById(roadVehicle.getRouteLegId())
+				.orElseThrow(ExecutionNotFoundException::new);
+		RoutePlan plan = routePlanRepository.findById(leg.getRoutePlanId())
+				.orElseThrow(ExecutionNotFoundException::new);
+		TransportOrder order = orderRepository.findById(plan.getTransportOrderId())
+				.orElseThrow(ExecutionNotFoundException::new);
+		return new RoadContext(roadVehicle, execution, leg, plan, order);
+	}
+
+	private AirContext loadAirReadContext(UUID routeLegId) {
+		AirLegExecution execution = airExecutionRepository.findByRouteLegId(routeLegId)
+				.orElseThrow(ExecutionNotFoundException::new);
+		RouteLeg leg = routeLegRepository.findById(routeLegId).orElseThrow(ExecutionNotFoundException::new);
+		RoutePlan plan = routePlanRepository.findById(leg.getRoutePlanId())
+				.orElseThrow(ExecutionNotFoundException::new);
+		TransportOrder order = orderRepository.findById(plan.getTransportOrderId())
+				.orElseThrow(ExecutionNotFoundException::new);
+		return new AirContext(execution, leg, plan, order);
+	}
+
 	private void requireFinalHandoverState(RouteLeg leg, RoutePlan plan, TransportOrder order,
 			RouteLegType expectedType) {
-		if (leg.getLegType() != expectedType || plan.getStatus() != RoutePlanStatus.APPROVED) {
-			throw new RoutePlanValidationException("Final handover requires the approved matching RouteLeg type");
+		if (leg.getLegType() != expectedType) {
+			throw new RoutePlanValidationException("Final handover requires the matching RouteLeg type");
+		}
+		if (plan.getStatus() != RoutePlanStatus.APPROVED) {
+			throw new ExecutionConflictException("Final handover requires an approved Route Plan");
 		}
 		List<RouteLeg> ordered = routeLegRepository
 				.findAllByRoutePlanIdOrderBySequenceNoAsc(plan.getId());
 		if (ordered.isEmpty() || !ordered.get(ordered.size() - 1).getId().equals(leg.getId())) {
-			throw new RoutePlanValidationException("Proof of Delivery is allowed only on the final RouteLeg");
+			throw new ExecutionConflictException("Proof of Delivery is allowed only on the final RouteLeg");
 		}
 		if (leg.getStatus() != RouteLegStatus.IN_PROGRESS || order.getStatus() != OrderStatus.IN_PROGRESS) {
-			throw new RoutePlanValidationException("Final handover requires an in-progress RouteLeg and Order");
+			throw new ExecutionConflictException("Final handover requires an in-progress RouteLeg and Order");
 		}
 	}
 
@@ -225,6 +274,17 @@ public class FinalHandoverService {
 			throw new AccessDeniedException("Only the assigned Escort can record final handover");
 		}
 		return actorId;
+	}
+
+	private void requireAssignedEscortForRead(UUID assignedEscortId) {
+		UUID actorId = currentUserProvider.getCurrentUserId();
+		UserAccount actor = userRepository.findById(actorId)
+				.filter(user -> user.getStatus() == UserStatus.ACTIVE && user.getRole() == UserRole.ESCORT)
+				.orElseThrow(() -> new AccessDeniedException("Only an active Escort can view final handover"));
+		if (currentUserProvider.getCurrentUserRole() != UserRole.ESCORT
+				|| !actorId.equals(assignedEscortId)) {
+			throw new ExecutionNotFoundException();
+		}
 	}
 
 	private boolean roadDeliveryReady(UUID routeLegId) {
@@ -278,7 +338,8 @@ public class FinalHandoverService {
 			OrderStatus orderStatus) {
 		return new ProofOfDeliveryResponse(proof.getId(), proof.getRoadVehicleExecutionId(),
 				proof.getAirLegExecutionId(), routeLegId, horseIds, proof.getRecipientName(),
-				proof.getProofPhotoUrl(), proof.getHandoverNote(), proof.getConfirmedByEscortId(),
+				proof.getProofPhotoUrl(), EvidenceDisplayName.proofOfDelivery(proof.getProofPhotoUrl()),
+				proof.getHandoverNote(), proof.getConfirmedByEscortId(),
 				proof.getDeliveredAt(), proof.getCreatedAt(), completed, required, legStatus, orderStatus);
 	}
 

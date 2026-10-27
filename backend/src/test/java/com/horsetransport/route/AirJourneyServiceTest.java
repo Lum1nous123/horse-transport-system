@@ -185,7 +185,7 @@ class AirJourneyServiceTest {
 		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.ESCORT);
 
 		assertThatThrownBy(() -> service.arriveAtDestination(LEG_ID))
-				.isInstanceOf(RoutePlanValidationException.class)
+				.isInstanceOf(ExecutionConflictException.class)
 				.hasMessage("AIR RouteLeg is not in progress");
 
 		assertThat(execution.getStatus()).isEqualTo(ExecutionStatus.IN_PROGRESS);
@@ -193,7 +193,7 @@ class AirJourneyServiceTest {
 	}
 
 	@Test
-	void nonFinalAirCompletesAfterDestinationAndWelfareThenOpensNextLeg() {
+	void nonFinalAirRequiresExplicitCompleteAfterDestinationAndWelfareThenOpensNextLeg() {
 		prepareDestinationArrival();
 		actAs(ESCORT_ID);
 		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.ESCORT);
@@ -215,6 +215,16 @@ class AirJourneyServiceTest {
 		assertThat(response.eventType()).isEqualTo(WelfareEventType.FINAL_DESTINATION);
 		assertThat(response.airLegExecutionId()).isEqualTo(EXECUTION_ID);
 		assertThat(response.note()).isEqualTo("Horse is well");
+		assertThat(execution.getStatus()).isEqualTo(ExecutionStatus.DESTINATION);
+		verify(coordinator, never()).completeNonFinalLeg(LEG_ID);
+
+		WelfareEvidence persisted = new WelfareEvidence(EXECUTION_ID,
+				WelfareEventType.FINAL_DESTINATION, response.photoUrl(), response.note(), ESCORT_ID, NOW);
+		when(welfareRepository.findByAirLegExecutionIdAndEventType(
+				EXECUTION_ID, WelfareEventType.FINAL_DESTINATION)).thenReturn(Optional.of(persisted));
+		AirExecutionResponse completed = service.complete(LEG_ID);
+
+		assertThat(completed.status()).isEqualTo(ExecutionStatus.COMPLETED);
 		assertThat(execution.getStatus()).isEqualTo(ExecutionStatus.COMPLETED);
 		assertThat(execution.getCompletedAt()).isEqualTo(NOW);
 		verify(notificationService).createWelfareUpdated(CUSTOMER_ID, ORDER_ID, EVIDENCE_ID);
@@ -232,9 +242,6 @@ class AirJourneyServiceTest {
 				.thenReturn("https://storage.example/air-welfare.jpg");
 		when(welfareRepository.saveAndFlush(any(WelfareEvidence.class)))
 				.thenAnswer(invocation -> persistedEvidence(invocation.getArgument(0)));
-		when(routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(PLAN_ID))
-				.thenReturn(List.of(leg));
-
 		WelfareEvidenceResponse response = service.recordFinalWelfare(
 				LEG_ID, validJpeg(), "Horse is ready for handover");
 
@@ -242,6 +249,60 @@ class AirJourneyServiceTest {
 		assertThat(execution.getStatus()).isEqualTo(ExecutionStatus.DESTINATION);
 		assertThat(leg.getStatus()).isEqualTo(RouteLegStatus.IN_PROGRESS);
 		verify(notificationService).createWelfareUpdated(CUSTOMER_ID, ORDER_ID, EVIDENCE_ID);
+		verify(executionRepository, never()).saveAndFlush(execution);
+		verify(coordinator, never()).completeNonFinalLeg(LEG_ID);
+	}
+
+	@Test
+	void rejectsExplicitCompleteBeforeWelfareIsRecorded() {
+		prepareDestinationArrival();
+		actAs(ESCORT_ID);
+		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.ESCORT);
+		RouteLeg nextLeg = new RouteLeg(PLAN_ID, 2, RouteLegType.ROAD, "Destination", "Final",
+				NOW.plusHours(2), NOW.plusHours(5), null, null, null, "Truck", null);
+		when(routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(PLAN_ID))
+				.thenReturn(List.of(leg, nextLeg));
+		when(welfareRepository.findByAirLegExecutionIdAndEventType(
+				EXECUTION_ID, WelfareEventType.FINAL_DESTINATION)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.complete(LEG_ID))
+				.isInstanceOf(ExecutionConflictException.class)
+				.hasMessageContaining("welfare");
+
+		assertThat(execution.getStatus()).isEqualTo(ExecutionStatus.DESTINATION);
+		verify(coordinator, never()).completeNonFinalLeg(LEG_ID);
+	}
+
+	@Test
+	void rejectsExplicitCompleteForFinalAirLeg() {
+		prepareDestinationArrival();
+		actAs(ESCORT_ID);
+		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.ESCORT);
+		when(routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(PLAN_ID))
+				.thenReturn(List.of(leg));
+
+		assertThatThrownBy(() -> service.complete(LEG_ID))
+				.isInstanceOf(ExecutionConflictException.class)
+				.hasMessageContaining("Proof of Delivery");
+
+		verify(coordinator, never()).completeNonFinalLeg(LEG_ID);
+	}
+
+	@Test
+	void duplicateExplicitCompleteReturnsPersistedStateWithoutCompletingAgain() {
+		prepareDestinationArrival();
+		execution.complete(NOW.minusMinutes(1));
+		actAs(ESCORT_ID);
+		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.ESCORT);
+		RouteLeg nextLeg = new RouteLeg(PLAN_ID, 2, RouteLegType.ROAD, "Destination", "Final",
+				NOW.plusHours(2), NOW.plusHours(5), null, null, null, "Truck", null);
+		when(routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(PLAN_ID))
+				.thenReturn(List.of(leg, nextLeg));
+
+		AirExecutionResponse response = service.complete(LEG_ID);
+
+		assertThat(response.status()).isEqualTo(ExecutionStatus.COMPLETED);
+		assertThat(response.completedAt()).isEqualTo(NOW.minusMinutes(1));
 		verify(executionRepository, never()).saveAndFlush(execution);
 		verify(coordinator, never()).completeNonFinalLeg(LEG_ID);
 	}
@@ -276,7 +337,7 @@ class AirJourneyServiceTest {
 				EXECUTION_ID, WelfareEventType.FINAL_DESTINATION)).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.recordFinalWelfare(LEG_ID, validJpeg(), "Horse is well"))
-				.isInstanceOf(RoutePlanValidationException.class)
+				.isInstanceOf(ExecutionConflictException.class)
 				.hasMessageContaining("destination arrival");
 
 		verify(storage, never()).upload(any(byte[].class), any(String.class), any(String.class), anyBoolean());
