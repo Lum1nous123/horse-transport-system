@@ -83,7 +83,7 @@ public class RoadJourneyService {
 		}
 		if (context.leg().getStatus() != RouteLegStatus.READY
 				&& context.leg().getStatus() != RouteLegStatus.IN_PROGRESS) {
-			throw new RoutePlanValidationException("The ROAD RouteLeg is not ready for execution");
+			throw new ExecutionConflictException("The ROAD RouteLeg is not ready for execution");
 		}
 		coordinator.startRoadVehicleExecution(context.leg().getId());
 		context.execution().start(LocalDateTime.now(clock));
@@ -99,7 +99,7 @@ public class RoadJourneyService {
 		if (previous.isPresent()) return CheckpointArrivalResponse.from(previous.get());
 		ensureLegInProgress(context);
 		if (context.execution().getStatus() != ExecutionStatus.IN_PROGRESS) {
-			throw new RoutePlanValidationException("Vehicle must be in progress to record a checkpoint arrival");
+			throw new ExecutionConflictException("Vehicle must be in progress to record a checkpoint arrival");
 		}
 		Checkpoint checkpoint = checkpointRepository.findById(checkpointId)
 				.orElseThrow(RoutePlanNotFoundException::new);
@@ -114,9 +114,9 @@ public class RoadJourneyService {
 		Set<UUID> reached = new HashSet<>(arrivals.stream()
 				.map(VehicleCheckpointArrival::getCheckpointId).toList());
 		Checkpoint next = checkpoints.stream().filter(item -> !reached.contains(item.getId())).findFirst()
-				.orElseThrow(() -> new RoutePlanValidationException("All planned checkpoints have already been reached"));
+				.orElseThrow(() -> new ExecutionConflictException("All planned checkpoints have already been reached"));
 		if (!next.getId().equals(checkpointId)) {
-			throw new RoutePlanValidationException("Vehicle must reach checkpoints in their planned order");
+			throw new ExecutionConflictException("Vehicle must reach checkpoints in their planned order");
 		}
 		VehicleCheckpointArrival arrival = arrivalRepository.saveAndFlush(new VehicleCheckpointArrival(
 				context.execution().getId(), checkpointId, actorId, LocalDateTime.now(clock)));
@@ -134,7 +134,7 @@ public class RoadJourneyService {
 		}
 		ensureLegInProgress(context);
 		if (context.execution().getStatus() != ExecutionStatus.IN_PROGRESS) {
-			throw new RoutePlanValidationException("Vehicle must be in progress before destination arrival");
+			throw new ExecutionConflictException("Vehicle must be in progress before destination arrival");
 		}
 		requireWelfareForLastReachedCheckpoint(context, arrivalRepository
 				.findAllByRoadVehicleExecutionId(context.execution().getId()));
@@ -156,14 +156,14 @@ public class RoadJourneyService {
 		ensureLegInProgress(context);
 		if (context.execution().getStatus() != ExecutionStatus.IN_PROGRESS
 				&& context.execution().getStatus() != ExecutionStatus.DESTINATION) {
-			throw new RoutePlanValidationException("Vehicle is not at an active checkpoint");
+			throw new ExecutionConflictException("Vehicle is not at an active checkpoint");
 		}
 		Checkpoint checkpoint = checkpointRepository.findById(checkpointId)
 				.orElseThrow(RoutePlanNotFoundException::new);
 		if (!checkpoint.getRouteLegId().equals(context.leg().getId())
 				|| arrivalRepository.findByRoadVehicleExecutionIdAndCheckpointId(
 						context.execution().getId(), checkpointId).isEmpty()) {
-			throw new RoutePlanValidationException("Welfare evidence requires this Vehicle to have reached its checkpoint");
+			throw new ExecutionConflictException("Welfare evidence requires this Vehicle to have reached its checkpoint");
 		}
 		return saveWelfare(context, checkpointId, WelfareEventType.CHECKPOINT, photo, note, actorId);
 	}
@@ -177,7 +177,7 @@ public class RoadJourneyService {
 		if (existing.isPresent()) return WelfareEvidenceResponse.from(existing.get());
 		ensureLegInProgress(context);
 		if (context.execution().getStatus() != ExecutionStatus.DESTINATION) {
-			throw new RoutePlanValidationException("Final destination welfare requires Driver destination arrival");
+			throw new ExecutionConflictException("Final destination welfare requires Driver destination arrival");
 		}
 		return saveWelfare(context, null, WelfareEventType.FINAL_DESTINATION, photo, note, actorId);
 	}
@@ -241,7 +241,7 @@ public class RoadJourneyService {
 		RoutePlan plan = routePlanRepository.findById(leg.getRoutePlanId())
 				.orElseThrow(RoutePlanNotFoundException::new);
 		if (plan.getStatus() != RoutePlanStatus.APPROVED) {
-			throw new RoutePlanValidationException("Route Plan must be approved before execution");
+			throw new ExecutionConflictException("Route Plan must be approved before execution");
 		}
 		TransportOrder order = orderRepository.findById(plan.getTransportOrderId())
 				.orElseThrow(RoutePlanNotFoundException::new);
@@ -250,7 +250,7 @@ public class RoadJourneyService {
 
 	private void ensureLegInProgress(RoadContext context) {
 		if (context.leg().getStatus() != RouteLegStatus.IN_PROGRESS) {
-			throw new RoutePlanValidationException("ROAD RouteLeg is not in progress");
+			throw new ExecutionConflictException("ROAD RouteLeg is not in progress");
 		}
 	}
 
@@ -267,7 +267,7 @@ public class RoadJourneyService {
 		boolean hasWelfare = welfareRepository.findByRoadVehicleExecutionIdAndCheckpointIdAndEventType(
 				context.execution().getId(), lastReached.getId(), WelfareEventType.CHECKPOINT).isPresent();
 		if (!hasWelfare) {
-			throw new RoutePlanValidationException("Escort welfare photo and note are required before Vehicle progression");
+			throw new ExecutionConflictException("Escort welfare photo and note are required before Vehicle progression");
 		}
 	}
 

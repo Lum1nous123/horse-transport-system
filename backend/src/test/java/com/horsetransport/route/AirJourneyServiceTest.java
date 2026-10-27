@@ -185,7 +185,7 @@ class AirJourneyServiceTest {
 		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.ESCORT);
 
 		assertThatThrownBy(() -> service.arriveAtDestination(LEG_ID))
-				.isInstanceOf(RoutePlanValidationException.class)
+				.isInstanceOf(ExecutionConflictException.class)
 				.hasMessage("AIR RouteLeg is not in progress");
 
 		assertThat(execution.getStatus()).isEqualTo(ExecutionStatus.IN_PROGRESS);
@@ -337,7 +337,7 @@ class AirJourneyServiceTest {
 				EXECUTION_ID, WelfareEventType.FINAL_DESTINATION)).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.recordFinalWelfare(LEG_ID, validJpeg(), "Horse is well"))
-				.isInstanceOf(RoutePlanValidationException.class)
+				.isInstanceOf(ExecutionConflictException.class)
 				.hasMessageContaining("destination arrival");
 
 		verify(storage, never()).upload(any(byte[].class), any(String.class), any(String.class), anyBoolean());

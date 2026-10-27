@@ -27,6 +27,7 @@ import com.horsetransport.order.TransportOrderRepository;
 import com.horsetransport.route.AirLegExecution;
 import com.horsetransport.route.AirLegExecutionRepository;
 import com.horsetransport.route.ExecutionStatus;
+import com.horsetransport.route.ExecutionConflictException;
 import com.horsetransport.route.RoadLegVehicle;
 import com.horsetransport.route.RoadLegVehicleHorse;
 import com.horsetransport.route.RoadLegVehicleHorseRepository;
@@ -164,7 +165,7 @@ class FinalHandoverServiceTest {
 
 		assertThatThrownBy(() -> service.recordRoadHandover(
 				ROAD_VEHICLE_ID, "Recipient", validJpeg(), null))
-				.isInstanceOf(RoutePlanValidationException.class)
+				.isInstanceOf(ExecutionConflictException.class)
 				.hasMessageContaining("destination arrival and final welfare");
 		verify(storage, never()).upload(any(), anyString(), anyString(), anyBoolean());
 	}

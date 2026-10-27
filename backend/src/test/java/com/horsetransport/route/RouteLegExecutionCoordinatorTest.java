@@ -131,7 +131,7 @@ class RouteLegExecutionCoordinatorTest {
 		prepare(SECOND_LEG_ID, List.of(firstLeg, secondLeg));
 
 		assertThatThrownBy(() -> coordinator.startCurrentLeg(SECOND_LEG_ID))
-				.isInstanceOf(RoutePlanValidationException.class)
+				.isInstanceOf(ExecutionConflictException.class)
 				.hasMessageContaining("earlier legs");
 		verifyNoInteractions(auditRecorder);
 	}
@@ -166,7 +166,7 @@ class RouteLegExecutionCoordinatorTest {
 		prepare(FIRST_LEG_ID, List.of(firstLeg));
 
 		assertThatThrownBy(() -> coordinator.completeNonFinalLeg(FIRST_LEG_ID))
-				.isInstanceOf(RoutePlanValidationException.class)
+				.isInstanceOf(ExecutionConflictException.class)
 				.hasMessageContaining("PoD handover");
 		assertThat(firstLeg.getStatus()).isEqualTo(RouteLegStatus.IN_PROGRESS);
 		verifyNoInteractions(auditRecorder);
@@ -260,7 +260,7 @@ class RouteLegExecutionCoordinatorTest {
 		prepare(FIRST_LEG_ID, List.of(firstLeg, secondLeg));
 
 		assertThatThrownBy(() -> coordinator.startCurrentLeg(FIRST_LEG_ID))
-				.isInstanceOf(RoutePlanValidationException.class)
+				.isInstanceOf(ExecutionConflictException.class)
 				.hasMessageContaining("READY");
 		verifyNoInteractions(auditRecorder);
 		verifyNoInteractions(notificationService);

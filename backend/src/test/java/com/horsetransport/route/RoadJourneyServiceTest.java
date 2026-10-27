@@ -202,7 +202,7 @@ class RoadJourneyServiceTest {
 
 		assertThatThrownBy(() -> service.recordCheckpointWelfare(VEHICLE_LINK_ID, CHECKPOINT_ID,
 				photo, "Horse is well"))
-				.isInstanceOf(RoutePlanValidationException.class)
+				.isInstanceOf(ExecutionConflictException.class)
 				.hasMessageContaining("reached its checkpoint");
 	}
 
@@ -245,7 +245,7 @@ class RoadJourneyServiceTest {
 				EXECUTION_ID, CHECKPOINT_ID, WelfareEventType.CHECKPOINT)).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.arriveAtDestination(VEHICLE_LINK_ID))
-				.isInstanceOf(RoutePlanValidationException.class)
+				.isInstanceOf(ExecutionConflictException.class)
 				.hasMessageContaining("welfare photo and note");
 		assertThat(execution.getStatus()).isEqualTo(ExecutionStatus.IN_PROGRESS);
 	}

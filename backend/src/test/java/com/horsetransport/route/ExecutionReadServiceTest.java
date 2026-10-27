@@ -96,6 +96,57 @@ class ExecutionReadServiceTest {
 	}
 
 	@Test
+	void secondRoadVehicleCanStillStartAfterFirstVehicleStartsSharedLeg() {
+		UserAccount driver = actor(UserRole.DRIVER, UserStatus.ACTIVE);
+		when(currentUserProvider.getCurrentUserId()).thenReturn(ACTOR_ID);
+		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.DRIVER);
+		when(userRepository.findById(ACTOR_ID)).thenReturn(Optional.of(driver));
+
+		RoutePlan plan = plan();
+		RouteLeg leg = leg(1, RouteLegType.ROAD, "Stable", "Airport");
+		leg.markReady();
+		leg.start();
+		Vehicle firstVehicle = new Vehicle("51H-111.11", "Horse Van A", "TRUCK", 2,
+				VehicleStatus.AVAILABLE, null);
+		Vehicle secondVehicle = new Vehicle("51H-222.22", "Horse Van B", "TRUCK", 2,
+				VehicleStatus.AVAILABLE, null);
+		RoadLegVehicle firstRoadVehicle = new RoadLegVehicle(leg.getId(), firstVehicle.getId());
+		RoadLegVehicle secondRoadVehicle = new RoadLegVehicle(leg.getId(), secondVehicle.getId());
+		RoadVehicleExecution firstExecution = new RoadVehicleExecution(firstRoadVehicle.getId(),
+				UUID.randomUUID(), UUID.randomUUID());
+		firstExecution.start(NOW.minusMinutes(5));
+		UUID secondEscortId = UUID.randomUUID();
+		RoadVehicleExecution secondExecution = new RoadVehicleExecution(secondRoadVehicle.getId(),
+				ACTOR_ID, secondEscortId);
+		TransportOrder order = order(org.mockito.Mockito.mock(TransportOrderHorse.class));
+
+		when(roadExecutionRepository.findByIdAndDriverId(secondExecution.getId(), ACTOR_ID))
+				.thenReturn(Optional.of(secondExecution));
+		when(roadVehicleRepository.findAllById(any())).thenReturn(List.of(secondRoadVehicle));
+		when(roadVehicleRepository.findAllByRouteLegIdIn(any()))
+				.thenReturn(List.of(firstRoadVehicle, secondRoadVehicle));
+		when(routeLegRepository.findAllById(any())).thenReturn(List.of(leg));
+		when(routeLegRepository.findAllByRoutePlanIdIn(any())).thenReturn(List.of(leg));
+		when(routePlanRepository.findAllById(any())).thenReturn(List.of(plan));
+		when(orderRepository.findAllById(any())).thenReturn(List.of(order));
+		when(vehicleRepository.findAllById(any())).thenReturn(List.of(firstVehicle, secondVehicle));
+		when(allocationRepository.findAllByRouteLegIdIn(any())).thenReturn(List.of());
+		when(checkpointRepository.findAllByRouteLegIdIn(any())).thenReturn(List.of());
+		when(arrivalRepository.findAllByRoadVehicleExecutionIdIn(any())).thenReturn(List.of());
+		when(welfareRepository.findAllByRoadVehicleExecutionIdIn(any())).thenReturn(List.of());
+		when(proofRepository.findAllByRoadVehicleExecutionIdIn(any())).thenReturn(List.of());
+		when(roadExecutionRepository.findAllByRoadLegVehicleIdIn(any()))
+				.thenReturn(List.of(firstExecution, secondExecution));
+		when(userRepository.findAllById(any())).thenReturn(List.of(driver, staff(secondEscortId, "Escort")));
+
+		RoadExecutionReadResponse.Detail response = service.roadDetail(secondExecution.getId());
+
+		assertThat(response.status()).isEqualTo(ExecutionStatus.NOT_STARTED);
+		assertThat(response.routeLegStatus()).isEqualTo(RouteLegStatus.IN_PROGRESS);
+		assertThat(response.availableActions().start()).isTrue();
+	}
+
+	@Test
 	void roadDetailReturnsOrderedCheckpointsEvidenceHorsesAndRoleSensitiveActions() {
 		UserAccount escort = actor(UserRole.ESCORT, UserStatus.ACTIVE);
 		when(currentUserProvider.getCurrentUserId()).thenReturn(ACTOR_ID);

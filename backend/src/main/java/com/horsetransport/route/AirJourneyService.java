@@ -92,7 +92,10 @@ public class AirJourneyService {
 			return AirExecutionResponse.from(context.execution());
 		}
 		if (context.leg().getStatus() != RouteLegStatus.IN_PROGRESS) {
-			throw new RoutePlanValidationException("AIR RouteLeg is not in progress");
+			throw new ExecutionConflictException("AIR RouteLeg is not in progress");
+		}
+		if (context.execution().getStatus() != ExecutionStatus.IN_PROGRESS) {
+			throw new ExecutionConflictException("AIR execution must be in progress before destination arrival");
 		}
 
 		context.execution().arriveAtDestination(LocalDateTime.now(clock));
@@ -112,10 +115,10 @@ public class AirJourneyService {
 			return WelfareEvidenceResponse.from(existing.get());
 		}
 		if (context.leg().getStatus() != RouteLegStatus.IN_PROGRESS) {
-			throw new RoutePlanValidationException("AIR RouteLeg is not in progress");
+			throw new ExecutionConflictException("AIR RouteLeg is not in progress");
 		}
 		if (context.execution().getStatus() != ExecutionStatus.DESTINATION) {
-			throw new RoutePlanValidationException(
+			throw new ExecutionConflictException(
 					"Final destination welfare requires Escort destination arrival");
 		}
 
@@ -236,7 +239,7 @@ public class AirJourneyService {
 		RoutePlan plan = routePlanRepository.findById(leg.getRoutePlanId())
 				.orElseThrow(RoutePlanNotFoundException::new);
 		if (plan.getStatus() != RoutePlanStatus.APPROVED) {
-			throw new RoutePlanValidationException("Route Plan must be approved before execution");
+			throw new ExecutionConflictException("Route Plan must be approved before execution");
 		}
 		TransportOrder order = orderRepository.findById(plan.getTransportOrderId())
 				.orElseThrow(RoutePlanNotFoundException::new);

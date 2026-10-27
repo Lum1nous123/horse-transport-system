@@ -61,6 +61,29 @@ class AirJourneyControllerTest {
 	}
 
 	@Test
+	void mapsLifecycleConflictToHttp409() throws Exception {
+		when(service.arriveAtDestination(LEG_ID))
+				.thenThrow(new ExecutionConflictException("AIR RouteLeg is not in progress"));
+
+		mockMvc.perform(post(path("/destination")))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("EXECUTION_CONFLICT"))
+				.andExpect(jsonPath("$.message").value("AIR RouteLeg is not in progress"));
+	}
+
+	@Test
+	void keepsInvalidFieldValidationAtHttp400() throws Exception {
+		MockMultipartFile photo = new MockMultipartFile("photo", "welfare.jpg", "image/jpeg",
+				new byte[] {(byte) 0xff, (byte) 0xd8, (byte) 0xff});
+		when(service.recordFinalWelfare(eq(LEG_ID), any(MultipartFile.class), eq(" ")))
+				.thenThrow(new RoutePlanValidationException("A welfare note is required"));
+
+		mockMvc.perform(multipart(path("/destination/welfare")).file(photo).param("note", " "))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("ROUTE_PLAN_VALIDATION_ERROR"));
+	}
+
+	@Test
 	void exposesMultipartFinalWelfareEndpoint() throws Exception {
 		MockMultipartFile photo = new MockMultipartFile("photo", "welfare.jpg", "image/jpeg",
 				new byte[] {(byte) 0xff, (byte) 0xd8, (byte) 0xff});

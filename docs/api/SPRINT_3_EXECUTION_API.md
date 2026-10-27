@@ -244,9 +244,9 @@ Duplicate completion returns the persisted representation. Premature completion 
 ```json
 {
   "code": "EXECUTION_CONFLICT",
-  "message": "AIR completion requires final destination welfare",
+  "message": "Non-final AIR completion requires welfare evidence",
   "timestamp": "2026-10-28T09:15:30Z"
 }
 ```
 
-Execution endpoints use 400 for malformed input/invalid media, 401 for no valid authentication, 403 for wrong role or inactive staff, 404 for nonexistent/foreign assignment, 409 for invalid lifecycle state, and 502 for media storage failure.
+Execution endpoints use 400 for malformed input, invalid fields, or invalid media; 401 for no valid authentication; 403 for wrong role or inactive staff; 404 for nonexistent/foreign assignment; 409 with `EXECUTION_CONFLICT` for invalid lifecycle state; and 502 for media storage failure.

@@ -300,7 +300,9 @@ public class ExecutionReadService {
 			boolean destination = execution.getStatus() == ExecutionStatus.IN_PROGRESS
 					&& !reachedNeedWelfare && pending.isEmpty();
 			return new RoadActions(execution.getStatus() == ExecutionStatus.NOT_STARTED
-					&& leg.getStatus() == RouteLegStatus.READY, next, destination, List.of(), false, false);
+					&& (leg.getStatus() == RouteLegStatus.READY
+							|| leg.getStatus() == RouteLegStatus.IN_PROGRESS),
+					next, destination, List.of(), false, false);
 		}
 		List<UUID> welfareIds = checkpoints.stream().filter(item -> item.arrivedAt() != null
 				&& item.welfareEvidence() == null).map(RoadCheckpoint::id).toList();
