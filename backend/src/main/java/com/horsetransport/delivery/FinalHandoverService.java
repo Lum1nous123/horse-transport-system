@@ -17,6 +17,8 @@ import com.horsetransport.order.TransportOrderRepository;
 import com.horsetransport.route.AirLegExecution;
 import com.horsetransport.route.AirLegExecutionRepository;
 import com.horsetransport.route.ExecutionStatus;
+import com.horsetransport.route.EvidenceDisplayName;
+import com.horsetransport.route.ExecutionNotFoundException;
 import com.horsetransport.route.RoadLegVehicle;
 import com.horsetransport.route.RoadLegVehicleHorseRepository;
 import com.horsetransport.route.RoadLegVehicleRepository;
@@ -166,6 +168,24 @@ public class FinalHandoverService {
 		return airResponse(context, proof);
 	}
 
+	@Transactional(readOnly = true)
+	public ProofOfDeliveryResponse getRoadHandover(UUID roadLegVehicleId) {
+		RoadContext context = loadRoadReadContext(roadLegVehicleId);
+		requireAssignedEscortForRead(context.execution().getEscortId());
+		ProofOfDelivery proof = proofRepository.findByRoadVehicleExecutionId(context.execution().getId())
+				.orElseThrow(ProofOfDeliveryNotFoundException::new);
+		return roadResponse(context, proof);
+	}
+
+	@Transactional(readOnly = true)
+	public ProofOfDeliveryResponse getAirHandover(UUID routeLegId) {
+		AirContext context = loadAirReadContext(routeLegId);
+		requireAssignedEscortForRead(context.execution().getEscortId());
+		ProofOfDelivery proof = proofRepository.findByAirLegExecutionId(context.execution().getId())
+				.orElseThrow(ProofOfDeliveryNotFoundException::new);
+		return airResponse(context, proof);
+	}
+
 	private RoadContext loadRoadContext(UUID roadLegVehicleId) {
 		RoadVehicleExecution execution = roadExecutionRepository
 				.findByRoadLegVehicleIdForUpdate(roadLegVehicleId)
@@ -199,6 +219,31 @@ public class FinalHandoverService {
 		return new AirContext(execution, leg, plan, order);
 	}
 
+	private RoadContext loadRoadReadContext(UUID roadLegVehicleId) {
+		RoadVehicleExecution execution = roadExecutionRepository.findByRoadLegVehicleId(roadLegVehicleId)
+				.orElseThrow(ExecutionNotFoundException::new);
+		RoadLegVehicle roadVehicle = roadVehicleRepository.findById(roadLegVehicleId)
+				.orElseThrow(ExecutionNotFoundException::new);
+		RouteLeg leg = routeLegRepository.findById(roadVehicle.getRouteLegId())
+				.orElseThrow(ExecutionNotFoundException::new);
+		RoutePlan plan = routePlanRepository.findById(leg.getRoutePlanId())
+				.orElseThrow(ExecutionNotFoundException::new);
+		TransportOrder order = orderRepository.findById(plan.getTransportOrderId())
+				.orElseThrow(ExecutionNotFoundException::new);
+		return new RoadContext(roadVehicle, execution, leg, plan, order);
+	}
+
+	private AirContext loadAirReadContext(UUID routeLegId) {
+		AirLegExecution execution = airExecutionRepository.findByRouteLegId(routeLegId)
+				.orElseThrow(ExecutionNotFoundException::new);
+		RouteLeg leg = routeLegRepository.findById(routeLegId).orElseThrow(ExecutionNotFoundException::new);
+		RoutePlan plan = routePlanRepository.findById(leg.getRoutePlanId())
+				.orElseThrow(ExecutionNotFoundException::new);
+		TransportOrder order = orderRepository.findById(plan.getTransportOrderId())
+				.orElseThrow(ExecutionNotFoundException::new);
+		return new AirContext(execution, leg, plan, order);
+	}
+
 	private void requireFinalHandoverState(RouteLeg leg, RoutePlan plan, TransportOrder order,
 			RouteLegType expectedType) {
 		if (leg.getLegType() != expectedType || plan.getStatus() != RoutePlanStatus.APPROVED) {
@@ -225,6 +270,17 @@ public class FinalHandoverService {
 			throw new AccessDeniedException("Only the assigned Escort can record final handover");
 		}
 		return actorId;
+	}
+
+	private void requireAssignedEscortForRead(UUID assignedEscortId) {
+		UUID actorId = currentUserProvider.getCurrentUserId();
+		UserAccount actor = userRepository.findById(actorId)
+				.filter(user -> user.getStatus() == UserStatus.ACTIVE && user.getRole() == UserRole.ESCORT)
+				.orElseThrow(() -> new AccessDeniedException("Only an active Escort can view final handover"));
+		if (currentUserProvider.getCurrentUserRole() != UserRole.ESCORT
+				|| !actorId.equals(assignedEscortId)) {
+			throw new ExecutionNotFoundException();
+		}
 	}
 
 	private boolean roadDeliveryReady(UUID routeLegId) {
@@ -278,7 +334,8 @@ public class FinalHandoverService {
 			OrderStatus orderStatus) {
 		return new ProofOfDeliveryResponse(proof.getId(), proof.getRoadVehicleExecutionId(),
 				proof.getAirLegExecutionId(), routeLegId, horseIds, proof.getRecipientName(),
-				proof.getProofPhotoUrl(), proof.getHandoverNote(), proof.getConfirmedByEscortId(),
+				proof.getProofPhotoUrl(), EvidenceDisplayName.proofOfDelivery(proof.getProofPhotoUrl()),
+				proof.getHandoverNote(), proof.getConfirmedByEscortId(),
 				proof.getDeliveredAt(), proof.getCreatedAt(), completed, required, legStatus, orderStatus);
 	}
 

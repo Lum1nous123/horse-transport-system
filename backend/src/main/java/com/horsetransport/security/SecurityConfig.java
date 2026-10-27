@@ -29,9 +29,11 @@ public class SecurityConfig {
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.exceptionHandling(exceptions -> exceptions
 						.authenticationEntryPoint((request, response, exception) ->
-								response.setStatus(HttpStatus.UNAUTHORIZED.value()))
+								SecurityApiErrorWriter.write(response, HttpStatus.UNAUTHORIZED.value(),
+										"UNAUTHORIZED", "Authentication is required"))
 						.accessDeniedHandler((request, response, exception) ->
-								response.setStatus(HttpStatus.FORBIDDEN.value())))
+								SecurityApiErrorWriter.write(response, HttpStatus.FORBIDDEN.value(),
+										"FORBIDDEN", "Access is forbidden")))
 				.authorizeHttpRequests(authorize -> authorize
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login").permitAll()

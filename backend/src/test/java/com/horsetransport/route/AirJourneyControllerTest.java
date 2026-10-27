@@ -52,6 +52,15 @@ class AirJourneyControllerTest {
 	}
 
 	@Test
+	void exposesExplicitCompleteEndpoint() throws Exception {
+		when(service.complete(LEG_ID)).thenReturn(execution(ExecutionStatus.COMPLETED));
+
+		mockMvc.perform(post(path("/complete")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("COMPLETED"));
+	}
+
+	@Test
 	void exposesMultipartFinalWelfareEndpoint() throws Exception {
 		MockMultipartFile photo = new MockMultipartFile("photo", "welfare.jpg", "image/jpeg",
 				new byte[] {(byte) 0xff, (byte) 0xd8, (byte) 0xff});

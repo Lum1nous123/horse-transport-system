@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -37,5 +38,15 @@ public class FinalHandoverController {
 			@RequestParam("photo") MultipartFile photo,
 			@RequestParam(value = "note", required = false) String note) {
 		return handoverService.recordAirHandover(routeLegId, recipientName, photo, note);
+	}
+
+	@GetMapping("/api/v1/road-executions/vehicles/{roadLegVehicleId}/proof-of-delivery")
+	public ProofOfDeliveryResponse getRoadHandover(@PathVariable UUID roadLegVehicleId) {
+		return handoverService.getRoadHandover(roadLegVehicleId);
+	}
+
+	@GetMapping("/api/v1/air-executions/legs/{routeLegId}/proof-of-delivery")
+	public ProofOfDeliveryResponse getAirHandover(@PathVariable UUID routeLegId) {
+		return handoverService.getAirHandover(routeLegId);
 	}
 }

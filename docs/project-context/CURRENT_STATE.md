@@ -313,20 +313,18 @@ automatic execution staffing, and Order `READY_TO_SHIP`. Targeted checks and
 frontend production builds have passed, but the full regression suite has not
 yet completed because Docker/Testcontainers remains unavailable.
 
-Sprint 3 BE-22–BE-24 work is implemented locally but not yet reviewed. Shared
-`StatusAuditRecorder` requires the caller's transaction, flushes audit writes,
-and constrains entity types to BR-22. `RouteLegExecutionCoordinator` adds the
-common first-start, first Order `IN_PROGRESS`, non-final completion, and next
-RouteLeg readiness policy; LM confirmation opens the first leg as `READY`.
-ROAD execution now records independent per-Vehicle checkpoint arrivals and
-welfare, requires destination plus final welfare before completing a Vehicle,
-and aggregates all Vehicle completions before calling the coordinator for a
-non-final leg. BE-25 AIR, BE-26 PoD/delivery, BE-27 tracking events, FE-14/15
-integration, and PostgreSQL rollback evidence remain outstanding. Backend
-compilation, Spring context, and focused ROAD/coordinator/BE-21 audit tests
-pass. PostgreSQL Hibernate validation was attempted but could not start because
-Docker is unavailable. Coverage evidence is tracked in
-`docs/implementation/sprint-3-audit-coverage.md`.
+Sprint 3 backend execution read contracts and the approved AIR completion gap
+are implemented in the isolated `feature/s3-backend-execution-read-contracts`
+worktree and await independent review. The change adds JWT-assigned active
+ROAD/AIR queues and detail readback, Welfare/PoD evidence readback, explicit
+non-final AIR completion, stable security errors, semantic media labels, and FE
+contract fixtures. Existing ROAD/AIR/PoD mutations and the Order tracking API
+remain the authoritative write/tracking paths. Public Cloudinary URLs remain
+demo-only. Focused tests and all 389 runnable non-Docker tests pass. Four
+Docker-optional tests were skipped; three Docker-required PostgreSQL tests
+cannot start in the current environment. Contract evidence is in
+`docs/api/SPRINT_3_EXECUTION_API.md` and
+`docs/api/SPRINT_3_FRONTEND_ADAPTER.md`.
 
 ### COMPLETED
 
