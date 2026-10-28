@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Collection;
 
 import jakarta.persistence.LockModeType;
 
@@ -23,6 +24,9 @@ public interface TransportOrderRepository extends JpaRepository<TransportOrder, 
 
 	@EntityGraph(attributePaths = "horses")
 	List<TransportOrder> findAllByStatusOrderByCreatedAtDesc(OrderStatus status);
+
+	@EntityGraph(attributePaths = "horses")
+	List<TransportOrder> findAllByStatusInOrderByCreatedAtDesc(Collection<OrderStatus> statuses);
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select o from TransportOrder o where o.id = :id and o.customerId = :customerId")

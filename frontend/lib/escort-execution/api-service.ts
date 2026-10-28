@@ -43,7 +43,7 @@ async function readApiError(response: Response): Promise<ApiErrorDto> {
   }
 }
 
-async function requestJson<T>(
+export async function requestEscortJson<T>(
   path: string,
   init: RequestInit,
   parse: JsonParser<T>,
@@ -63,7 +63,7 @@ async function requestJson<T>(
     response = await apiFetch(path, { ...init, headers });
   } catch {
     // Mutations are intentionally never retried: the server may have committed before the
-    // client observed a network failure. A future GET contract must reconcile that state.
+    // client observed a network failure. The page reconciles through the detail GET contract.
     throw error(
       "We couldn't confirm whether the Escort update was saved. Refresh the execution before trying again.",
       "REQUEST_FAILED",
@@ -179,19 +179,18 @@ export const escortExecutionMutationApi = {
     const path = input.eventType === "CHECKPOINT"
       ? `/api/v1/road-executions/vehicles/${vehicleId}/checkpoints/${checkpointId}/welfare`
       : `/api/v1/road-executions/vehicles/${vehicleId}/destination/welfare`;
-    return requestJson(path, { method: "POST", body: welfareFormData(input) }, (value) =>
+    return requestEscortJson(path, { method: "POST", body: welfareFormData(input) }, (value) =>
       parseWelfareEvidenceResponse(value, {
         mode: "ROAD",
         eventType: input.eventType,
         checkpointId: input.eventType === "CHECKPOINT" ? input.checkpointId.trim() : null,
-        originalPhotoName: input.photo.name,
       }));
   },
 
   startAirExecution(routeLegId: string): Promise<AirExecutionResponseDto> {
     const id = routeLegId.trim();
     const pathId = locator(id, "AIR RouteLeg identifier");
-    return requestJson(
+    return requestEscortJson(
       `/api/v1/air-executions/legs/${pathId}/start`,
       { method: "POST" },
       (value) => parseAirExecutionResponse(value, id),
@@ -201,7 +200,7 @@ export const escortExecutionMutationApi = {
   recordAirDestinationArrival(routeLegId: string): Promise<AirExecutionResponseDto> {
     const id = routeLegId.trim();
     const pathId = locator(id, "AIR RouteLeg identifier");
-    return requestJson(
+    return requestEscortJson(
       `/api/v1/air-executions/legs/${pathId}/destination`,
       { method: "POST" },
       (value) => parseAirExecutionResponse(value, id),
@@ -210,14 +209,13 @@ export const escortExecutionMutationApi = {
 
   recordAirWelfare(routeLegId: string, input: RecordAirWelfareInput): Promise<WelfareEvidence> {
     const id = locator(routeLegId, "AIR RouteLeg identifier");
-    return requestJson(
+    return requestEscortJson(
       `/api/v1/air-executions/legs/${id}/destination/welfare`,
       { method: "POST", body: welfareFormData(input) },
       (value) => parseWelfareEvidenceResponse(value, {
         mode: "AIR",
         eventType: "FINAL_DESTINATION",
         checkpointId: null,
-        originalPhotoName: input.photo.name,
       }),
     );
   },
@@ -228,13 +226,12 @@ export const escortExecutionMutationApi = {
   ): Promise<ProofOfDelivery> {
     const id = roadLegVehicleId.trim();
     const pathId = locator(id, "ROAD Vehicle identifier");
-    return requestJson(
+    return requestEscortJson(
       `/api/v1/road-executions/vehicles/${pathId}/proof-of-delivery`,
       { method: "POST", body: proofFormData(input) },
       (value) => parseProofOfDeliveryResponse(value, {
         mode: "ROAD",
         roadLegVehicleId: id,
-        originalPhotoName: input.photo.name,
       }),
     );
   },
@@ -245,14 +242,23 @@ export const escortExecutionMutationApi = {
   ): Promise<ProofOfDelivery> {
     const id = routeLegId.trim();
     const pathId = locator(id, "AIR RouteLeg identifier");
-    return requestJson(
+    return requestEscortJson(
       `/api/v1/air-executions/legs/${pathId}/proof-of-delivery`,
       { method: "POST", body: proofFormData(input) },
       (value) => parseProofOfDeliveryResponse(value, {
         mode: "AIR",
         routeLegId: id,
-        originalPhotoName: input.photo.name,
       }),
+    );
+  },
+
+  completeAirExecution(routeLegId: string): Promise<AirExecutionResponseDto> {
+    const id = routeLegId.trim();
+    const pathId = locator(id, "AIR RouteLeg identifier");
+    return requestEscortJson(
+      `/api/v1/air-executions/legs/${pathId}/complete`,
+      { method: "POST" },
+      (value) => parseAirExecutionResponse(value, id),
     );
   },
 };

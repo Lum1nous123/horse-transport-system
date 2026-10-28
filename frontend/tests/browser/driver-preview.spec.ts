@@ -1,23 +1,23 @@
 import { expect, test } from "@playwright/test";
 
-test("before Start has no map; confirmed Start opens the first checkpoint", async ({ page }, testInfo) => {
+test("before Start has no timeline; confirmed Start opens the first checkpoint", async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/driver?preview=1");
   await expect(page.getByRole("heading", { name: "My ROAD work" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Start my vehicle" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Planned route schematic" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "ROAD route timeline" })).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath("before-start.png"), fullPage: true });
   await page.getByRole("button", { name: "Start my vehicle" }).click();
   await expect(page).toHaveURL(/\/driver\/executions\/demo-execution-204/);
-  await expect(page.getByRole("region", { name: "Planned route schematic" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "ROAD route timeline" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Pathum Thani rest stop" })).toBeVisible();
   if (testInfo.project.name === "mobile") {
-    const map = await page.getByRole("region", { name: "Planned route schematic" }).boundingBox();
+    const timeline = await page.getByRole("region", { name: "ROAD route timeline" }).boundingBox();
     const sheet = await page.getByRole("region", { name: "Pathum Thani rest stop", exact: true }).boundingBox();
-    expect(map).not.toBeNull();
+    expect(timeline).not.toBeNull();
     expect(sheet).not.toBeNull();
-    expect(sheet!.y).toBeGreaterThanOrEqual(map!.y + map!.height - 8);
+    expect(sheet!.y).toBeGreaterThanOrEqual(timeline!.y + timeline!.height - 8);
   }
   await page.screenshot({ path: testInfo.outputPath("after-start.png"), fullPage: true });
   await expect(page.getByRole("button", { name: "Confirm checkpoint arrival" })).toBeVisible();

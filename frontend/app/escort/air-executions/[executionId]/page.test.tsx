@@ -370,6 +370,31 @@ describe("AirExecutionDetailPage", () => {
     expect(detailMocks.getAssignedAirExecution).toHaveBeenCalledTimes(2);
   });
 
+  it("reconciles an uncertain network write through detail read-back without replay", async () => {
+    const { EscortExecutionError } = await import("@/lib/escort-execution/types");
+    const started = execution({
+      routeLegStatus: "IN_PROGRESS",
+      status: "IN_PROGRESS",
+      startedAt: "2026-10-31T16:35:00Z",
+      availableActions: { start: false, arriveAtDestination: true, recordWelfare: false, complete: false },
+    });
+    detailMocks.getAssignedAirExecution.mockResolvedValueOnce(execution()).mockResolvedValueOnce(started);
+    detailMocks.startAirExecution.mockRejectedValueOnce(new EscortExecutionError(
+      "The connection failed after submission.",
+      "REQUEST_FAILED",
+      { status: 0, apiCode: "NETWORK_ERROR" },
+    ));
+    const user = userEvent.setup();
+    render(<AirExecutionDetailPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Start AIR execution" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("mutation was not replayed");
+    expect(await screen.findByRole("button", { name: "Record destination arrival" })).toBeInTheDocument();
+    expect(detailMocks.startAirExecution).toHaveBeenCalledOnce();
+    expect(detailMocks.getAssignedAirExecution).toHaveBeenCalledTimes(2);
+  });
+
   it("locks mutations when a successful write cannot be read back and reconciles without replay", async () => {
     const { EscortExecutionError } = await import("@/lib/escort-execution/types");
     const started = execution({

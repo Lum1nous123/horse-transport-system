@@ -159,6 +159,33 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### Sprint 3 Frontend API integration — local implementation (2026-10-28)
+
+- Branch `feature/s3-frontend-api-integration` at Backend-contract base
+  `ec76180` connects FE-14 Driver ROAD, FE-15 Escort ROAD/AIR, FE-16 welfare/PoD,
+  and FE-17 Customer/LM tracking to the merged Sprint 3 APIs while preserving
+  the development-only preview adapters.
+- Driver and Escort controls use Backend `availableActions` and persisted
+  locator IDs. Mutations are not retried and are followed by detail read-back.
+  Tracking maps the Backend persistence DTO into the existing frontend view
+  model instead of treating the wire DTO as the view model.
+- Frontend TypeScript, lint, all 208 Vitest tests, 22 Playwright preview tests,
+  and production build pass.
+  Focused Backend execution/tracking/controller/security tests also pass.
+- Real API/database E2E now passes against the reviewed local-profile Supabase
+  development/demo target. Dedicated `*.s3demo@example.com` accounts cover all
+  supported workflow roles (the domain has no ADMIN role); deterministic,
+  idempotent `S3DEMO-*` ROAD/AIR fixtures and scoped cleanup scripts are in
+  `backend/scripts/`. Multi-vehicle ROAD execution, checkpoint/final welfare,
+  non-final AIR completion, final ROAD/AIR PoD with duplicate readback,
+  Cloudinary uploads, PostgreSQL persistence, and Customer/LM tracking were
+  verified through real APIs. A workflow-created ROAD Order also passed an
+  authenticated browser run through Driver Start/destination, Escort final
+  welfare, PoD, and LM tracking. Checkpoint, AIR, and Customer browser replay
+  remain open. See `docs/reports/SPRINT_3_DEMO_RUNBOOK.md`.
+- Work is uncommitted. Human review, live E2E, QA sign-off, commit/push, and
+  merge remain open.
+
 ### S3-018-FE-01 Proof of Delivery — local mock-first implementation (2026-10-24)
 
 - Local branch `feature/s3-018-fe-01-pod-ui` in the isolated FE16 worktree

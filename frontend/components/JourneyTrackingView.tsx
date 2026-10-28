@@ -50,7 +50,7 @@ export default function JourneyTrackingView({ role }: { role: Role }) {
   const query = useSearchParams();
   const preview = process.env.NODE_ENV === "development" && query.get("preview") === "1";
   const scenario = query.get("scenario");
-  const backHref = role === "CUSTOMER" ? "/customer" : "/logistics/route-reviews";
+  const backHref = role === "CUSTOMER" ? "/customer" : "/logistics/tracking";
   const [state, setState] = useState<State>("checking");
   const [message, setMessage] = useState("");
   const [tracking, setTracking] = useState<JourneyTracking | null>(null);
@@ -71,7 +71,7 @@ export default function JourneyTrackingView({ role }: { role: Role }) {
     setState("loading");
     try {
       const user = await getCurrentUser();
-      if (user.role !== role) { setState("forbidden"); return; }
+      if (user.role !== role || user.status !== "ACTIVE") { setState("forbidden"); return; }
       const token = getAccessToken();
       if (!token) { router.replace("/login"); return; }
       const data = await readJourneyTracking(orderId, token);

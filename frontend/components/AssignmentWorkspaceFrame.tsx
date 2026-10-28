@@ -8,7 +8,7 @@ import { clearAccessToken } from "@/lib/auth";
 type AssignmentWorkspaceFrameProps = {
   children: ReactNode;
   preview: boolean;
-  activeSection?: "orders" | "assignments" | "reviews";
+  activeSection?: "orders" | "assignments" | "reviews" | "tracking";
 };
 
 export default function AssignmentWorkspaceFrame({ children, preview, activeSection = "assignments" }: AssignmentWorkspaceFrameProps) {
@@ -34,6 +34,9 @@ export default function AssignmentWorkspaceFrame({ children, preview, activeSect
           </Link>
           <Link className={activeSection === "reviews" ? "is-current" : undefined} href={`/logistics/route-reviews${previewSuffix}`} aria-current={activeSection === "reviews" ? "page" : undefined}>
             Route Reviews
+          </Link>
+          <Link className={activeSection === "tracking" ? "is-current" : undefined} href="/logistics/tracking" aria-current={activeSection === "tracking" ? "page" : undefined}>
+            Order Tracking
           </Link>
         </nav>
         <div className="customer-topbar-actions">

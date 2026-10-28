@@ -9,7 +9,9 @@ export type ExecutionLeg = {
   sequenceNo: number;
   type: "ROAD" | "AIR";
   origin: string;
+  originAddress: string | null;
   destination: string;
+  destinationAddress: string | null;
   status: LegStatus;
 };
 
@@ -18,6 +20,7 @@ export type ExecutionCheckpoint = {
   routeLegId: string;
   sequenceNo: number;
   name: string;
+  address: string | null;
 };
 
 export type CheckpointArrival = {
