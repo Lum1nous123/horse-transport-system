@@ -159,6 +159,18 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### Sprint 3 P1 tracking reliability — local implementation (2026-10-31)
+
+- Logistics Manager tracking list eligibility now requires the same approved
+  Route Plan as tracking detail, so Orders without an approved plan are not
+  offered as broken tracking links. Existing Order-status filtering, ordering,
+  search input behavior, and LM authorization remain unchanged.
+- Customer journey data is treated as the primary read. A notification-read
+  failure now leaves the journey visible with a non-blocking warning, while a
+  journey-read failure retains the existing full-page error behavior.
+- Focused Backend and Frontend tests, Frontend TypeScript, and lint pass. No
+  database operation was executed.
+
 ### Sprint 3 P0 legacy command retirement — local implementation (2026-10-30)
 
 - The completed development-only first-RouteLeg repair and execution-staff

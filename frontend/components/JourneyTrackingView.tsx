@@ -55,6 +55,7 @@ export default function JourneyTrackingView({ role }: { role: Role }) {
   const [message, setMessage] = useState("");
   const [tracking, setTracking] = useState<JourneyTracking | null>(null);
   const [notifications, setNotifications] = useState<JourneyNotification[]>([]);
+  const [notificationWarning, setNotificationWarning] = useState("");
 
   const load = useCallback(async () => {
     if (preview) {
@@ -64,11 +65,13 @@ export default function JourneyTrackingView({ role }: { role: Role }) {
       const sample = previewJourneyScenario(scenario);
       setTracking(sample.tracking);
       setNotifications(sample.notifications);
+      setNotificationWarning("");
       setState("ready");
       return;
     }
     if (!getAccessToken()) { router.replace(`/login?next=${encodeURIComponent(window.location.pathname)}`); return; }
     setState("loading");
+    setNotificationWarning("");
     try {
       const user = await getCurrentUser();
       if (user.role !== role || user.status !== "ACTIVE") { setState("forbidden"); return; }
@@ -77,7 +80,12 @@ export default function JourneyTrackingView({ role }: { role: Role }) {
       const data = await readJourneyTracking(orderId, token);
       setTracking(data);
       if (role === "CUSTOMER") {
-        setNotifications(await readJourneyNotifications(orderId, token));
+        try {
+          setNotifications(await readJourneyNotifications(orderId, token));
+        } catch {
+          setNotifications([]);
+          setNotificationWarning("Latest updates are temporarily unavailable. Journey tracking is still available.");
+        }
       }
       setState("ready");
     } catch (error) {
@@ -101,7 +109,7 @@ export default function JourneyTrackingView({ role }: { role: Role }) {
       {state === "checking" || state === "loading" ? <p className="journey-state" role="status">Loading journey tracking…</p> : state === "forbidden" ? <section className="journey-state" role="alert"><h1>You can’t view this journey</h1><p>Tracking is available only to the Order owner and Logistics Manager.</p><Link href={backHref}>Back to Orders</Link></section> : state === "error" ? <section className="journey-state" role="alert"><h1>Journey unavailable</h1><p>{message}</p><button className="customer-secondary-button" type="button" onClick={() => void load()}>Try again</button></section> : tracking && <>
         <div className="journey-heading"><div><p className="customer-eyebrow">ORDER {tracking.orderCode}</p><h1>Journey tracking</h1><p>{tracking.origin} <span aria-hidden="true">→</span> {tracking.destination}</p></div><div><span className="journey-status">{tracking.orderStatus.replaceAll("_", " ")}</span><small>Last updated {dateTime(tracking.updatedAt)}</small><button className="customer-secondary-button compact" type="button" onClick={() => void load()}>Refresh tracking</button></div></div>
         <div className="journey-layout"><section className="journey-panel"><h2>Route progress</h2>{tracking.legs.length === 0 ? <p className="journey-empty">No journey progress has been recorded yet.</p> : <ol className="journey-legs">{[...tracking.legs].sort((a, b) => a.sequenceNo - b.sequenceNo).map((leg) => <li key={leg.id}><Leg leg={leg} /></li>)}</ol>}{tracking.deliveryEvents.length > 0 && <div className="journey-delivery"><h3>Delivery events</h3>{tracking.deliveryEvents.map((event) => <p key={event.id}>{event.label} · {dateTime(event.occurredAt)}</p>)}</div>}</section>
-        {role === "CUSTOMER" && <aside className="journey-panel journey-notifications"><h2>Latest updates</h2><p>Automatic in-app notices for this Order.</p>{notifications.length === 0 ? <p className="journey-empty">No updates yet.</p> : <ul>{notifications.map((notice) => <li key={notice.id}><strong>{notice.title}</strong><p>{notice.message}</p><time>{dateTime(notice.createdAt)}</time></li>)}</ul>}</aside>}</div>
+        {role === "CUSTOMER" && <aside className="journey-panel journey-notifications"><h2>Latest updates</h2><p>Automatic in-app notices for this Order.</p>{notificationWarning ? <p className="journey-notification-warning" role="status">{notificationWarning}</p> : notifications.length === 0 ? <p className="journey-empty">No updates yet.</p> : <ul>{notifications.map((notice) => <li key={notice.id}><strong>{notice.title}</strong><p>{notice.message}</p><time>{dateTime(notice.createdAt)}</time></li>)}</ul>}</aside>}</div>
       </>}
     </div>
   </main>;

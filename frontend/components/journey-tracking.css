@@ -56,6 +56,7 @@
 .journey-notifications li strong { color: #15344d; }
 .journey-notifications li p { margin: 4px 0; font-size: .875rem; }
 .journey-notifications time { color: #5c6f7d; font-size: .75rem; }
+.journey-notifications .journey-notification-warning { margin: 0; padding: 12px; border: 1px solid #e7c96f; border-radius: 6px; background: #fff8df; color: #6f5410; font-size: .875rem; }
 .journey-empty { color: #5c6f7d; }
 .journey-state { padding: 36px; border: 1px solid #d7e2ea; border-radius: 8px; background: #fff; }
 .journey-state h1 { margin: 0; color: #15344d; }
