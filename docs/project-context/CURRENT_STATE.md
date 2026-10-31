@@ -159,6 +159,20 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### Sprint 3 P0 legacy command retirement — local implementation (2026-10-30)
+
+- The completed development-only first-RouteLeg repair and execution-staff
+  reassignment commands have been retired from production source. Their command
+  entry points, nested Spring configurations, safety helper, and mutation
+  services are no longer part of the runtime artifact.
+- Removing the reassignment mutation path prevents it from bypassing the
+  current ROAD/AIR overlap eligibility rules in `ExecutionStaffingService`.
+  A focused regression test verifies that all retired legacy command and
+  service types are absent from the runtime classpath.
+- No database command was executed and no Order, RouteLeg, Vehicle, Welfare,
+  or Proof of Delivery data was changed. Historical details are retained in
+  `docs/reports/SPRINT_3_LEGACY_COMMAND_RETIREMENT.md` and Git history.
+
 ### Sprint 3 Frontend API integration — local implementation (2026-10-28)
 
 - Branch `feature/s3-frontend-api-integration` at Backend-contract base
