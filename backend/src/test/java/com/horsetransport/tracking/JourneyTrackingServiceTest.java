@@ -108,6 +108,8 @@ class JourneyTrackingServiceTest {
 
 		assertThat(response.orderId()).isEqualTo(ORDER_ID);
 		assertThat(response.deliveredAt()).isEqualTo(fixture.deliveredAt());
+		assertThat(response.horses()).extracting(JourneyTrackingResponse.Horse::name)
+				.containsExactly("Silver Star");
 		assertThat(response.legs()).extracting(JourneyTrackingResponse.Leg::sequenceNo)
 				.containsExactly(1, 2);
 
@@ -137,6 +139,40 @@ class JourneyTrackingServiceTest {
 
 		String json = new ObjectMapper().registerModule(new JavaTimeModule()).writeValueAsString(response);
 		assertThat(json).doesNotContain("userId", "email", "driver@example.test", "escort@example.test");
+	}
+
+	@Test
+	void airOnlyTrackingUsesEveryHorseAssignedToTheOrder() {
+		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.LOGISTICS_MANAGER);
+		TransportOrder order = order(null);
+		UUID secondHorseId = UUID.randomUUID();
+		addOrderHorse(order, secondHorseId);
+		when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+		stubApprovedPlanWithLegs(List.of(leg(AIR_LEG_ID, 1, RouteLegType.AIR, "Airport", "Stable")));
+
+		TransportOrderHorse first = order.getHorses().get(0);
+		when(horseRepository.findAllById(any())).thenReturn(List.of(
+				horse(first.getHorseId(), "Silver Star"), horse(secondHorseId, "Moon Dancer")));
+
+		JourneyTrackingResponse response = service.getTracking(ORDER_ID);
+
+		assertThat(response.horses()).extracting(JourneyTrackingResponse.Horse::name)
+				.containsExactly("Moon Dancer", "Silver Star");
+		assertThat(response.legs()).singleElement()
+				.extracting(JourneyTrackingResponse.Leg::type).isEqualTo(RouteLegType.AIR);
+	}
+
+	@Test
+	void trackingDoesNotInventHorsesWhenOrderHasNoValidAssignment() {
+		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.LOGISTICS_MANAGER);
+		TransportOrder order = order(null);
+		ReflectionTestUtils.setField(order, "horses", new java.util.ArrayList<TransportOrderHorse>());
+		when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+		stubApprovedPlanWithLegs(List.of(leg(AIR_LEG_ID, 1, RouteLegType.AIR, "Airport", "Stable")));
+
+		JourneyTrackingResponse response = service.getTracking(ORDER_ID);
+
+		assertThat(response.horses()).isEmpty();
 	}
 
 	@Test
@@ -266,6 +302,15 @@ class JourneyTrackingServiceTest {
 		return new Fixture(deliveredAt);
 	}
 
+	private void stubApprovedPlanWithLegs(List<RouteLeg> legs) {
+		RoutePlan plan = new RoutePlan(ORDER_ID, UUID.randomUUID());
+		ReflectionTestUtils.setField(plan, "id", PLAN_ID);
+		ReflectionTestUtils.setField(plan, "status", RoutePlanStatus.APPROVED);
+		ReflectionTestUtils.setField(plan, "approvedAt", LocalDateTime.of(2026, 10, 20, 9, 0));
+		when(routePlanRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(plan));
+		when(routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(PLAN_ID)).thenReturn(legs);
+	}
+
 	private TransportOrder order(LocalDateTime deliveredAt) {
 		try {
 			Constructor<TransportOrder> orderConstructor = TransportOrder.class
@@ -295,14 +340,31 @@ class JourneyTrackingServiceTest {
 	}
 
 	private Horse horse(UUID horseId) {
+		return horse(horseId, "Silver Star");
+	}
+
+	private Horse horse(UUID horseId, String name) {
 		try {
 			Constructor<Horse> constructor = Horse.class.getDeclaredConstructor(UUID.class, String.class,
 					String.class, String.class, String.class, String.class, LocalDate.class, String.class);
 			constructor.setAccessible(true);
-			Horse horse = constructor.newInstance(CUSTOMER_ID, "Silver Star", null,
+			Horse horse = constructor.newInstance(CUSTOMER_ID, name, null,
 					"MICRO-TRACK", "Warmblood", "MARE", null, null);
 			ReflectionTestUtils.setField(horse, "id", horseId);
 			return horse;
+		} catch (ReflectiveOperationException exception) {
+			throw new IllegalStateException(exception);
+		}
+	}
+
+	private void addOrderHorse(TransportOrder order, UUID horseId) {
+		try {
+			Constructor<TransportOrderHorse> constructor = TransportOrderHorse.class
+					.getDeclaredConstructor(TransportOrder.class, UUID.class);
+			constructor.setAccessible(true);
+			@SuppressWarnings("unchecked")
+			List<TransportOrderHorse> horses = (List<TransportOrderHorse>) ReflectionTestUtils.getField(order, "horses");
+			horses.add(constructor.newInstance(order, horseId));
 		} catch (ReflectiveOperationException exception) {
 			throw new IllegalStateException(exception);
 		}

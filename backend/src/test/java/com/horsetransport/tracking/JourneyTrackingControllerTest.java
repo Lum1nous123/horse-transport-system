@@ -35,12 +35,15 @@ class JourneyTrackingControllerTest {
 				ORDER_ID, "ORD-TRACKING", OrderStatus.IN_PROGRESS, "Origin", "US",
 				"Destination", "BE", LocalDateTime.of(2026, 10, 23, 8, 0), null,
 				UUID.randomUUID(), RoutePlanStatus.APPROVED,
-				LocalDateTime.of(2026, 10, 22, 8, 0), List.of()));
+				LocalDateTime.of(2026, 10, 22, 8, 0),
+				List.of(new JourneyTrackingResponse.Horse(UUID.randomUUID(), UUID.randomUUID(), "Silver Star")),
+				List.of()));
 
 		mockMvc.perform(get("/api/v1/orders/{orderId}/tracking", ORDER_ID))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.orderId").value(ORDER_ID.toString()))
 				.andExpect(jsonPath("$.orderCode").value("ORD-TRACKING"))
+				.andExpect(jsonPath("$.horses[0].name").value("Silver Star"))
 				.andExpect(jsonPath("$.legs").isArray());
 	}
 }

@@ -3,6 +3,53 @@ import { JourneyReadError, readJourneyNotifications, readJourneyTracking } from 
 
 afterEach(() => vi.unstubAllGlobals());
 
+const horse = (id: string, name: string) => ({
+  transportOrderHorseId: `order-${id}`,
+  horseId: id,
+  name,
+});
+
+function trackingPayload(horses: ReturnType<typeof horse>[], legs: unknown[]) {
+  return {
+    orderId: "40000000-0000-0000-0000-000000000001",
+    orderCode: "ORD-TRACKING",
+    orderStatus: "DELIVERED",
+    originAddress: "Origin",
+    originCountry: "US",
+    destinationAddress: "Destination",
+    destinationCountry: "BE",
+    requestedDepartureAt: "2026-10-27T08:00:00",
+    deliveredAt: "2026-10-27T15:30:00",
+    routePlanId: "30000000-0000-0000-0000-000000000001",
+    routePlanStatus: "APPROVED",
+    routePlanApprovedAt: "2026-10-26T10:00:00",
+    horses,
+    legs,
+  };
+}
+
+function airLeg() {
+  return {
+    routeLegId: "30000000-0000-0000-0000-000000000002",
+    sequenceNo: 1,
+    type: "AIR",
+    status: "COMPLETED",
+    origin: "Airport",
+    destination: "Stable",
+    roadVehicles: [],
+    airExecution: {
+      executionId: "10000000-0000-0000-0000-000000000001",
+      status: "COMPLETED",
+      startedAt: "2026-10-27T08:05:00",
+      destinationArrivedAt: "2026-10-27T15:00:00",
+      completedAt: "2026-10-27T15:30:00",
+      escort: null,
+      finalWelfare: null,
+      proofOfDelivery: null,
+    },
+  };
+}
+
 describe("journey read service", () => {
   it("sends the bearer token and reads tracking for the requested Order", async () => {
     const backendTracking = {
@@ -18,6 +65,7 @@ describe("journey read service", () => {
       routePlanId: "30000000-0000-0000-0000-000000000001",
       routePlanStatus: "APPROVED",
       routePlanApprovedAt: "2026-10-26T10:00:00",
+      horses: [{ transportOrderHorseId: "70000000-0000-0000-0000-000000000001", horseId: "60000000-0000-0000-0000-000000000001", name: "Silver Star" }],
       legs: [{
         routeLegId: "30000000-0000-0000-0000-000000000002",
         sequenceNo: 1,
@@ -85,6 +133,78 @@ describe("journey read service", () => {
       expect.stringContaining("/api/v1/orders/order-2068/tracking"),
       expect.objectContaining({ headers: expect.objectContaining({ Authorization: "Bearer token-for-test" }) }),
     );
+  });
+
+  it("uses the Order horse assignment for a single-leg final AIR journey", async () => {
+    const payload = trackingPayload([horse("horse-1", "Silver Star")], [airLeg()]);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => payload }));
+
+    await expect(readJourneyTracking("air-order", "token")).resolves.toMatchObject({
+      legs: [{ mode: "AIR", horses: ["Silver Star"] }],
+    });
+  });
+
+  it("shows every assigned Order horse on an AIR-only journey", async () => {
+    const payload = trackingPayload([
+      horse("horse-1", "Silver Star"),
+      horse("horse-2", "Moon Dancer"),
+    ], [airLeg()]);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => payload }));
+
+    await expect(readJourneyTracking("air-order", "token")).resolves.toMatchObject({
+      legs: [{ horses: ["Silver Star", "Moon Dancer"] }],
+    });
+  });
+
+  it("keeps Order horses on AIR while preserving per-Vehicle horses on AIR-to-ROAD tracking", async () => {
+    const roadHorse = horse("horse-1", "Silver Star");
+    const roadLeg = {
+      ...airLeg(),
+      routeLegId: "30000000-0000-0000-0000-000000000003",
+      sequenceNo: 2,
+      type: "ROAD",
+      roadVehicles: [{
+        roadLegVehicleId: "vehicle-1",
+        plateNumber: "QA-ROAD-01",
+        executionStatus: "COMPLETED",
+        horses: [roadHorse],
+        driver: null,
+        escort: null,
+        checkpoints: [],
+        startedAt: null,
+        destinationArrivedAt: null,
+        completedAt: null,
+        finalWelfare: null,
+        proofOfDelivery: null,
+      }],
+      airExecution: null,
+    };
+    const payload = trackingPayload([roadHorse, horse("horse-2", "Moon Dancer")], [airLeg(), roadLeg]);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => payload }));
+
+    await expect(readJourneyTracking("mixed-order", "token")).resolves.toMatchObject({
+      legs: [
+        { mode: "AIR", horses: ["Silver Star", "Moon Dancer"] },
+        { mode: "ROAD", horses: ["Silver Star"] },
+      ],
+    });
+  });
+
+  it("does not invent a horse when the Order has no valid horse assignment", async () => {
+    const payload = trackingPayload([], [airLeg()]);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => payload }));
+
+    await expect(readJourneyTracking("empty-order", "token")).resolves.toMatchObject({
+      legs: [{ horses: [] }],
+    });
+  });
+
+  it("rejects tracking that omits the authoritative Order horse assignment", async () => {
+    const payload = trackingPayload([], [airLeg()]);
+    Reflect.deleteProperty(payload, "horses");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => payload }));
+
+    await expect(readJourneyTracking("invalid-order", "token")).rejects.toMatchObject({ status: 200 });
   });
 
   it("does not turn a server authorization denial into empty tracking", async () => {

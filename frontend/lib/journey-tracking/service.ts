@@ -106,8 +106,7 @@ function maxTimestamp(values: Array<string | null>): string | null {
 function mapTracking(value: unknown): JourneyTracking {
   const source = object(value);
   const rawLegs = array(source.legs).map(object);
-  const allHorseNames = [...new Set(rawLegs.flatMap((leg) => array(leg.roadVehicles)
-    .flatMap((vehicle) => horseNames(object(vehicle).horses))))];
+  const allHorseNames = [...new Set(horseNames(source.horses))];
   const deliveryEvents: JourneyTracking["deliveryEvents"] = [];
   const updateTimes: Array<string | null> = [timestamp(source.routePlanApprovedAt), timestamp(source.deliveredAt)];
 

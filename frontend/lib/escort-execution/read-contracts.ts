@@ -187,9 +187,22 @@ function airActions(value: unknown, contract: string): AirExecutionAvailableActi
   };
 }
 
-function airSummary(value: unknown, contract = "AIR execution"): AssignedAirExecutionSummary {
+function airSummary(
+  value: unknown,
+  contract = "AIR execution",
+  deriveWelfareFromDetail = false,
+): AssignedAirExecutionSummary {
   const source = object(value, contract);
   enumeration(source.orderStatus, orderStatuses, contract);
+  let welfareRecorded: boolean;
+  if (deriveWelfareFromDetail) {
+    if (!("welfareEvidence" in source)) return malformed(contract);
+    welfareRecorded = source.welfareEvidence !== null;
+    if (source.welfareRecorded !== undefined
+        && bool(source.welfareRecorded, contract) !== welfareRecorded) return malformed(contract);
+  } else {
+    welfareRecorded = bool(source.welfareRecorded, contract);
+  }
   return {
     executionId: uuid(source.executionId, contract),
     routeLegId: uuid(source.routeLegId, contract),
@@ -203,7 +216,7 @@ function airSummary(value: unknown, contract = "AIR execution"): AssignedAirExec
     plannedDepartureAt: dateTime(source.plannedDepartureAt, contract),
     plannedArrivalAt: dateTime(source.plannedArrivalAt, contract),
     status: enumeration(source.status, executionStatuses, contract),
-    welfareRecorded: bool(source.welfareRecorded, contract),
+    welfareRecorded,
     proofOfDeliveryRecorded: bool(source.proofOfDeliveryRecorded, contract),
     proofOfDeliveryAvailable: bool(source.proofOfDeliveryAvailable, contract),
     handoverProgress: handover(source.handoverProgress, contract),
@@ -279,7 +292,7 @@ export function parseAssignedAirQueue(value: unknown): AssignedAirWorkQueue {
 export function parseAssignedAirDetail(value: unknown): AssignedAirExecutionDetail {
   const contract = "AIR execution detail";
   const source = object(value, contract);
-  const summary = airSummary(source, contract);
+  const summary = airSummary(source, contract, true);
   const assignedEscort = staff(source.assignedEscort, contract);
   array(source.horses, contract).forEach((item) => horse(item, contract));
   const welfareEvidence = source.welfareEvidence === null

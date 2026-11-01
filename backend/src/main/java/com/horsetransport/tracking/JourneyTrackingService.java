@@ -147,7 +147,18 @@ public class JourneyTrackingService {
 		return new JourneyTrackingResponse(order.getId(), order.getOrderCode(), order.getStatus(),
 				order.getOriginAddress(), order.getOriginCountry(), order.getDestinationAddress(),
 				order.getDestinationCountry(), order.getRequestedDepartureAt(), order.getDeliveredAt(),
-				plan.getId(), plan.getStatus(), plan.getApprovedAt(), legResponses);
+				plan.getId(), plan.getStatus(), plan.getApprovedAt(), orderHorses(data), legResponses);
+	}
+
+	private List<JourneyTrackingResponse.Horse> orderHorses(TrackingData data) {
+		return data.orderHorsesById().values().stream()
+				.filter(orderHorse -> data.horsesById().containsKey(orderHorse.getHorseId()))
+				.map(orderHorse -> {
+					Horse horse = data.horsesById().get(orderHorse.getHorseId());
+					return new JourneyTrackingResponse.Horse(orderHorse.getId(), horse.getId(), horse.getName());
+				})
+				.sorted(Comparator.comparing(JourneyTrackingResponse.Horse::name))
+				.toList();
 	}
 
 	private TransportOrder findAccessibleOrder(UUID orderId) {

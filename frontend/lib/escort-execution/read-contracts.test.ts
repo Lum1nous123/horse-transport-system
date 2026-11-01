@@ -105,6 +105,39 @@ function airSummary() {
   };
 }
 
+function airWelfareEvidence() {
+  return {
+    id: ids.evidence,
+    roadVehicleExecutionId: null,
+    airLegExecutionId: ids.execution,
+    checkpointId: null,
+    eventType: "FINAL_DESTINATION",
+    photoUrl: "https://res.cloudinary.com/demo/image/upload/v1/air-welfare.jpg",
+    photoName: "air-welfare.jpg",
+    note: "Horse arrived alert and hydrated.",
+    recordedByEscortId: ids.escort,
+    recordedAt: "2026-10-28T16:10:00",
+  };
+}
+
+function airDetail(overrides: Record<string, unknown> = {}) {
+  const { welfareRecorded: omittedQueueOnlyFlag, ...summary } = airSummary();
+  void omittedQueueOnlyFlag;
+  return {
+    ...summary,
+    assignedAt: "2026-10-26T10:00:00",
+    startedAt: null,
+    destinationArrivedAt: null,
+    completedAt: null,
+    assignedEscort: { id: ids.escort, fullName: "Eli Escort" },
+    horses: [{ id: ids.horse, transportOrderHorseId: ids.orderHorse, name: "Silver Star", microchipId: "MICRO-S3-001" }],
+    welfareEvidence: null,
+    proofOfDelivery: null,
+    lastUpdatedAt: "2026-10-26T10:00:00",
+    ...overrides,
+  };
+}
+
 describe("Sprint 3 execution read contracts", () => {
   it("maps ROAD queue and detail without deriving actions", () => {
     expect(parseAssignedRoadQueue({ executions: [roadSummary()] }).executions[0]).toMatchObject({
@@ -123,18 +156,42 @@ describe("Sprint 3 execution read contracts", () => {
       handoverProgress: { orderStatus: "READY_TO_SHIP" },
       availableActions: { start: true },
     });
-    expect(parseAssignedAirDetail({
-      ...airSummary(),
-      assignedAt: "2026-10-26T10:00:00",
+    expect(parseAssignedAirDetail(airDetail())).toMatchObject({
+      assignedEscortId: ids.escort,
       startedAt: null,
-      destinationArrivedAt: null,
-      completedAt: null,
-      assignedEscort: { id: ids.escort, fullName: "Eli Escort" },
-      horses: [{ id: ids.horse, transportOrderHorseId: ids.orderHorse, name: "Silver Star", microchipId: "MICRO-S3-001" }],
+      welfareRecorded: false,
       welfareEvidence: null,
-      proofOfDelivery: null,
-      lastUpdatedAt: "2026-10-26T10:00:00",
-    })).toMatchObject({ assignedEscortId: ids.escort, startedAt: null });
+    });
+  });
+
+  it("derives AIR detail welfare from evidence without requiring the queue-only flag", () => {
+    const detail = airDetail({ welfareEvidence: airWelfareEvidence() });
+
+    expect(parseAssignedAirDetail(detail)).toMatchObject({
+      welfareRecorded: true,
+      welfareEvidence: { id: ids.evidence, note: "Horse arrived alert and hydrated." },
+    });
+    expect(parseAssignedAirDetail({ ...detail, welfareRecorded: true })).toMatchObject({
+      welfareRecorded: true,
+    });
+    expect(() => parseAssignedAirDetail({ ...detail, welfareRecorded: false }))
+      .toThrow(/reviewed Backend contract/);
+  });
+
+  it("keeps AIR queue welfareRecorded mandatory", () => {
+    const { welfareRecorded: omitted, ...missingWelfareFlag } = airSummary();
+    void omitted;
+
+    expect(() => parseAssignedAirQueue({ executions: [missingWelfareFlag] }))
+      .toThrow(/reviewed Backend contract/);
+  });
+
+  it("still rejects AIR detail when a truly required field is missing", () => {
+    const { assignedEscort: omitted, ...missingAssignedEscort } = airDetail();
+    void omitted;
+
+    expect(() => parseAssignedAirDetail(missingAssignedEscort))
+      .toThrow(/reviewed Backend contract/);
   });
 
   it("rejects contradictory persisted evidence flags", () => {
