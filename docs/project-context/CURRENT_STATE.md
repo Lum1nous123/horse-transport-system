@@ -159,6 +159,69 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### Sprint 3 final E2E and manual validation (2026-11-01)
+
+- Core authenticated browser E2E scenarios pass: single-leg ROAD, sequential
+  ROAD-to-ROAD, multi-vehicle ROAD, AIR-to-ROAD, and single-leg final AIR.
+- Manual Fixture A `S3MANUAL-20261101-AIR-MVR` passes end to end. The owner
+  confirmed non-final AIR Start/destination/final welfare/Complete, ROAD unlock,
+  two independent Driver starts, checkpoint arrivals and welfare, destination
+  arrivals and final welfare, then PoD aggregation from `1/2` with the Order
+  still `IN_PROGRESS` to `2/2` with the ROAD RouteLeg `COMPLETED` and Order
+  `DELIVERED`.
+- The owner waived manual execution of Fixture B
+  `S3MANUAL-20261101-AIR-FINAL`; it is not recorded as a manual PASS. The same
+  final single-leg AIR workflow already passed authenticated browser E2E with
+  `S3QA-AIR-FINAL-001`, so Fixture B does not need execution or reset.
+- The AIR detail contract mismatch and AIR-only Horse tracking assignment gaps
+  are fixed with regression coverage. LM and Customer tracking passed browser
+  verification, with no known tracking defect remaining in the tested Sprint 3
+  scenarios.
+- Final local checks: 423 Backend non-container tests and 225 Frontend tests
+  pass; Backend compilation, TypeScript, ESLint, and the Frontend production
+  build pass. Docker/Testcontainers tests are `NOT RUN / ENVIRONMENT BLOCKED`
+  because the Docker daemon is unavailable; the owner chose not to address that
+  environment gate during this documentation-finalization turn.
+- Existing manual and E2E datasets and evidence remain intact. No replay of
+  payment, Route Plan approval, or lifecycle E2E is required.
+
+### Sprint 3 manual testing dataset — retained for demo/retest (2026-11-01)
+
+- Owner-approved fixtures `S3MANUAL-20261101-AIR-MVR` and
+  `S3MANUAL-20261101-AIR-FINAL` were inserted into the shared Supabase
+  development/demo project whose branch is truthfully labeled `PRODUCTION`.
+- The pooler-compatible target guard and immediate read-only preflight passed;
+  one atomic transaction committed exactly 24 fixture records (18 + 6), with
+  no update, delete, lifecycle evidence, notification, audit, or Cloudinary
+  mutation.
+- Initial readback confirmed both Orders at `READY_TO_SHIP`, approved Route
+  Plans, initial AIR legs `READY`, Fixture A's ROAD leg `PLANNED`, and every
+  execution `NOT_STARTED` before testing. Fixture A has since completed manual
+  testing and is `DELIVERED`; Fixture B remains preserved without manual
+  execution by owner decision.
+- The reusable demo/retest procedure remains in
+  `docs/reports/SPRINT_3_MANUAL_TESTING_RUNBOOK_VI.md`. No cleanup or reset has
+  been performed against either manual fixture.
+
+### Sprint 3 ROAD-to-ROAD E2E — completed (2026-10-31)
+
+- The deterministic `S3QA-R2R-001` two-leg ROAD fixture passed the complete
+  authenticated workflow: strict leg sequencing, checkpoint/final welfare,
+  final-leg PoD, Order delivery, and LM/Customer tracking.
+- Setup requires independently approved database/schema/server metadata plus an
+  exact fixture write confirmation. The target guard preserves Supabase's
+  `PRODUCTION` branch label while separately recording the owner's approved
+  development/demo usage, and pins the approved project reference and endpoint
+  before reconnecting. It fails on identifier collisions, missing or
+  role-invalid synthetic accounts, staff overlap, or Vehicle conflicts.
+- The retained cleanup script validates the complete exact graph and refuses database evidence
+  deletion while Cloudinary assets remain unconfirmed. A guarded exact-URL
+  Cloudinary cleanup command is not yet implemented, so completed-run cleanup
+  remains blocked until an equivalent operation is approved.
+- The fixture and evidence remain intact; no cleanup was performed. See
+  `docs/reports/SPRINT_3_ROAD_ROAD_E2E_FIXTURE.md` for the fixture design and
+  safety controls.
+
 ### Sprint 3 P1 tracking reliability — local implementation (2026-10-31)
 
 - Logistics Manager tracking list eligibility now requires the same approved
@@ -205,12 +268,12 @@ These follow-ups do not change approved requirements and must not be used to inf
   `backend/scripts/`. Multi-vehicle ROAD execution, checkpoint/final welfare,
   non-final AIR completion, final ROAD/AIR PoD with duplicate readback,
   Cloudinary uploads, PostgreSQL persistence, and Customer/LM tracking were
-  verified through real APIs. A workflow-created ROAD Order also passed an
-  authenticated browser run through Driver Start/destination, Escort final
-  welfare, PoD, and LM tracking. Checkpoint, AIR, and Customer browser replay
-  remain open. See `docs/reports/SPRINT_3_DEMO_RUNBOOK.md`.
-- Work is uncommitted. Human review, live E2E, QA sign-off, commit/push, and
-  merge remain open.
+  verified through real APIs. Authenticated browser validation now also covers
+  checkpoint workflows, AIR execution, multi-vehicle ROAD, final AIR PoD, and
+  LM/Customer tracking. See `docs/reports/SPRINT_3_DEMO_RUNBOOK.md` and the
+  manual runbook above.
+- Work is uncommitted. Final Git review, commit/push, PR review, and merge
+  remain open.
 
 ### S3-018-FE-01 Proof of Delivery — local mock-first implementation (2026-10-24)
 
