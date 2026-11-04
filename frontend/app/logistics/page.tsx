@@ -6,6 +6,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { clearAccessToken, getAccessToken, getCurrentUser } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
+import { filterLogisticsInboxOrders } from "@/lib/logistics-inbox-search";
+import BrandMark from "@/components/BrandMark";
 
 type OrderStatus = "SUBMITTED" | "QUOTATION_SENT" | "REJECTED" | "CANCELLED";
 type InboxOrder = {
@@ -52,6 +54,22 @@ type Quotation = {
 type DraftItem = { description: string; amount: string };
 type QuoteDraft = { depositAmount: string; notes: string; lineItems: DraftItem[] };
 type ApiErrorBody = { code?: string; message?: string };
+type LogisticsIconName = "inbox" | "location" | "mode" | "calendar" | "horses" | "contact" | "note" | "quote";
+
+const logisticsIconPaths: Record<LogisticsIconName, string[]> = {
+  inbox: ["M4 5h16v14H4z", "M4 14h5l2 2h2l2-2h5"],
+  location: ["M12 21s6-5.4 6-11a6 6 0 1 0-12 0c0 5.6 6 11 6 11Z", "M12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"],
+  mode: ["M3 7h11v10H3z", "M14 10h4l3 3v4h-7z", "M7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm10 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"],
+  calendar: ["M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Z", "M8 2v4m8-4v4M3 9h18"],
+  horses: ["M8.5 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7-1a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z", "M3 20a5.5 5.5 0 0 1 11 0m0-6a5 5 0 0 1 7 4.6V20"],
+  contact: ["M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z", "M4 21a8 8 0 0 1 16 0"],
+  note: ["M5 3h14v18H5z", "M8 8h8m-8 4h8m-8 4h5"],
+  quote: ["M6 3h9l4 4v14H6z", "M15 3v5h4M9 12h6m-6 4h6"],
+};
+
+function LogisticsIcon({ name }: { name: LogisticsIconName }) {
+  return <svg className="logistics-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{logisticsIconPaths[name].map((path) => <path d={path} key={path} />)}</svg>;
+}
 
 class LogisticsApiError extends Error {
   constructor(message: string, readonly code: string, readonly status: number) {
@@ -155,6 +173,7 @@ export default function LogisticsPage() {
   const [preview, setPreview] = useState(false);
   const [ready, setReady] = useState(false);
   const [orders, setOrders] = useState<InboxOrder[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -176,6 +195,15 @@ export default function LogisticsPage() {
     const amount = Number(item.amount);
     return Number.isFinite(amount) ? sum + amount : sum;
   }, 0), [quoteDraft.lineItems]);
+
+  const visibleOrders = useMemo(
+    () => filterLogisticsInboxOrders(orders, searchQuery),
+    [orders, searchQuery],
+  );
+  const selectedInboxOrder = useMemo(
+    () => orders.find((order) => order.id === selectedId) ?? null,
+    [orders, selectedId],
+  );
 
   const refreshInbox = useCallback(async () => {
     setLoading(true);
@@ -409,33 +437,45 @@ export default function LogisticsPage() {
   }
 
   return (
-    <main className="customer-page logistics-page">
+    <main className="customer-page logistics-page logistics-manager-page">
       <header className="customer-topbar">
         <Link className="customer-brand" href="/" aria-label="Horse Transport System home">
-          <span className="customer-brand-mark" aria-hidden="true">HT</span><span>Horse Transport System</span>
+          <BrandMark /><span>Horse Transport System</span>
         </Link>
-        <div className="customer-topbar-actions"><span>Logistics workspace</span><Link className="logistics-workspace-link" href={preview ? "/logistics/assignments?preview=1" : "/logistics/assignments"}>Staff Assignment</Link><Link className="logistics-workspace-link" href={preview ? "/logistics/route-reviews?preview=1" : "/logistics/route-reviews"}>Route Reviews</Link><button type="button" className="customer-link-button" onClick={signOut}>Sign out</button></div>
+        <nav className="logistics-primary-nav" aria-label="Logistics workspaces">
+          <Link className="is-current" href={preview ? "/logistics?preview=1" : "/logistics"} aria-current="page">Logistics workspace</Link>
+          <Link href={preview ? "/logistics/assignments?preview=1" : "/logistics/assignments"}>Staff assignment</Link>
+          <Link href={preview ? "/logistics/route-reviews?preview=1" : "/logistics/route-reviews"}>Route reviews</Link>
+          <Link href="/logistics/tracking">Order tracking</Link>
+        </nav>
+        <div className="customer-topbar-actions"><span>Logistics Manager</span><button type="button" className="customer-link-button" onClick={signOut}>Sign out</button></div>
       </header>
       <div className="customer-content logistics-content">
         {preview && <div className="customer-preview-banner" role="status"><strong>Preview mode</strong><span>Sample data only. Changes stay in this tab and are not sent to the backend.</span></div>}
-        <div className="customer-heading-row logistics-heading"><div><p className="customer-eyebrow">PRE-APPROVAL</p><h1>Submitted orders</h1><p className="customer-intro">Review requests, prepare a quotation, or reject an order with a reason.</p></div><span className="customer-count">{orders.length} awaiting review</span></div>
+        <div className="customer-heading-row logistics-heading"><div className="logistics-heading-copy"><span className="logistics-heading-icon" aria-hidden="true">✓</span><div><div className="logistics-heading-title"><h1>Submitted orders</h1><span className="customer-count">{orders.length} awaiting review</span></div><p className="customer-intro">Review incoming requests, verify transport details, and prepare quotations.</p></div></div></div>
         {feedback && <p className="customer-feedback" role="status">{feedback}</p>}
         {loadError && <div className="customer-alert" role="alert"><span>{loadError}</span><button type="button" onClick={() => void refreshInbox()}>Try again</button></div>}
         <div className="logistics-workspace">
           <section className="logistics-inbox" aria-labelledby="inbox-heading">
-            <div className="logistics-panel-heading"><div><h2 id="inbox-heading">Order inbox</h2><p>Orders in SUBMITTED status</p></div><button className="customer-text-button" type="button" onClick={() => void refreshInbox()} disabled={loading} aria-label="Refresh order inbox">Refresh</button></div>
-            {loading ? <p className="logistics-empty" role="status">Loading submitted orders…</p> : orders.length === 0 ? <div className="logistics-empty"><span className="logistics-empty-icon" aria-hidden="true">✓</span><h3>Inbox is clear</h3><p>New submitted transport requests will appear here.</p></div> : <ul className="logistics-order-list">{orders.map((order) => <li key={order.id}><button className={`logistics-order-card${selectedId === order.id ? " is-selected" : ""}`} type="button" disabled={quoteBusyAction || rejectBusy} onClick={() => void openOrder(order)} aria-current={selectedId === order.id ? "true" : undefined}><span className="logistics-order-card-top"><strong>{order.orderCode}</strong><span className="order-status status-submitted">Submitted</span></span><span className="logistics-route">{location(order.originAddress, order.originCountry)} <span aria-hidden="true">→</span> {location(order.destinationAddress, order.destinationCountry)}</span><span className="logistics-order-meta">{order.horseCount} {order.horseCount === 1 ? "horse" : "horses"} · {order.transportMode ?? "Mode not set"}</span><span className="logistics-order-meta">Received {new Date(order.createdAt).toLocaleDateString()}</span></button></li>)}</ul>}
+            <div className="logistics-inbox-header">
+              <div className="logistics-inbox-title"><div><h2 id="inbox-heading"><LogisticsIcon name="inbox" />Order inbox</h2><span>{searchQuery ? `${visibleOrders.length} of ${orders.length}` : orders.length}</span></div><button className="customer-text-button" type="button" onClick={() => void refreshInbox()} disabled={loading} aria-label="Refresh order inbox">{loading ? "Refreshing…" : "Refresh"}</button></div>
+              <label className="logistics-search"><span className="sr-only">Search submitted orders</span><input type="search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search order or route" autoComplete="off" /></label>
+            </div>
+            {loading ? <p className="logistics-empty" role="status">Loading submitted orders…</p> : orders.length === 0 ? <div className="logistics-empty"><span className="logistics-empty-icon" aria-hidden="true">✓</span><h3>Inbox is clear</h3><p>New submitted transport requests will appear here.</p></div> : visibleOrders.length === 0 ? <div className="logistics-empty logistics-search-empty"><h3>No matching orders</h3><p>Try a different order code, route, status, or mode.</p><button className="customer-text-button" type="button" onClick={() => setSearchQuery("")}>Clear search</button></div> : <ul className="logistics-order-list">{visibleOrders.map((order) => <li key={order.id}><button className={`logistics-order-card${selectedId === order.id ? " is-selected" : ""}`} type="button" disabled={quoteBusyAction || rejectBusy} onClick={() => void openOrder(order)} aria-current={selectedId === order.id ? "true" : undefined}><span className="logistics-order-card-top"><strong>{order.orderCode}</strong><span className="order-status status-submitted">Submitted</span></span><span className="logistics-route">{location(order.originAddress, order.originCountry)} <span aria-hidden="true">→</span> {location(order.destinationAddress, order.destinationCountry)}</span><span className="logistics-order-card-bottom"><span>{order.horseCount} {order.horseCount === 1 ? "horse" : "horses"} · {order.transportMode ?? "Mode not set"}</span>{order.createdAt && <span>{new Date(order.createdAt).toLocaleDateString()}</span>}</span></button></li>)}</ul>}
+            {!loading && orders.length > 0 && <p className="logistics-inbox-footer">Showing {visibleOrders.length} of {orders.length} loaded {orders.length === 1 ? "order" : "orders"}</p>}
           </section>
 
           <section className="logistics-detail" aria-label="Selected order details">
             {!selectedId ? <div className="logistics-select-prompt"><span aria-hidden="true">↖</span><h2>Select an order</h2><p>Choose a submitted request to review its journey and delivery details.</p></div> : detailBusy ? <div className="logistics-select-prompt" role="status"><p>Loading order details…</p></div> : !orderDetail ? <div className="logistics-select-prompt"><p>Order details are unavailable. Refresh the inbox and try again.</p></div> : <>
-              <div className="logistics-detail-heading"><div><span className="order-status status-submitted">Submitted</span><h2>{orderDetail.orderCode}</h2><p>{location(orderDetail.originAddress, orderDetail.originCountry)} <span aria-hidden="true">→</span> {location(orderDetail.destinationAddress, orderDetail.destinationCountry)}</p></div><button className="customer-secondary-button compact reject-trigger" type="button" onClick={() => { setRejectOrder(orderDetail); setRejectError(""); setRejectionReason(""); }}>Reject order</button></div>
-              <div className="logistics-order-facts"><div><span>Transport mode</span><strong>{orderDetail.transportMode ?? "Not provided"}</strong></div><div><span>Requested departure</span><strong>{orderDetail.requestedDepartureAt ? new Date(orderDetail.requestedDepartureAt).toLocaleString() : "Not provided"}</strong></div><div><span>Horses</span><strong>{orderDetail.horseIds.length} {orderDetail.horseIds.length === 1 ? "horse" : "horses"}</strong></div></div>
-              <section className="logistics-info-section"><h3>Delivery contact</h3><dl><div><dt>Name</dt><dd>{orderDetail.recipientName || "Not provided"}</dd></div><div><dt>Phone</dt><dd>{orderDetail.recipientPhone || "Not provided"}</dd></div>{orderDetail.recipientEmail && <div><dt>Email</dt><dd>{orderDetail.recipientEmail}</dd></div>}</dl></section>
-              {orderDetail.specialRequirements && <section className="logistics-info-section"><h3>Special requirements</h3><p>{orderDetail.specialRequirements}</p></section>}
-              <section className="logistics-quotation-section" aria-labelledby="quotation-editor-heading"><div className="logistics-panel-heading"><div><h3 id="quotation-editor-heading">Quotation</h3><p>{quotation?.status === "SENT" ? "Sent quotations are locked." : "Add cost items and a deposit before sending."}</p></div></div>
+              <div className="logistics-detail-heading"><div className="logistics-detail-title"><div><h2>{orderDetail.orderCode}</h2><span className="order-status status-submitted">Submitted</span>{selectedInboxOrder?.createdAt && <span className="logistics-received-date">Received {new Date(selectedInboxOrder.createdAt).toLocaleDateString()}</span>}</div><p><LogisticsIcon name="location" />{location(orderDetail.originAddress, orderDetail.originCountry)} <span aria-hidden="true">→</span> {location(orderDetail.destinationAddress, orderDetail.destinationCountry)}</p></div><div className="logistics-header-actions"><button className="customer-secondary-button compact reject-trigger" type="button" onClick={() => { setRejectOrder(orderDetail); setRejectError(""); setRejectionReason(""); }}>Reject order</button>{!quotation && !quoteError && <button className="customer-primary-button compact" type="button" disabled={quoteBusy || quoteBusyAction} onClick={() => void createQuotation()}>{quoteBusy ? "Checking quotation…" : quoteBusyAction ? "Preparing…" : "Prepare quotation"}</button>}</div></div>
+              <section className="logistics-summary" aria-labelledby="transport-summary-heading"><h3 id="transport-summary-heading">Transport summary</h3><dl><div><dt><LogisticsIcon name="mode" />Transport mode</dt><dd>{orderDetail.transportMode ?? "Not provided"}</dd></div><div><dt><LogisticsIcon name="calendar" />Requested departure</dt><dd>{orderDetail.requestedDepartureAt ? new Date(orderDetail.requestedDepartureAt).toLocaleString() : "Not provided"}</dd></div><div><dt><LogisticsIcon name="horses" />Horses</dt><dd>{orderDetail.horseIds.length} {orderDetail.horseIds.length === 1 ? "horse" : "horses"}</dd></div></dl></section>
+              <div className={`logistics-detail-grid${orderDetail.specialRequirements ? " has-requirements" : ""}`}>
+                <section className="logistics-info-section"><h3><LogisticsIcon name="contact" />Delivery contact</h3><dl><div><dt>Name</dt><dd>{orderDetail.recipientName || "Not provided"}</dd></div><div><dt>Phone</dt><dd>{orderDetail.recipientPhone ? <a href={`tel:${orderDetail.recipientPhone}`}>{orderDetail.recipientPhone}</a> : "Not provided"}</dd></div><div><dt>Email</dt><dd>{orderDetail.recipientEmail ? <a href={`mailto:${orderDetail.recipientEmail}`}>{orderDetail.recipientEmail}</a> : "Not provided"}</dd></div></dl></section>
+                {orderDetail.specialRequirements && <section className="logistics-info-section logistics-requirements"><h3><LogisticsIcon name="note" />Special requirements</h3><p>{orderDetail.specialRequirements}</p></section>}
+              </div>
+              <section className="logistics-quotation-section" aria-labelledby="quotation-editor-heading"><div className="logistics-quotation-heading"><div><h3 id="quotation-editor-heading"><LogisticsIcon name="quote" />Quotation</h3><p>{quotation?.status === "SENT" ? "Sent quotations are locked." : quotation?.status === "DRAFT" ? "Complete the draft and send it to the customer." : "No quotation has been prepared for this order."}</p></div><span className={`quotation-state ${quotation?.status.toLowerCase() ?? "not-started"}`}>{quotation?.status === "SENT" ? "Sent" : quotation?.status === "DRAFT" ? "Draft" : quoteBusy ? "Checking…" : "Not started"}</span></div>
                 {quoteError && <p className="customer-form-error" role="alert">{quoteError}</p>}
-                {quoteBusy ? <p className="field-hint" role="status">Loading quotation…</p> : !quotation ? <div className="logistics-no-quote"><p>No quotation draft exists for this order yet.</p><button className="customer-primary-button" type="button" disabled={quoteBusyAction} onClick={() => void createQuotation()}>{quoteBusyAction ? "Creating…" : "Prepare quotation"}</button></div> : quotation.status === "SENT" ? <QuotationBreakdown quotation={quotation} /> : <>
+                {quoteBusy ? <p className="field-hint" role="status">Loading quotation…</p> : !quotation ? <div className="logistics-no-quote"><p>Use “Prepare quotation” above to start adding cost items and a deposit requirement.</p></div> : quotation.status === "SENT" ? <QuotationBreakdown quotation={quotation} /> : <>
                   <div className="logistics-line-items"><div className="logistics-line-heading"><span>Cost item</span><span>Amount (USD)</span><span className="sr-only">Actions</span></div>{quoteDraft.lineItems.map((item, index) => <div className="logistics-line-editor" key={`${quotation.id}-${index}`}><label className="sr-only" htmlFor={`line-description-${index}`}>Cost item {index + 1} description</label><input id={`line-description-${index}`} value={item.description} maxLength={255} placeholder="Transport service" onChange={(event) => setQuoteDraft((current) => ({ ...current, lineItems: current.lineItems.map((line, lineIndex) => lineIndex === index ? { ...line, description: event.target.value } : line) }))} /><label className="sr-only" htmlFor={`line-amount-${index}`}>Cost item {index + 1} amount in USD</label><input id={`line-amount-${index}`} type="number" min="0.01" step="0.01" value={item.amount} placeholder="0.00" onChange={(event) => setQuoteDraft((current) => ({ ...current, lineItems: current.lineItems.map((line, lineIndex) => lineIndex === index ? { ...line, amount: event.target.value } : line) }))} /><button className="customer-text-button remove-line-button" type="button" onClick={() => setQuoteDraft((current) => ({ ...current, lineItems: current.lineItems.filter((_, lineIndex) => lineIndex !== index) }))} aria-label={`Remove cost item ${index + 1}`}>Remove</button></div>)}<button className="customer-secondary-button compact add-line-button" type="button" onClick={() => setQuoteDraft((current) => ({ ...current, lineItems: [...current.lineItems, { description: "", amount: "" }] }))}>Add cost item <span aria-hidden="true">＋</span></button></div>
                   <div className="logistics-total-row"><span>Total</span><strong>{formatMoney(computedTotal || null)}</strong></div>
                   <div className="customer-field-grid logistics-quote-fields"><label className="customer-field"><span>Deposit amount (USD)</span><input type="number" min="0.01" step="0.01" value={quoteDraft.depositAmount} placeholder="Enter deposit" onChange={(event) => setQuoteDraft((current) => ({ ...current, depositAmount: event.target.value }))} /></label><label className="customer-field"><span>Remaining balance</span><input value={quoteDraft.depositAmount && Number(quoteDraft.depositAmount) > 0 ? formatMoney(computedTotal - Number(quoteDraft.depositAmount)) : "—"} readOnly /></label></div>

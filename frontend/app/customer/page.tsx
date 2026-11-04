@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import BrandMark from "@/components/BrandMark";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
@@ -441,7 +442,7 @@ export default function CustomerPage() {
     <main className="customer-page">
       <header className="customer-topbar">
         <Link className="customer-brand" href="/" aria-label="Horse Transport System home">
-          <span className="customer-brand-mark" aria-hidden="true">HT</span><span>Horse Transport System</span>
+          <BrandMark /><span>Horse Transport System</span>
         </Link>
         <div className="customer-topbar-actions"><span>Customer workspace</span><button type="button" className="customer-link-button" onClick={signOut}>Sign out</button></div>
       </header>

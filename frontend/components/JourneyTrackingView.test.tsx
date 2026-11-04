@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { Leg, Vehicle } from "./JourneyTrackingView";
 import type { JourneyLeg, JourneyVehicle } from "@/lib/journey-tracking/types";
@@ -37,5 +37,20 @@ describe("journey vehicle", () => {
     expect(screen.getByText("Horse settled")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View welfare photo" })).toHaveAttribute("href", "/welfare/air.jpg");
     expect(screen.queryByRole("region", { name: /map/i })).not.toBeInTheDocument();
+  });
+
+  it("opens the active leg by default and keeps completed history collapsible", () => {
+    const completedLeg: JourneyLeg = {
+      id: "road", sequenceNo: 1, mode: "ROAD", origin: "Stable", destination: "Airport",
+      status: "COMPLETED", horses: ["Apollo"], vehicles: [], events: [], welfareEvidence: [],
+    };
+    const { container, rerender } = render(<Leg leg={completedLeg} />);
+    const details = container.querySelector("details");
+    expect(details).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByText("View details"));
+    expect(details).toHaveAttribute("open");
+
+    rerender(<Leg leg={{ ...completedLeg, status: "IN_PROGRESS" }} />);
+    expect(container.querySelector("details")).toHaveAttribute("open");
   });
 });
