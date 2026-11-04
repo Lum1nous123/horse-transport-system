@@ -33,6 +33,7 @@ function welfare(overrides: Record<string, unknown> = {}) {
     checkpointId,
     eventType: "CHECKPOINT",
     photoUrl: "https://storage.example/evidence.png",
+    photoName: "checkpoint-welfare.jpg",
     note: " Horse is calm. ",
     recordedByEscortId: escortId,
     recordedAt: "2026-10-26T10:05:00",
@@ -49,6 +50,7 @@ function proof(overrides: Record<string, unknown> = {}) {
     transportedOrderHorseIds: [horseId],
     recipientName: " Stable Manager ",
     proofPhotoUrl: "https://storage.example/proof.png",
+    proofPhotoName: "proof-of-delivery.jpg",
     handoverNote: null,
     confirmedByEscortId: escortId,
     deliveredAt: "2026-10-26T10:10:00",
@@ -65,13 +67,11 @@ const roadWelfareContext = {
   mode: "ROAD" as const,
   eventType: "CHECKPOINT" as const,
   checkpointId,
-  originalPhotoName: "original.png",
 };
 
 const airProofContext = {
   mode: "AIR" as const,
   routeLegId,
-  originalPhotoName: "proof.png",
 };
 
 describe("escort Backend response contracts", () => {

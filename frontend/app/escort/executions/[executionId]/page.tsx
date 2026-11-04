@@ -127,13 +127,17 @@ export default function RoadExecutionDetailPage() {
       if (writeSucceeded) throw caught;
       const nextMessage = caught instanceof Error ? caught.message : "We couldn't save this ROAD update.";
       const nextCode = caught instanceof EscortExecutionError ? caught.code : "REQUEST_FAILED";
-      if (nextCode === "STALE_STATE") {
+      const uncertainNetworkWrite = caught instanceof EscortExecutionError
+        && caught.details?.apiCode === "NETWORK_ERROR";
+      if (nextCode === "STALE_STATE" || uncertainNetworkWrite) {
         try {
           setExecution(await service.getAssignedRoadExecution(params.executionId));
-          setFeedback("The ROAD state changed and the latest persisted state was loaded. No mutation was replayed.");
+          setFeedback(uncertainNetworkWrite
+            ? "The connection failed after submission. The latest persisted ROAD state was loaded and the mutation was not replayed."
+            : "The ROAD state changed and the latest persisted state was loaded. No mutation was replayed.");
         } catch (recoveryError) {
           const recoveryMessage = recoveryError instanceof Error ? recoveryError.message : "The latest persisted ROAD state could not be loaded.";
-          requireReconciliation(`The ROAD state changed, and recovery read-back failed: ${recoveryMessage}`);
+          requireReconciliation(`${uncertainNetworkWrite ? "The submission result is uncertain" : "The ROAD state changed"}, and recovery read-back failed: ${recoveryMessage}`);
         }
       } else {
         setError(nextMessage);

@@ -1,5 +1,6 @@
 import type { EscortExecutionService } from "./types";
 import { unavailableEscortExecutionService } from "./unavailable-service";
+import { productionEscortExecutionService } from "./production-service";
 
 let mockServicePromise: Promise<EscortExecutionService> | null = null;
 
@@ -55,7 +56,7 @@ const lazyDevelopmentMockService: EscortExecutionService = {
 
 export function getEscortExecutionService(preview: boolean): EscortExecutionService {
   const developmentPreview = process.env.NODE_ENV === "development" && preview;
-  return developmentPreview ? lazyDevelopmentMockService : unavailableEscortExecutionService;
+  return developmentPreview ? lazyDevelopmentMockService : productionEscortExecutionService;
 }
 
 export * from "./types";

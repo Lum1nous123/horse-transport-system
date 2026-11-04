@@ -5,4 +5,6 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface StatusAuditLogRepository extends JpaRepository<StatusAuditLog, UUID> {
+	boolean existsByEntityTypeAndEntityIdAndOldStatusAndNewStatus(
+			AuditEntityType entityType, UUID entityId, String oldStatus, String newStatus);
 }

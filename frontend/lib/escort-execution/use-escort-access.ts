@@ -57,7 +57,7 @@ export function useEscortAccess() {
       try {
         const user = await getCurrentUser();
         if (!active) return;
-        if (user.role !== "ESCORT") {
+        if (user.role !== "ESCORT" || user.status !== "ACTIVE") {
           setMessage("You don't have permission to use this Escort workspace.");
           setState("forbidden");
           return;

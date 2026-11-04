@@ -32,7 +32,7 @@ function originalPhoto(name = "original.png") {
   return new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], name, { type: "image/png" });
 }
 
-function airExecution(status: "IN_PROGRESS" | "DESTINATION") {
+function airExecution(status: "IN_PROGRESS" | "DESTINATION" | "COMPLETED") {
   return {
     id: executionId,
     routeLegId,
@@ -40,7 +40,7 @@ function airExecution(status: "IN_PROGRESS" | "DESTINATION") {
     status,
     startedAt: "2026-10-25T08:00:00",
     destinationArrivedAt: status === "DESTINATION" ? "2026-10-25T10:00:00" : null,
-    completedAt: null,
+    completedAt: status === "COMPLETED" ? "2026-10-25T10:15:00" : null,
   };
 }
 
@@ -52,6 +52,7 @@ function welfare(mode: "ROAD" | "AIR", eventType: "CHECKPOINT" | "FINAL_DESTINAT
     checkpointId: eventType === "CHECKPOINT" ? checkpointId : null,
     eventType,
     photoUrl: "https://storage.example/evidence.png",
+    photoName: eventType === "CHECKPOINT" ? "checkpoint-welfare.jpg" : "final-welfare.jpg",
     note: "Horses are calm and hydrated.",
     recordedByEscortId: escortId,
     recordedAt: "2026-10-25T10:05:00",
@@ -67,6 +68,7 @@ function proof(mode: "ROAD" | "AIR") {
     transportedOrderHorseIds: ["77777777-7777-7777-7777-777777777777"],
     recipientName: "Stable Manager",
     proofPhotoUrl: "https://storage.example/proof.png",
+    proofPhotoName: "proof-of-delivery.jpg",
     handoverNote: null,
     confirmedByEscortId: escortId,
     deliveredAt: "2026-10-25T10:10:00",
@@ -111,7 +113,7 @@ describe("escortExecutionMutationApi", () => {
       id: evidenceId,
       eventType: "CHECKPOINT",
       checkpointId,
-      photoName: "checkpoint-original.png",
+      photoName: "checkpoint-welfare.jpg",
     });
   });
 
@@ -140,6 +142,13 @@ describe("escortExecutionMutationApi", () => {
     expect(capturedRequest(1).path).toBe(`/api/v1/air-executions/legs/${routeLegId}/destination`);
   });
 
+  it("uses the explicit non-final AIR completion endpoint", async () => {
+    apiMocks.apiFetch.mockResolvedValueOnce(jsonResponse(airExecution("COMPLETED")));
+    await expect(escortExecutionMutationApi.completeAirExecution(routeLegId))
+      .resolves.toMatchObject({ routeLegId, status: "COMPLETED" });
+    expect(capturedRequest().path).toBe(`/api/v1/air-executions/legs/${routeLegId}/complete`);
+  });
+
   it("posts the original AIR welfare file to the confirmed destination endpoint", async () => {
     const file = originalPhoto("air-original.png");
     apiMocks.apiFetch.mockResolvedValueOnce(jsonResponse(welfare("AIR", "FINAL_DESTINATION"), 201));
@@ -153,7 +162,7 @@ describe("escortExecutionMutationApi", () => {
     expect(request.path).toBe(`/api/v1/air-executions/legs/${routeLegId}/destination/welfare`);
     expect(request.body.get("photo")).toBe(file);
     expect(request.headers.has("Content-Type")).toBe(false);
-    expect(result).toMatchObject({ eventType: "FINAL_DESTINATION", photoName: "air-original.png" });
+    expect(result).toMatchObject({ eventType: "FINAL_DESTINATION", photoName: "final-welfare.jpg" });
   });
 
   it.each([
@@ -174,7 +183,7 @@ describe("escortExecutionMutationApi", () => {
     expect(request.body.get("photo")).toBe(file);
     expect(request.body.get("note")).toBe("Safe handover.");
     expect(request.headers.has("Content-Type")).toBe(false);
-    expect(result).toMatchObject({ mode, proofPhotoName: file.name });
+    expect(result).toMatchObject({ mode, proofPhotoName: "proof-of-delivery.jpg" });
   });
 
   it("omits the optional PoD note when the user supplies only whitespace", async () => {

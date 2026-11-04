@@ -7571,6 +7571,107 @@ button.ts-workflow-step-header:focus-visible {
 
 /* Customer Remaining Balance checkout and persisted result. */
 
+/* Customer workspace refresh. */
+.customer-dashboard-page { min-height: 100vh; background: #f4f7fa; }
+.customer-dashboard-page .customer-topbar { position: relative; min-height: 66px; border-bottom-color: #d9e3eb; padding-inline: 22px; box-shadow: 0 1px 8px rgb(22 50 74 / 5%); }
+.customer-dashboard-nav { position: absolute; left: 50%; display: flex; align-items: center; gap: 7px; transform: translateX(-50%); }
+.customer-dashboard-nav a { border-radius: 7px; padding: 9px 13px; color: #40566a; font-size: .8rem; font-weight: 650; transition: background-color 150ms ease-out,color 150ms ease-out; }
+.customer-dashboard-nav a:hover { background: #edf4fa; color: #174f8a; }
+.customer-dashboard-content { width: calc(100% - 44px); max-width: none; padding: 28px 0 64px; }
+.customer-dashboard-content .customer-preview-banner { margin: 0 0 22px; }
+.customer-dashboard-heading { align-items: center; margin-bottom: 24px; }
+.customer-dashboard-heading h1 { font-size: clamp(1.85rem,2.5vw,2.5rem); }
+.customer-dashboard-heading .customer-intro { max-width: 680px; }
+.customer-dashboard-heading .customer-primary-button { min-height: 42px; border-radius: 8px; padding-inline: 17px; box-shadow: 0 6px 16px rgb(18 83 160 / 15%); }
+.customer-dashboard-loading { min-height: 260px; border: 1px solid #d9e3eb; border-radius: 14px; padding: 42px; background: #fff; }
+.customer-dashboard-summary { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 14px; margin-bottom: 18px; }
+.customer-dashboard-summary article { display: flex; min-width: 0; align-items: center; gap: 13px; border: 1px solid #d9e3eb; border-radius: 12px; padding: 16px 17px; background: #fff; box-shadow: 0 5px 18px rgb(25 54 79 / 4%); }
+.customer-summary-icon { display: grid; width: 39px; height: 39px; flex: 0 0 auto; place-items: center; border-radius: 10px; background: #e7f0ff; color: #1554b3; }
+.customer-summary-icon.is-amber { background: #fff2cf; color: #8a5c00; }
+.customer-summary-icon.is-green { background: #e5f5eb; color: #147044; }
+.customer-summary-icon.is-violet { background: #eee9ff; color: #6544b8; }
+.customer-summary-icon .customer-dashboard-icon { width: 20px; height: 20px; }
+.customer-dashboard-summary article > div { display: grid; min-width: 0; gap: 2px; }
+.customer-dashboard-summary strong { color: #102f4a; font-size: 1.22rem; line-height: 1; }
+.customer-dashboard-summary article > div > span { overflow: hidden; color: #647789; font-size: .76rem; text-overflow: ellipsis; white-space: nowrap; }
+.customer-dashboard-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(320px,380px); align-items: start; gap: 18px; }
+.customer-dashboard-panel { min-width: 0; margin: 0; overflow: hidden; border: 1px solid #d6e1e9; border-radius: 14px; background: #fff; box-shadow: 0 8px 24px rgb(25 54 79 / 5%); scroll-margin-top: 82px; }
+.customer-dashboard-panel-heading { min-height: 74px; margin: 0; border-bottom: 1px solid #e2e9ef; padding: 17px 19px; }
+.customer-dashboard-panel-heading h2 { font-size: 1.08rem; }
+.customer-dashboard-panel-heading p { font-size: .78rem; }
+.customer-dashboard-panel-heading .customer-count { border-radius: 999px; padding: 5px 9px; background: #eaf2fb; color: #235d96; font-weight: 650; }
+.customer-order-toolbar { display: grid; grid-template-columns: minmax(220px,1fr) minmax(150px,190px); gap: 10px; border-bottom: 1px solid #e2e9ef; padding: 12px 14px; background: #f9fbfd; }
+.customer-order-search { position: relative; display: flex; min-width: 0; align-items: center; }
+.customer-order-search .customer-dashboard-icon { position: absolute; left: 12px; width: 17px; height: 17px; color: #6d8294; pointer-events: none; }
+.customer-order-search input,.customer-order-status-filter select { width: 100%; min-height: 40px; border: 1px solid #cfdbe4; border-radius: 8px; background: #fff; color: #173650; font: inherit; font-size: .8rem; }
+.customer-order-search input { padding: 8px 12px 8px 38px; }
+.customer-order-status-filter select { padding: 8px 32px 8px 11px; text-transform: capitalize; }
+.customer-order-search input:focus-visible,.customer-order-status-filter select:focus-visible { border-color: #1c67c7; outline: 3px solid rgb(28 103 199 / 14%); }
+.customer-orders-panel .customer-order-list { border: 0; border-radius: 0; }
+.customer-dashboard-order { min-height: 112px; padding: 17px 18px; }
+.customer-dashboard-order .order-route-icon { width: 42px; height: 42px; border-radius: 10px; background: #e9f2ff; color: #1558b3; }
+.customer-dashboard-icon { display: inline-block; width: 18px; height: 18px; flex: 0 0 auto; vertical-align: middle; }
+.customer-dashboard-order .customer-order-main > p { margin-top: 6px; color: #28475f; font-weight: 550; }
+.customer-order-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 5px 13px; margin-top: 8px; color: #6b7e8f; font-size: .72rem; }
+.customer-order-meta > span { display: inline-flex; align-items: center; gap: 5px; }
+.customer-order-meta > span + span { position: relative; }
+.customer-order-meta > span + span::before { content: ""; width: 3px; height: 3px; margin-right: 4px; border-radius: 50%; background: #9aabb8; }
+.customer-order-meta .customer-dashboard-icon { width: 13px; height: 13px; }
+.customer-dashboard-order .customer-order-actions { max-width: 320px; }
+.customer-dashboard-order .customer-primary-button.compact { background: #1558b3; }
+.customer-dashboard-order .customer-primary-button.compact:hover { background: #10498f; }
+.customer-dashboard-order .customer-secondary-button.compact { min-height: 36px; border-color: #cbd9e4; }
+.customer-dashboard-order .customer-text-button.compact { color: #9b3028; }
+.customer-filter-empty { min-height: 170px; border: 0; border-radius: 0; }
+.customer-filter-empty .customer-empty-icon .customer-dashboard-icon { width: 20px; height: 20px; }
+.customer-horses-panel { position: sticky; top: 84px; }
+.customer-horses-panel .horse-list,.customer-horses-panel .horse-empty { border: 0; border-radius: 0; }
+.customer-horses-panel .horse-list { max-height: min(58vh,560px); overflow-y: auto; }
+.customer-horses-panel .horse-list li { min-height: 72px; padding-inline: 17px; }
+.customer-horses-panel .horse-avatar { background: #eaf1ff; color: #174f91; }
+.customer-horses-panel .horse-breed { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.customer-horses-panel .horse-form { margin: 0; border: 0; border-bottom: 1px solid #e2e9ef; border-radius: 0; padding: 18px; background: #f9fbfd; }
+.customer-horses-panel .horse-form .customer-field-grid { grid-template-columns: minmax(0,1fr); gap: 0; }
+.customer-horses-panel .horse-form .customer-form-actions { flex-wrap: wrap; }
+.customer-horses-panel .horse-form .customer-form-actions > button { flex: 1; }
+
+@media (max-width: 1100px) {
+  .customer-dashboard-grid { grid-template-columns: minmax(0,1fr); }
+  .customer-horses-panel { position: static; }
+  .customer-horses-panel .horse-list { max-height: none; }
+  .customer-horses-panel .horse-form .customer-field-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 16px; }
+}
+
+@media (max-width: 820px) {
+  .customer-dashboard-nav { display: none; }
+  .customer-dashboard-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .customer-dashboard-order { align-items: flex-start; flex-wrap: wrap; }
+  .customer-dashboard-order .customer-order-actions { width: calc(100% - 56px); max-width: none; justify-content: flex-start; margin-left: 56px; }
+}
+
+@media (max-width: 680px) {
+  .customer-dashboard-page .customer-topbar { padding-inline: 16px; }
+  .customer-dashboard-content { width: min(100% - 28px,1120px); padding-top: 22px; }
+  .customer-dashboard-heading { gap: 16px; margin-bottom: 22px; }
+  .customer-dashboard-summary { gap: 9px; }
+  .customer-dashboard-summary article { gap: 10px; padding: 13px; }
+  .customer-summary-icon { width: 35px; height: 35px; }
+  .customer-order-toolbar { grid-template-columns: minmax(0,1fr); }
+  .customer-dashboard-order .customer-order-actions { width: calc(100% - 52px); margin-left: 52px; }
+  .customer-horses-panel .horse-form .customer-field-grid { grid-template-columns: minmax(0,1fr); gap: 0; }
+}
+
+@media (max-width: 420px) {
+  .customer-dashboard-summary { grid-template-columns: minmax(0,1fr); }
+  .customer-dashboard-summary article { min-height: 64px; }
+  .customer-dashboard-order .customer-order-actions { width: 100%; margin-left: 0; }
+  .customer-dashboard-order .customer-order-actions > a,.customer-dashboard-order .customer-order-actions > button { flex: 1 1 auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .customer-dashboard-nav a { transition: none; }
+}
+
 /* Compact Logistics Manager order-review workspace. */
 .logistics-manager-page {
   --lm-border: #dfe6ed;

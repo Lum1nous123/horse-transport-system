@@ -2,7 +2,20 @@ export type ExecutionStatus = "NOT_STARTED" | "IN_PROGRESS" | "DESTINATION" | "C
 
 export type RouteLegStatus = "PLANNED" | "READY" | "IN_PROGRESS" | "COMPLETED";
 
-export type DeliveryOrderStatus = "IN_PROGRESS" | "DELIVERED";
+export type ExecutionOrderStatus =
+  | "DRAFT"
+  | "SUBMITTED"
+  | "QUOTATION_SENT"
+  | "APPROVED"
+  | "READY_TO_SHIP"
+  | "IN_PROGRESS"
+  | "DELIVERED"
+  | "REJECTED"
+  | "CANCELLED";
+
+// Kept as the preview snapshot's historical name; execution readbacks may
+// legitimately expose READY_TO_SHIP before the journey starts.
+export type DeliveryOrderStatus = ExecutionOrderStatus;
 
 export type RoadCheckpointType = "REST_STOP" | "BORDER" | "QUARANTINE" | "OTHER";
 
@@ -45,7 +58,7 @@ type ProofOfDeliveryBase = {
   completedHandovers: number;
   requiredHandovers: number;
   routeLegStatus: RouteLegStatus;
-  orderStatus: DeliveryOrderStatus;
+  orderStatus: ExecutionOrderStatus;
 };
 
 export type ProofOfDelivery = ProofOfDeliveryBase & (
@@ -67,7 +80,7 @@ export type HandoverProgress = {
   completedHandovers: number;
   requiredHandovers: number;
   routeLegStatus: RouteLegStatus;
-  orderStatus: DeliveryOrderStatus;
+  orderStatus: ExecutionOrderStatus;
 };
 
 export type RoadCheckpointProgress = {

@@ -57,11 +57,12 @@ export default function JourneyTrackingView({ role }: { role: Role }) {
   const query = useSearchParams();
   const preview = process.env.NODE_ENV === "development" && query.get("preview") === "1";
   const scenario = query.get("scenario");
-  const backHref = role === "CUSTOMER" ? "/customer" : "/logistics/route-reviews";
+  const backHref = role === "CUSTOMER" ? "/customer" : "/logistics/tracking";
   const [state, setState] = useState<State>("checking");
   const [message, setMessage] = useState("");
   const [tracking, setTracking] = useState<JourneyTracking | null>(null);
   const [notifications, setNotifications] = useState<JourneyNotification[]>([]);
+  const [notificationWarning, setNotificationWarning] = useState("");
 
   const load = useCallback(async () => {
     if (preview) {
@@ -71,20 +72,27 @@ export default function JourneyTrackingView({ role }: { role: Role }) {
       const sample = previewJourneyScenario(scenario);
       setTracking(sample.tracking);
       setNotifications(sample.notifications);
+      setNotificationWarning("");
       setState("ready");
       return;
     }
     if (!getAccessToken()) { router.replace(`/login?next=${encodeURIComponent(window.location.pathname)}`); return; }
     setState("loading");
+    setNotificationWarning("");
     try {
       const user = await getCurrentUser();
-      if (user.role !== role) { setState("forbidden"); return; }
+      if (user.role !== role || user.status !== "ACTIVE") { setState("forbidden"); return; }
       const token = getAccessToken();
       if (!token) { router.replace("/login"); return; }
       const data = await readJourneyTracking(orderId, token);
       setTracking(data);
       if (role === "CUSTOMER") {
-        setNotifications(await readJourneyNotifications(orderId, token));
+        try {
+          setNotifications(await readJourneyNotifications(orderId, token));
+        } catch {
+          setNotifications([]);
+          setNotificationWarning("Latest updates are temporarily unavailable. Journey tracking is still available.");
+        }
       }
       setState("ready");
     } catch (error) {
@@ -109,7 +117,7 @@ export default function JourneyTrackingView({ role }: { role: Role }) {
         <div className="journey-heading"><div><p className="customer-eyebrow">ORDER {tracking.orderCode}</p><h1>Journey tracking</h1><p>{tracking.origin} <span aria-hidden="true">→</span> {tracking.destination}</p></div><div><span className="journey-status">{tracking.orderStatus.replaceAll("_", " ")}</span><small>Last updated {dateTime(tracking.updatedAt)}</small><button className="customer-secondary-button compact" type="button" onClick={() => void load()}>Refresh tracking</button></div></div>
         {tracking.legs.length > 0 && <JourneyProgress legs={tracking.legs} />}
         <div className="journey-layout"><section className="journey-panel"><div className="journey-panel-heading"><div><h2>Route progress</h2><p>Open a route leg to review vehicles, milestones, staff, and welfare evidence.</p></div><span>{tracking.legs.length} {tracking.legs.length === 1 ? "leg" : "legs"}</span></div>{tracking.legs.length === 0 ? <p className="journey-empty">No journey progress has been recorded yet.</p> : <ol className="journey-legs">{[...tracking.legs].sort((a, b) => a.sequenceNo - b.sequenceNo).map((leg) => <li key={leg.id}><Leg leg={leg} /></li>)}</ol>}{tracking.deliveryEvents.length > 0 && <div className="journey-delivery"><h3>Delivery events</h3>{tracking.deliveryEvents.map((event) => <p key={event.id}>{event.label} · {dateTime(event.occurredAt)}</p>)}</div>}</section>
-        {role === "CUSTOMER" && <aside className="journey-panel journey-notifications"><h2>Latest updates</h2><p>Automatic in-app notices for this Order.</p>{notifications.length === 0 ? <p className="journey-empty">No updates yet.</p> : <ul>{notifications.map((notice) => <li key={notice.id}><strong>{notice.title}</strong><p>{notice.message}</p><time>{dateTime(notice.createdAt)}</time></li>)}</ul>}</aside>}</div>
+        {role === "CUSTOMER" && <aside className="journey-panel journey-notifications"><h2>Latest updates</h2><p>Automatic in-app notices for this Order.</p>{notificationWarning ? <p className="journey-notification-warning" role="status">{notificationWarning}</p> : notifications.length === 0 ? <p className="journey-empty">No updates yet.</p> : <ul>{notifications.map((notice) => <li key={notice.id}><strong>{notice.title}</strong><p>{notice.message}</p><time>{dateTime(notice.createdAt)}</time></li>)}</ul>}</aside>}</div>
       </>}
     </div>
   </main>;

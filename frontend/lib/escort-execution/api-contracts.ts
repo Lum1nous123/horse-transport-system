@@ -41,6 +41,7 @@ export type WelfareEvidenceResponseDto = {
   checkpointId: string | null;
   eventType: WelfareEventType;
   photoUrl: string;
+  photoName: string;
   note: string;
   recordedByEscortId: string;
   recordedAt: string;
@@ -54,6 +55,7 @@ export type ProofOfDeliveryResponseDto = {
   transportedOrderHorseIds: string[];
   recipientName: string;
   proofPhotoUrl: string;
+  proofPhotoName: string;
   handoverNote: string | null;
   confirmedByEscortId: string;
   deliveredAt: string;
@@ -196,8 +198,8 @@ export function parseAirExecutionResponse(
 }
 
 type WelfareContext =
-  | { mode: "ROAD"; eventType: WelfareEventType; checkpointId: string | null; originalPhotoName: string }
-  | { mode: "AIR"; eventType: "FINAL_DESTINATION"; checkpointId: null; originalPhotoName: string };
+  | { mode: "ROAD"; eventType: WelfareEventType; checkpointId: string | null }
+  | { mode: "AIR"; eventType: "FINAL_DESTINATION"; checkpointId: null };
 
 export function parseWelfareEvidenceResponse(
   value: unknown,
@@ -212,6 +214,7 @@ export function parseWelfareEvidenceResponse(
     checkpointId: nullableUuid(source.checkpointId, contract),
     eventType: enumValue(source.eventType, welfareEventTypes, contract),
     photoUrl: mediaUrlValue(source.photoUrl, contract),
+    photoName: stringValue(source.photoName, contract),
     note: stringValue(source.note, contract),
     recordedByEscortId: uuidValue(source.recordedByEscortId, contract),
     recordedAt: localDateTimeValue(source.recordedAt, contract),
@@ -229,15 +232,15 @@ export function parseWelfareEvidenceResponse(
     eventType: dto.eventType,
     checkpointId: dto.checkpointId,
     photoUrl: dto.photoUrl,
-    photoName: context.originalPhotoName,
+    photoName: dto.photoName,
     note: dto.note,
     recordedAt: dto.recordedAt,
   };
 }
 
 type ProofContext =
-  | { mode: "ROAD"; roadLegVehicleId: string; originalPhotoName: string }
-  | { mode: "AIR"; routeLegId: string; originalPhotoName: string };
+  | { mode: "ROAD"; roadLegVehicleId: string }
+  | { mode: "AIR"; routeLegId: string };
 
 export function parseProofOfDeliveryResponse(
   value: unknown,
@@ -253,6 +256,7 @@ export function parseProofOfDeliveryResponse(
     transportedOrderHorseIds: stringArray(source.transportedOrderHorseIds, contract),
     recipientName: stringValue(source.recipientName, contract),
     proofPhotoUrl: mediaUrlValue(source.proofPhotoUrl, contract),
+    proofPhotoName: stringValue(source.proofPhotoName, contract),
     handoverNote: nullableString(source.handoverNote, contract),
     confirmedByEscortId: uuidValue(source.confirmedByEscortId, contract),
     deliveredAt: localDateTimeValue(source.deliveredAt, contract),
@@ -274,7 +278,7 @@ export function parseProofOfDeliveryResponse(
     transportedOrderHorseIds: dto.transportedOrderHorseIds,
     recipientName: dto.recipientName,
     proofPhotoUrl: dto.proofPhotoUrl,
-    proofPhotoName: context.originalPhotoName,
+    proofPhotoName: dto.proofPhotoName,
     handoverNote: dto.handoverNote,
     confirmedByEscortId: dto.confirmedByEscortId,
     deliveredAt: dto.deliveredAt,

@@ -102,7 +102,7 @@ describe("Driver execution components", () => {
   it("selecting an unreached destination does not expose a premature arrival action", async () => {
     const { session } = setup("in-progress");
     render(<DriverExecutionDetail session={session} executionId="demo-execution-204" journey onStarted={vi.fn()} />);
-    await userEvent.click(await screen.findByRole("button", { name: /Destination: Ayutthaya/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /Destination\s+Ayutthaya equine center/i }));
     expect(screen.queryByRole("button", { name: "Confirm destination arrival" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open next stop" })).toBeInTheDocument();
   });
