@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { clearAccessToken } from "@/lib/auth";
+import BrandMark from "@/components/BrandMark";
 import {
   CustomerRemainingBalanceError,
   getCustomerRemainingBalanceService,
@@ -190,7 +191,7 @@ export default function CustomerRemainingBalancePage() {
     <main className="customer-page balance-page">
       <header className="customer-topbar balance-topbar">
         <Link className="customer-brand" href="/" aria-label="Horse Transport System home">
-          <span className="customer-brand-mark" aria-hidden="true">HT</span>
+          <BrandMark />
           <span>Horse Transport System</span>
         </Link>
         <nav className="balance-topbar-nav" aria-label="Customer workspace">

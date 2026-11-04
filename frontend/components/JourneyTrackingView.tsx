@@ -7,6 +7,7 @@ import { clearAccessToken, getAccessToken, getCurrentUser } from "@/lib/auth";
 import { previewJourneyScenario, previewTracking } from "@/lib/journey-tracking/preview";
 import { JourneyReadError, readJourneyNotifications, readJourneyTracking } from "@/lib/journey-tracking/service";
 import type { JourneyLeg, JourneyNotification, JourneyTracking, JourneyVehicle } from "@/lib/journey-tracking/types";
+import BrandMark from "@/components/BrandMark";
 import "./journey-tracking.css";
 
 type Role = "CUSTOMER" | "LOGISTICS_MANAGER";
@@ -37,11 +38,17 @@ export function Vehicle({ vehicle }: { vehicle: JourneyVehicle }) {
 }
 
 export function Leg({ leg }: { leg: JourneyLeg }) {
-  return <article className="journey-leg"><div className="journey-leg-heading"><span className="journey-mode" aria-hidden="true">{leg.mode === "ROAD" ? "▣" : "✈"}</span><div><h3>{leg.mode} · {leg.origin} to {leg.destination}</h3><p>Horses: {leg.horses.join(", ") || "Not assigned"}</p></div><span className={`journey-leg-status is-${leg.status.toLowerCase()}`}>{leg.status.replaceAll("_", " ")}</span></div>
+  const expandedByDefault = leg.status === "IN_PROGRESS" || leg.status === "READY";
+  return <details className={`journey-leg is-${leg.status.toLowerCase()}`} open={expandedByDefault}><summary className="journey-leg-heading"><span className="journey-mode" aria-hidden="true">{leg.mode === "ROAD" ? "▣" : "✈"}</span><div><h3>{leg.mode} · {leg.origin} to {leg.destination}</h3><p>{leg.horses.length} {leg.horses.length === 1 ? "horse" : "horses"}{leg.vehicles.length > 0 ? ` · ${leg.vehicles.length} ${leg.vehicles.length === 1 ? "vehicle" : "vehicles"}` : ""}</p></div><span className={`journey-leg-status is-${leg.status.toLowerCase()}`}>{leg.status.replaceAll("_", " ")}</span><span className="journey-leg-disclosure"><span className="when-closed">View details</span><span className="when-open">Hide details</span><b aria-hidden="true">⌄</b></span></summary><div className="journey-leg-body"><p className="journey-horse-list"><strong>Horses</strong>{leg.horses.join(", ") || "Not assigned"}</p>
     {leg.vehicles.map((vehicle) => <Vehicle vehicle={vehicle} key={vehicle.id} />)}
     {leg.events.length > 0 && <ol className="journey-events">{leg.events.map((event) => <li key={event.id}><strong>{event.label}</strong><time>{dateTime(event.occurredAt)}</time></li>)}</ol>}
     {leg.welfareEvidence.length > 0 && <section className="journey-air-welfare"><h4>Welfare evidence</h4><ul>{leg.welfareEvidence.map((evidence) => <li key={evidence.id}><time>{dateTime(evidence.recordedAt)}</time>{evidence.note && <p>{evidence.note}</p>}{evidence.photoUrl && <a href={evidence.photoUrl} target="_blank" rel="noreferrer">View welfare photo</a>}</li>)}</ul></section>}
-  </article>;
+  </div></details>;
+}
+
+function JourneyProgress({ legs }: { legs: JourneyLeg[] }) {
+  const sortedLegs = [...legs].sort((a, b) => a.sequenceNo - b.sequenceNo);
+  return <section className="journey-overview" aria-labelledby="journey-overview-heading"><div className="journey-overview-heading"><div><h2 id="journey-overview-heading">Journey overview</h2><p>{sortedLegs.filter((leg) => leg.status === "COMPLETED").length} of {sortedLegs.length} route legs completed</p></div></div><ol>{sortedLegs.map((leg) => <li className={`is-${leg.status.toLowerCase()}`} key={leg.id}><span className="journey-overview-step" aria-hidden="true">{leg.status === "COMPLETED" ? "✓" : leg.sequenceNo}</span><div><strong>{leg.mode}</strong><span>{leg.origin} <b aria-hidden="true">→</b> {leg.destination}</span></div><span className={`journey-leg-status is-${leg.status.toLowerCase()}`}>{leg.status.replaceAll("_", " ")}</span></li>)}</ol></section>;
 }
 
 export default function JourneyTrackingView({ role }: { role: Role }) {
@@ -101,14 +108,15 @@ export default function JourneyTrackingView({ role }: { role: Role }) {
     return () => window.clearTimeout(timer);
   }, [load]);
 
-  return <main className="customer-page journey-page">
-    <header className="customer-topbar"><Link className="customer-brand" href="/"><span className="customer-brand-mark" aria-hidden="true">HT</span><span>Horse Transport System</span></Link><div className="customer-topbar-actions"><span>{role === "CUSTOMER" ? "Customer" : "Logistics"} workspace</span><button className="customer-link-button" type="button" onClick={() => { clearAccessToken(); router.replace("/login"); }}>Sign out</button></div></header>
+  return <main className={`customer-page journey-page${role === "LOGISTICS_MANAGER" ? " logistics-manager-page" : ""}`}>
+    <header className="customer-topbar"><Link className="customer-brand" href="/" aria-label="Horse Transport System home"><BrandMark /><span>Horse Transport System</span></Link>{role === "LOGISTICS_MANAGER" && <nav className="logistics-primary-nav" aria-label="Logistics workspaces"><Link href={preview ? "/logistics?preview=1" : "/logistics"}>Logistics workspace</Link><Link href={preview ? "/logistics/assignments?preview=1" : "/logistics/assignments"}>Staff assignment</Link><Link href={preview ? "/logistics/route-reviews?preview=1" : "/logistics/route-reviews"}>Route reviews</Link><Link className="is-current" href="/logistics/tracking" aria-current="page">Order tracking</Link></nav>}<div className="customer-topbar-actions"><span>{role === "CUSTOMER" ? "Customer" : "Logistics Manager"}</span><button className="customer-link-button" type="button" onClick={() => { clearAccessToken(); router.replace("/login"); }}>Sign out</button></div></header>
     <div className="customer-content journey-content">
       {preview && <div className="customer-preview-banner" role="status"><strong>Preview mode</strong><span>Sample journey data. No backend request is sent.</span></div>}
       <nav className="journey-breadcrumb" aria-label="Breadcrumb"><Link href={preview ? `${backHref}?preview=1` : backHref}>{role === "CUSTOMER" ? "My Orders" : "Orders"}</Link><span>/</span><span>{tracking?.orderCode ?? orderId}</span></nav>
       {state === "checking" || state === "loading" ? <p className="journey-state" role="status">Loading journey tracking…</p> : state === "forbidden" ? <section className="journey-state" role="alert"><h1>You can’t view this journey</h1><p>Tracking is available only to the Order owner and Logistics Manager.</p><Link href={backHref}>Back to Orders</Link></section> : state === "error" ? <section className="journey-state" role="alert"><h1>Journey unavailable</h1><p>{message}</p><button className="customer-secondary-button" type="button" onClick={() => void load()}>Try again</button></section> : tracking && <>
         <div className="journey-heading"><div><p className="customer-eyebrow">ORDER {tracking.orderCode}</p><h1>Journey tracking</h1><p>{tracking.origin} <span aria-hidden="true">→</span> {tracking.destination}</p></div><div><span className="journey-status">{tracking.orderStatus.replaceAll("_", " ")}</span><small>Last updated {dateTime(tracking.updatedAt)}</small><button className="customer-secondary-button compact" type="button" onClick={() => void load()}>Refresh tracking</button></div></div>
-        <div className="journey-layout"><section className="journey-panel"><h2>Route progress</h2>{tracking.legs.length === 0 ? <p className="journey-empty">No journey progress has been recorded yet.</p> : <ol className="journey-legs">{[...tracking.legs].sort((a, b) => a.sequenceNo - b.sequenceNo).map((leg) => <li key={leg.id}><Leg leg={leg} /></li>)}</ol>}{tracking.deliveryEvents.length > 0 && <div className="journey-delivery"><h3>Delivery events</h3>{tracking.deliveryEvents.map((event) => <p key={event.id}>{event.label} · {dateTime(event.occurredAt)}</p>)}</div>}</section>
+        {tracking.legs.length > 0 && <JourneyProgress legs={tracking.legs} />}
+        <div className="journey-layout"><section className="journey-panel"><div className="journey-panel-heading"><div><h2>Route progress</h2><p>Open a route leg to review vehicles, milestones, staff, and welfare evidence.</p></div><span>{tracking.legs.length} {tracking.legs.length === 1 ? "leg" : "legs"}</span></div>{tracking.legs.length === 0 ? <p className="journey-empty">No journey progress has been recorded yet.</p> : <ol className="journey-legs">{[...tracking.legs].sort((a, b) => a.sequenceNo - b.sequenceNo).map((leg) => <li key={leg.id}><Leg leg={leg} /></li>)}</ol>}{tracking.deliveryEvents.length > 0 && <div className="journey-delivery"><h3>Delivery events</h3>{tracking.deliveryEvents.map((event) => <p key={event.id}>{event.label} · {dateTime(event.occurredAt)}</p>)}</div>}</section>
         {role === "CUSTOMER" && <aside className="journey-panel journey-notifications"><h2>Latest updates</h2><p>Automatic in-app notices for this Order.</p>{notificationWarning ? <p className="journey-notification-warning" role="status">{notificationWarning}</p> : notifications.length === 0 ? <p className="journey-empty">No updates yet.</p> : <ul>{notifications.map((notice) => <li key={notice.id}><strong>{notice.title}</strong><p>{notice.message}</p><time>{dateTime(notice.createdAt)}</time></li>)}</ul>}</aside>}</div>
       </>}
     </div>
