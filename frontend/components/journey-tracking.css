@@ -62,3 +62,104 @@
 .journey-state a { color: #1f64aa; text-decoration: underline; }
 @media (max-width: 800px) { .journey-layout { grid-template-columns: 1fr; } .journey-heading { align-items: start; flex-direction: column; } .journey-heading > div:last-child { justify-items: start; } }
 @media (max-width: 540px) { .journey-panel { padding: 16px; } .journey-leg { padding: 14px; } .journey-leg-heading { display: grid; grid-template-columns: 34px minmax(0, 1fr); } .journey-leg-heading > div { min-width: 0; } .journey-leg-heading .journey-leg-status { grid-column: 2; justify-self: start; } .journey-contacts { grid-template-columns: 1fr; } .journey-events, .journey-air-welfare { margin-left: 0; } }
+
+/* Operational tracking workspace: compact overview, clear current state, progressive detail. */
+.journey-page.logistics-manager-page .journey-content { width: calc(100% - 44px); max-width: none; padding: 18px 0 48px; }
+.journey-page.logistics-manager-page .journey-breadcrumb { margin-bottom: 14px; font-size: .72rem; }
+.journey-page.logistics-manager-page .journey-heading { align-items: center; margin-bottom: 14px; border: 1px solid #ced9e5; border-radius: 12px; padding: 17px 18px; background: #fff; box-shadow: 0 5px 18px rgb(11 39 67 / 5%); }
+.journey-page.logistics-manager-page .journey-heading h1 { margin: 2px 0 3px; color: #0b2743; font-size: 1.7rem; }
+.journey-page.logistics-manager-page .journey-heading .customer-eyebrow { color: #1d4ed8; font-size: .65rem; }
+.journey-page.logistics-manager-page .journey-heading > div:last-child { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px 12px; }
+.journey-page.logistics-manager-page .journey-heading small { width: 100%; text-align: right; }
+.journey-page.logistics-manager-page .journey-heading .customer-secondary-button { min-height: 36px; border-color: #a9c5e7; color: #174ea6; font-size: .72rem; }
+.journey-page.logistics-manager-page .journey-status { background: #dbeafe; color: #1746a2; }
+
+.journey-overview { margin-bottom: 14px; border: 1px solid #b9d1f2; border-radius: 12px; padding: 15px 18px 17px; background: linear-gradient(135deg, #f7fbff 0%, #eef6ff 100%); box-shadow: 0 6px 20px rgb(29 78 216 / 7%); }
+.journey-overview-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 13px; }
+.journey-overview-heading h2 { margin: 0; color: #0b2743; font-size: .9rem; }
+.journey-overview-heading p { margin: 2px 0 0; color: #52677b; font-size: .7rem; }
+.journey-overview ol { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.journey-overview li { position: relative; display: grid; min-width: 0; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 9px; border: 1px solid #d5e0ea; border-radius: 9px; padding: 10px 11px; background: rgb(255 255 255 / 82%); }
+.journey-overview li.is-in_progress,
+.journey-overview li.is-ready { border-color: #6fa9f4; background: #fff; box-shadow: inset 3px 0 #1d4ed8; }
+.journey-overview li.is-completed { border-color: #bcdcca; }
+.journey-overview-step { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: #e5ebf1; color: #405467; font-size: .72rem; font-weight: 800; }
+.journey-overview .is-completed .journey-overview-step { background: #178555; color: #fff; }
+.journey-overview .is-in_progress .journey-overview-step,
+.journey-overview .is-ready .journey-overview-step { background: #1d4ed8; color: #fff; }
+.journey-overview li > div { min-width: 0; }
+.journey-overview li strong,
+.journey-overview li > div > span { display: block; }
+.journey-overview li strong { color: #0b2743; font-size: .75rem; }
+.journey-overview li > div > span { overflow: hidden; margin-top: 2px; color: #52677b; font-size: .65rem; text-overflow: ellipsis; white-space: nowrap; }
+.journey-overview li > div b { color: #1d4ed8; }
+.journey-overview .journey-leg-status { padding: 4px 7px; font-size: .58rem; }
+
+.journey-page.logistics-manager-page .journey-panel { border-color: #ced9e5; border-radius: 12px; padding: 18px; box-shadow: 0 8px 26px rgb(11 39 67 / 6%); }
+.journey-panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.journey-panel-heading h2 { margin: 0; color: #0b2743; font-size: 1rem; }
+.journey-panel-heading p { margin: 3px 0 0; color: #52677b; font-size: .72rem; }
+.journey-panel-heading > span { border-radius: 999px; padding: 4px 8px; background: #e8f1ff; color: #174ea6; font-size: .65rem; font-weight: 700; }
+.journey-legs { gap: 11px; }
+.journey-leg { overflow: hidden; border-color: #ced9e5; border-radius: 10px; padding: 0; background: #fff; }
+.journey-leg.is-in_progress,
+.journey-leg.is-ready { border-color: #74aaf0; box-shadow: 0 5px 16px rgb(29 78 216 / 9%); }
+.journey-leg.is-upcoming:not([open]) { background: #f9fbfd; }
+.journey-leg-heading { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; list-style: none; }
+.journey-leg-heading::-webkit-details-marker { display: none; }
+.journey-leg-heading:hover { background: #f7faff; }
+.journey-leg[open] > .journey-leg-heading { border-bottom: 1px solid #dce5ed; background: #f8fbff; }
+.journey-leg.is-in_progress[open] > .journey-leg-heading,
+.journey-leg.is-ready[open] > .journey-leg-heading { background: #edf5ff; }
+.journey-leg-heading > div { min-width: 0; }
+.journey-leg-heading p { margin-top: 3px; font-size: .72rem; }
+.journey-mode { width: 34px; height: 34px; background: #e8f1ff; color: #1d4ed8; }
+.journey-leg-disclosure { display: inline-flex; align-items: center; gap: 5px; color: #174ea6; font-size: .68rem; font-weight: 700; white-space: nowrap; }
+.journey-leg-disclosure b { display: inline-block; font-size: .9rem; transition: transform 160ms ease; }
+.journey-leg[open] .journey-leg-disclosure b { transform: rotate(180deg); }
+.journey-leg-disclosure .when-open { display: none; }
+.journey-leg[open] .journey-leg-disclosure .when-open { display: inline; }
+.journey-leg[open] .journey-leg-disclosure .when-closed { display: none; }
+.journey-leg-body { padding: 0 16px 16px; }
+.journey-horse-list { display: flex; gap: 9px; margin: 12px 0 0; color: #52677b; font-size: .72rem; }
+.journey-horse-list strong { color: #0b2743; }
+.journey-vehicle { margin-top: 12px; border: 1px solid #dce5ed; border-radius: 8px; padding: 14px; background: #f6f9fc; }
+.journey-vehicle-heading { align-items: center; }
+.journey-vehicle-heading strong { color: #0b2743; font-size: .82rem; }
+.journey-vehicle-heading > span:last-child { font-size: .7rem; }
+.journey-checkpoints { position: relative; gap: 16px; margin-top: 15px; }
+.journey-checkpoints::before { position: absolute; top: 10px; right: 10px; left: 10px; height: 2px; background: #d6e0e8; content: ""; }
+.journey-checkpoints li { position: relative; z-index: 1; align-items: flex-start; font-size: .72rem; }
+.journey-checkpoints li > div { padding-right: 6px; background: #f6f9fc; }
+.journey-checkpoint-marker { width: 21px; height: 21px; border: 2px solid #f6f9fc; }
+.journey-contacts { gap: 10px; margin-top: 14px; }
+.journey-contact { border-color: #d5e0e9; border-radius: 7px; padding: 10px 11px; }
+.journey-contact span { font-size: .65rem; }
+.journey-contact strong,
+.journey-contact p { font-size: .75rem; }
+.journey-events { margin: 13px 0 0; border: 1px solid #dce5ed; border-radius: 7px; padding: 0 11px; background: #fafcfe; }
+.journey-events li:first-child { border-top: 0; }
+.journey-air-welfare { margin: 10px 0 0; border: 1px solid #edcf74; border-radius: 7px; padding: 11px 12px; background: #fff9e8; }
+.journey-air-welfare h4 { color: #684700; font-size: .78rem; }
+
+@media (max-width: 900px) {
+  .journey-page.logistics-manager-page .journey-content { width: calc(100% - 28px); }
+  .journey-overview ol { grid-template-columns: minmax(0, 1fr); }
+  .journey-leg-heading { grid-template-columns: 34px minmax(0, 1fr) auto; }
+  .journey-leg-disclosure { grid-column: 2 / -1; justify-self: end; }
+}
+
+@media (max-width: 540px) {
+  .journey-page.logistics-manager-page .journey-heading { align-items: flex-start; padding: 15px; }
+  .journey-page.logistics-manager-page .journey-heading > div:last-child { justify-content: flex-start; }
+  .journey-page.logistics-manager-page .journey-heading small { text-align: left; }
+  .journey-overview { padding: 13px; }
+  .journey-page.logistics-manager-page .journey-panel { padding: 13px; }
+  .journey-leg { padding: 0; }
+  .journey-leg-heading { display: grid; grid-template-columns: 34px minmax(0, 1fr); padding: 13px; }
+  .journey-leg-heading .journey-leg-status { grid-column: 2; justify-self: start; }
+  .journey-leg-disclosure { grid-column: 2; justify-self: start; }
+  .journey-leg-body { padding: 0 13px 13px; }
+  .journey-checkpoints { grid-template-columns: minmax(0, 1fr); }
+  .journey-checkpoints::before { top: 10px; right: auto; bottom: 10px; left: 10px; width: 2px; height: auto; }
+}

@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useDriverSession } from "@/lib/driver-execution/use-driver-session";
 import DriverWorkspace from "./DriverWorkspace";
+import BrandMark from "@/components/BrandMark";
 import styles from "./execution.module.css";
 
 export default function DriverAccess({ executionId }: { executionId?: string }) {
   const access = useDriverSession();
   if (access.status === "allowed") return <DriverWorkspace session={access.session} executionId={executionId} />;
   return <main className={styles.accessPage}><section className={styles.accessCard}>
-    <span className={styles.brandMark}>HT</span>
+    <BrandMark className={styles.brandMark} />
     {access.status === "checking" ? <p role="status">Checking your Driver account…</p> : <>
       <h1>{access.status === "forbidden" ? "Access denied" : "We couldn't verify access"}</h1>
       <p role="alert">{access.message}</p>

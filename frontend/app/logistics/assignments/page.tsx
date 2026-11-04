@@ -69,10 +69,13 @@ export default function StaffAssignmentQueuePage() {
       </nav>
 
       <div className="assignment-page-heading">
-        <div>
-          <p className="customer-eyebrow">STAFFING</p>
-          <h1>Staff Assignment</h1>
-          <p className="customer-intro">Assign one Transport Specialist and one Fleet &amp; Route Coordinator to each order.</p>
+        <div className="assignment-title-group">
+          <span className="assignment-title-icon" aria-hidden="true">⇄</span>
+          <div>
+            <p className="customer-eyebrow">STAFFING</p>
+            <h1>Staff Assignment</h1>
+            <p className="customer-intro">Assign one Transport Specialist and one Fleet &amp; Route Coordinator to each order.</p>
+          </div>
         </div>
         <button className="customer-secondary-button" type="button" onClick={() => void loadQueues()} disabled={loading}>
           {loading ? "Refreshing…" : "Refresh queue"}
@@ -86,6 +89,7 @@ export default function StaffAssignmentQueuePage() {
         </div>
       )}
 
+      <div className="assignment-queue-grid">
       <section className="assignment-queue-section" aria-labelledby="needs-assignment-heading">
         <div className="assignment-section-heading">
           <div>
@@ -123,6 +127,7 @@ export default function StaffAssignmentQueuePage() {
           <OrderList orders={assigned} preview={preview} readOnly />
         ) : null}
       </section>
+      </div>
     </AssignmentWorkspaceFrame>
   );
 }
