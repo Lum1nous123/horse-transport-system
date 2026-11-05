@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { clearAccessToken } from "@/lib/auth";
 import type { DriverSession } from "@/lib/driver-execution/types";
 import DriverDashboardDecor from "./DriverDashboardDecor";
+import BrandMark from "@/components/BrandMark";
 import styles from "./execution.module.css";
 
 // Shared execution shell; mode-specific actions live in the Driver workspace.
@@ -17,7 +18,7 @@ export default function ExecutionWorkspaceFrame({ session, children, focused = f
   return <main className={`${styles.shell} ${focused ? "" : styles.dashboardShell}`}>
     <a className={styles.skipLink} href="#execution-content">Skip to execution work</a>
     <header className={styles.topbar}>
-      <Link className={styles.brand} href="/"><span className={styles.brandMark}>HT</span><span>Horse Transport System</span></Link>
+      <Link className={styles.brand} href="/" aria-label="Horse Transport System home"><BrandMark className={styles.brandMark} /><span>Horse Transport System</span></Link>
       <nav aria-label="Driver workspace"><Link className={styles.navLink} href={`/driver${session.previewQuery}`}>My ROAD work</Link></nav>
       <div className={styles.account}><span>{session.fullName} <span className={styles.accountRole}>· Driver</span></span><button type="button" onClick={signOut}>Sign out</button></div>
     </header>

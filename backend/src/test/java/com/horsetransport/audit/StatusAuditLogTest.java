@@ -40,4 +40,14 @@ class StatusAuditLogTest {
 		assertThat(audit.getReason()).isNull();
 		assertThat(audit.getOccurredAt()).isNotNull();
 	}
+
+	@Test
+	void systemTransitionCanRecordARepairReasonWithoutInventingAUserActor() {
+		StatusAuditLog audit = StatusAuditLog.systemTransition(AuditEntityType.ROUTE_LEG,
+				ENTITY_ID, "PLANNED", "READY", "Approved legacy backfill");
+
+		assertThat(audit.getActorKind()).isEqualTo(AuditActorKind.SYSTEM);
+		assertThat(audit.getActorUserId()).isNull();
+		assertThat(audit.getReason()).isEqualTo("Approved legacy backfill");
+	}
 }

@@ -25,6 +25,7 @@ public record JourneyTrackingResponse(
 		UUID routePlanId,
 		RoutePlanStatus routePlanStatus,
 		LocalDateTime routePlanApprovedAt,
+		List<Horse> horses,
 		List<Leg> legs) {
 
 	public record Leg(

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { clearAccessToken } from "@/lib/auth";
+import BrandMark from "@/components/BrandMark";
 
 type EscortWorkspaceFrameProps = {
   children: ReactNode;
@@ -32,7 +33,7 @@ export default function EscortWorkspaceFrame({
     <main className="customer-page escort-workspace-page">
       <header className="customer-topbar escort-topbar">
         <Link className="customer-brand" href="/" aria-label="Horse Transport System home">
-          <span className="customer-brand-mark" aria-hidden="true">HT</span>
+          <BrandMark />
           <span>Horse Transport System</span>
         </Link>
         <nav className="escort-topbar-nav" aria-label="Escort workspace">

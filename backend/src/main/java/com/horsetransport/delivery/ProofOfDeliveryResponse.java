@@ -15,6 +15,7 @@ public record ProofOfDeliveryResponse(
 		List<UUID> transportedOrderHorseIds,
 		String recipientName,
 		String proofPhotoUrl,
+		String proofPhotoName,
 		String handoverNote,
 		UUID confirmedByEscortId,
 		LocalDateTime deliveredAt,
@@ -23,4 +24,15 @@ public record ProofOfDeliveryResponse(
 		int requiredHandovers,
 		RouteLegStatus routeLegStatus,
 		OrderStatus orderStatus) {
+
+	public ProofOfDeliveryResponse(UUID id, UUID roadVehicleExecutionId, UUID airLegExecutionId,
+			UUID routeLegId, List<UUID> transportedOrderHorseIds, String recipientName,
+			String proofPhotoUrl, String handoverNote, UUID confirmedByEscortId,
+			LocalDateTime deliveredAt, LocalDateTime createdAt, int completedHandovers,
+			int requiredHandovers, RouteLegStatus routeLegStatus, OrderStatus orderStatus) {
+		this(id, roadVehicleExecutionId, airLegExecutionId, routeLegId, transportedOrderHorseIds,
+				recipientName, proofPhotoUrl, "proof-of-delivery.jpg", handoverNote,
+				confirmedByEscortId, deliveredAt, createdAt, completedHandovers,
+				requiredHandovers, routeLegStatus, orderStatus);
+	}
 }

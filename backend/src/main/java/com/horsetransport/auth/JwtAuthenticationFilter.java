@@ -7,6 +7,7 @@ import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.horsetransport.user.UserAccount;
 import com.horsetransport.user.UserRepository;
 import com.horsetransport.user.UserStatus;
+import com.horsetransport.security.SecurityApiErrorWriter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -63,7 +64,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		}
 		catch (JWTVerificationException | IllegalArgumentException | InvalidCredentialsException exception) {
 			SecurityContextHolder.clearContext();
-			response.setStatus(HttpStatus.UNAUTHORIZED.value());
+			SecurityApiErrorWriter.write(response, HttpStatus.UNAUTHORIZED.value(),
+					"UNAUTHORIZED", "Authentication is required");
 		}
 	}
 }

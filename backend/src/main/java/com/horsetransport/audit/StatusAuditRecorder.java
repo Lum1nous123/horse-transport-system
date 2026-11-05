@@ -37,6 +37,13 @@ public class StatusAuditRecorder {
 				oldStatus, newStatus));
 	}
 
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void recordSystemTransition(AuditEntityType entityType, UUID entityId, String oldStatus,
+			String newStatus, String reason) {
+		record(StatusAuditLog.systemTransition(Objects.requireNonNull(entityType), entityId,
+				oldStatus, newStatus, reason));
+	}
+
 	private void record(StatusAuditLog audit) {
 		Objects.requireNonNull(audit.getEntityId(), "Audit entity ID is required");
 		if (Objects.equals(audit.getOldStatus(), audit.getNewStatus())) {

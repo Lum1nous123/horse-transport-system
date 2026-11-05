@@ -37,4 +37,9 @@ public class AirJourneyController {
 			@RequestParam("photo") MultipartFile photo, @RequestParam("note") String note) {
 		return journeyService.recordFinalWelfare(routeLegId, photo, note);
 	}
+
+	@PostMapping("/complete")
+	public AirExecutionResponse complete(@PathVariable UUID routeLegId) {
+		return journeyService.complete(routeLegId);
+	}
 }

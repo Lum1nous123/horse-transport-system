@@ -92,7 +92,10 @@ public class AirJourneyService {
 			return AirExecutionResponse.from(context.execution());
 		}
 		if (context.leg().getStatus() != RouteLegStatus.IN_PROGRESS) {
-			throw new RoutePlanValidationException("AIR RouteLeg is not in progress");
+			throw new ExecutionConflictException("AIR RouteLeg is not in progress");
+		}
+		if (context.execution().getStatus() != ExecutionStatus.IN_PROGRESS) {
+			throw new ExecutionConflictException("AIR execution must be in progress before destination arrival");
 		}
 
 		context.execution().arriveAtDestination(LocalDateTime.now(clock));
@@ -112,10 +115,10 @@ public class AirJourneyService {
 			return WelfareEvidenceResponse.from(existing.get());
 		}
 		if (context.leg().getStatus() != RouteLegStatus.IN_PROGRESS) {
-			throw new RoutePlanValidationException("AIR RouteLeg is not in progress");
+			throw new ExecutionConflictException("AIR RouteLeg is not in progress");
 		}
 		if (context.execution().getStatus() != ExecutionStatus.DESTINATION) {
-			throw new RoutePlanValidationException(
+			throw new ExecutionConflictException(
 					"Final destination welfare requires Escort destination arrival");
 		}
 
@@ -132,11 +135,13 @@ public class AirJourneyService {
 				context.execution().getId(), WelfareEventType.FINAL_DESTINATION, photoUrl,
 				validated.note(), actorId, LocalDateTime.now(clock)));
 		notificationService.createWelfareUpdated(context.customerId(), context.planOrderId(), evidence.getId());
-		completeNonFinalExecution(context);
 		return WelfareEvidenceResponse.from(evidence);
 	}
 
-	private void completeNonFinalExecution(AirContext context) {
+	@Transactional
+	public AirExecutionResponse complete(UUID routeLegId) {
+		AirContext context = loadContext(routeLegId);
+		requireAssignedEscort(context.execution());
 		List<RouteLeg> orderedLegs = routeLegRepository
 				.findAllByRoutePlanIdOrderBySequenceNoAsc(context.leg().getRoutePlanId());
 		int currentIndex = -1;
@@ -147,18 +152,28 @@ public class AirJourneyService {
 			}
 		}
 		if (currentIndex < 0) {
-			throw new RoutePlanValidationException("AIR RouteLeg is not part of its ordered Route Plan");
+			throw new ExecutionConflictException("AIR RouteLeg is not part of its ordered Route Plan");
 		}
 
-		// Final AIR dừng ở ranh giới PoD; BE-26 sẽ hoàn tất RouteLeg và Order
 		if (currentIndex == orderedLegs.size() - 1) {
-			return;
+			throw new ExecutionConflictException("Final AIR completion requires Proof of Delivery");
 		}
-
-		// Non-final AIR hoàn tất execution rồi giao BE-23 mở đúng leg kế tiếp
+		if (context.execution().getStatus() == ExecutionStatus.COMPLETED) {
+			return AirExecutionResponse.from(context.execution());
+		}
+		if (context.leg().getStatus() != RouteLegStatus.IN_PROGRESS
+				|| context.execution().getStatus() != ExecutionStatus.DESTINATION) {
+			throw new ExecutionConflictException(
+					"Non-final AIR completion requires destination arrival and welfare");
+		}
+		if (welfareRepository.findByAirLegExecutionIdAndEventType(context.execution().getId(),
+				WelfareEventType.FINAL_DESTINATION).isEmpty()) {
+			throw new ExecutionConflictException("Non-final AIR completion requires welfare evidence");
+		}
 		context.execution().complete(LocalDateTime.now(clock));
 		executionRepository.saveAndFlush(context.execution());
 		coordinator.completeNonFinalLeg(context.leg().getId());
+		return AirExecutionResponse.from(context.execution());
 	}
 
 	private ValidatedPhoto validatePhoto(MultipartFile file, String note) {
@@ -224,7 +239,7 @@ public class AirJourneyService {
 		RoutePlan plan = routePlanRepository.findById(leg.getRoutePlanId())
 				.orElseThrow(RoutePlanNotFoundException::new);
 		if (plan.getStatus() != RoutePlanStatus.APPROVED) {
-			throw new RoutePlanValidationException("Route Plan must be approved before execution");
+			throw new ExecutionConflictException("Route Plan must be approved before execution");
 		}
 		TransportOrder order = orderRepository.findById(plan.getTransportOrderId())
 				.orElseThrow(RoutePlanNotFoundException::new);

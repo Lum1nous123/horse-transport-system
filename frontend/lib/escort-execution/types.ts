@@ -2,6 +2,21 @@ export type ExecutionStatus = "NOT_STARTED" | "IN_PROGRESS" | "DESTINATION" | "C
 
 export type RouteLegStatus = "PLANNED" | "READY" | "IN_PROGRESS" | "COMPLETED";
 
+export type ExecutionOrderStatus =
+  | "DRAFT"
+  | "SUBMITTED"
+  | "QUOTATION_SENT"
+  | "APPROVED"
+  | "READY_TO_SHIP"
+  | "IN_PROGRESS"
+  | "DELIVERED"
+  | "REJECTED"
+  | "CANCELLED";
+
+// Kept as the preview snapshot's historical name; execution readbacks may
+// legitimately expose READY_TO_SHIP before the journey starts.
+export type DeliveryOrderStatus = ExecutionOrderStatus;
+
 export type RoadCheckpointType = "REST_STOP" | "BORDER" | "QUARANTINE" | "OTHER";
 
 export type WelfareEventType = "CHECKPOINT" | "FINAL_DESTINATION";
@@ -18,8 +33,54 @@ export type WelfareEvidence = {
   checkpointId: string | null;
   photoUrl: string;
   photoName: string;
+  photoIsPreview?: boolean;
   note: string;
   recordedAt: string;
+};
+
+export type ProofOfDeliveryInput = {
+  recipientName: string;
+  photo: File;
+  note?: string;
+};
+
+type ProofOfDeliveryBase = {
+  id: string;
+  routeLegId: string;
+  transportedOrderHorseIds: string[];
+  recipientName: string;
+  proofPhotoUrl: string;
+  proofPhotoName: string;
+  proofPhotoIsPreview?: boolean;
+  handoverNote: string | null;
+  confirmedByEscortId: string;
+  deliveredAt: string;
+  completedHandovers: number;
+  requiredHandovers: number;
+  routeLegStatus: RouteLegStatus;
+  orderStatus: ExecutionOrderStatus;
+};
+
+export type ProofOfDelivery = ProofOfDeliveryBase & (
+  | {
+      mode: "ROAD";
+      roadLegVehicleId: string;
+      roadVehicleExecutionId: string;
+      airLegExecutionId?: never;
+    }
+  | {
+      mode: "AIR";
+      roadLegVehicleId?: never;
+      roadVehicleExecutionId?: never;
+      airLegExecutionId: string;
+    }
+);
+
+export type HandoverProgress = {
+  completedHandovers: number;
+  requiredHandovers: number;
+  routeLegStatus: RouteLegStatus;
+  orderStatus: ExecutionOrderStatus;
 };
 
 export type RoadCheckpointProgress = {
@@ -33,6 +94,7 @@ export type RoadCheckpointProgress = {
 
 export type AssignedRoadExecutionSummary = {
   executionId: string;
+  roadLegVehicleId: string;
   orderId: string;
   orderCode: string;
   routeLegId: string;
@@ -50,6 +112,9 @@ export type AssignedRoadExecutionSummary = {
   pendingCheckpointWelfareCount: number;
   destinationArrivedAt: string | null;
   finalWelfareRecorded: boolean;
+  proofOfDeliveryRecorded: boolean;
+  proofOfDeliveryAvailable: boolean;
+  handoverProgress: HandoverProgress;
 };
 
 export type AssignedRoadExecutionDetail = AssignedRoadExecutionSummary & {
@@ -59,15 +124,64 @@ export type AssignedRoadExecutionDetail = AssignedRoadExecutionSummary & {
   horses: AssignedHorse[];
   checkpoints: RoadCheckpointProgress[];
   finalWelfareEvidence: WelfareEvidence | null;
+  proofOfDelivery: ProofOfDelivery | null;
   availableActions: {
     checkpointWelfareIds: string[];
     finalWelfare: boolean;
+    proofOfDelivery: boolean;
   };
   lastUpdatedAt: string;
 };
 
 export type AssignedRoadWorkQueue = {
   executions: AssignedRoadExecutionSummary[];
+};
+
+export type AirExecutionAvailableActions = {
+  start: boolean;
+  arriveAtDestination: boolean;
+  recordWelfare: boolean;
+  complete: boolean;
+};
+
+export type AssignedAirExecutionSummary = {
+  executionId: string;
+  orderId: string;
+  orderCode: string;
+  routeLegId: string;
+  routeLegSequenceNo: number;
+  routeLegStatus: RouteLegStatus;
+  isFinalLeg: boolean;
+  origin: string;
+  destination: string;
+  plannedDepartureAt: string;
+  plannedArrivalAt: string;
+  status: ExecutionStatus;
+  welfareRecorded: boolean;
+  proofOfDeliveryRecorded: boolean;
+  proofOfDeliveryAvailable: boolean;
+  handoverProgress: HandoverProgress;
+  availableActions: AirExecutionAvailableActions;
+};
+
+export type AssignedAirExecutionDetail = AssignedAirExecutionSummary & {
+  assignedEscortId: string;
+  assignedEscortName: string;
+  startedAt: string | null;
+  destinationArrivedAt: string | null;
+  completedAt: string | null;
+  welfareEvidence: WelfareEvidence | null;
+  proofOfDelivery: ProofOfDelivery | null;
+  lastUpdatedAt: string;
+};
+
+export type AssignedAirWorkQueue = {
+  executions: AssignedAirExecutionSummary[];
+};
+
+export type RecordAirWelfareInput = {
+  photo: File;
+  note: string;
 };
 
 export type RecordRoadWelfareInput =
@@ -84,11 +198,24 @@ export type RecordRoadWelfareInput =
       note: string;
     };
 
-export type EscortExecutionService = {
+export type RoadEscortExecutionService = {
   listAssignedRoadWork(): Promise<AssignedRoadWorkQueue>;
   getAssignedRoadExecution(executionId: string): Promise<AssignedRoadExecutionDetail>;
   recordRoadWelfare(executionId: string, input: RecordRoadWelfareInput): Promise<void>;
+  recordRoadProofOfDelivery(roadLegVehicleId: string, input: ProofOfDeliveryInput): Promise<ProofOfDelivery>;
 };
+
+export type AirEscortExecutionService = {
+  listAssignedAirWork(): Promise<AssignedAirWorkQueue>;
+  getAssignedAirExecution(executionId: string): Promise<AssignedAirExecutionDetail>;
+  startAirExecution(executionId: string): Promise<void>;
+  recordAirDestinationArrival(executionId: string): Promise<void>;
+  recordAirWelfare(executionId: string, input: RecordAirWelfareInput): Promise<void>;
+  completeAirExecution(executionId: string): Promise<void>;
+  recordAirProofOfDelivery(routeLegId: string, input: ProofOfDeliveryInput): Promise<ProofOfDelivery>;
+};
+
+export type EscortExecutionService = RoadEscortExecutionService & AirEscortExecutionService;
 
 export type EscortExecutionErrorCode =
   | "FORBIDDEN"
@@ -99,7 +226,14 @@ export type EscortExecutionErrorCode =
   | "CONTRACT_UNAVAILABLE";
 
 export class EscortExecutionError extends Error {
-  constructor(message: string, public readonly code: EscortExecutionErrorCode) {
+  constructor(
+    message: string,
+    public readonly code: EscortExecutionErrorCode,
+    public readonly details?: {
+      status?: number;
+      apiCode?: string;
+    },
+  ) {
     super(message);
     this.name = "EscortExecutionError";
   }

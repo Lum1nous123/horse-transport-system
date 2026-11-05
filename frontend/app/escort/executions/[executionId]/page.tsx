@@ -1,17 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import EscortWorkspaceFrame from "@/components/EscortWorkspaceFrame";
-import RoadWelfareForm from "@/components/RoadWelfareForm";
+import ProofOfDeliveryForm from "@/components/ProofOfDeliveryForm";
+import ProofOfDeliveryReadback from "@/components/ProofOfDeliveryReadback";
+import WelfareEvidenceForm from "@/components/WelfareEvidenceForm";
+import WelfareEvidenceReadback from "@/components/WelfareEvidenceReadback";
 import {
   EscortExecutionError,
   getEscortExecutionService,
   type AssignedRoadExecutionDetail,
+  type ProofOfDeliveryInput,
   type RecordRoadWelfareInput,
-  type WelfareEvidence,
 } from "@/lib/escort-execution/service";
 import { useEscortAccess } from "@/lib/escort-execution/use-escort-access";
 
@@ -29,25 +31,7 @@ function label(value: string) {
   return value.toLowerCase().replaceAll("_", " ").replace(/^./, (character) => character.toUpperCase());
 }
 
-function WelfareReadback({ evidence }: { evidence: WelfareEvidence }) {
-  return (
-    <article className="escort-welfare-readback">
-      <Image
-        src={evidence.photoUrl}
-        alt={`Welfare evidence ${evidence.photoName}`}
-        width={160}
-        height={110}
-        unoptimized
-      />
-      <div>
-        <span>Saved welfare evidence</span>
-        <strong>{evidence.photoName}</strong>
-        <p>{evidence.note}</p>
-        <time dateTime={evidence.recordedAt}>{formatDateTime(evidence.recordedAt)}</time>
-      </div>
-    </article>
-  );
-}
+type ReconciliationState = { message: string };
 
 export default function RoadExecutionDetailPage() {
   const params = useParams<{ executionId: string }>();
@@ -59,7 +43,11 @@ export default function RoadExecutionDetailPage() {
   const [error, setError] = useState("");
   const [errorCode, setErrorCode] = useState("");
   const [feedback, setFeedback] = useState("");
+  const [reconciliation, setReconciliation] = useState<ReconciliationState | null>(null);
+  const [reconciling, setReconciling] = useState(false);
   const mutationInFlight = useRef(false);
+  const reconciliationRequired = useRef(false);
+  const reconciliationInFlight = useRef(false);
 
   const loadExecution = useCallback(async (announce = false) => {
     setLoading(true);
@@ -68,6 +56,8 @@ export default function RoadExecutionDetailPage() {
     try {
       const detail = await service.getAssignedRoadExecution(params.executionId);
       setExecution(detail);
+      reconciliationRequired.current = false;
+      setReconciliation(null);
       if (announce) setFeedback("Execution state refreshed from the saved service state.");
     } catch (caught) {
       setExecution(null);
@@ -84,42 +74,102 @@ export default function RoadExecutionDetailPage() {
     return () => window.clearTimeout(timer);
   }, [accessState, loadExecution]);
 
-  async function recordWelfare(
-    key: string,
-    input: RecordRoadWelfareInput,
-  ) {
-    if (mutationInFlight.current) {
-      throw new EscortExecutionError("A welfare update is already being saved.", "REQUEST_FAILED");
+  function requireReconciliation(message: string) {
+    reconciliationRequired.current = true;
+    setError("");
+    setErrorCode("");
+    setFeedback("");
+    setReconciliation({ message });
+  }
+
+  async function retryReconciliation() {
+    if (reconciliationInFlight.current) return;
+    reconciliationInFlight.current = true;
+    setReconciling(true);
+    try {
+      const persisted = await service.getAssignedRoadExecution(params.executionId);
+      setExecution(persisted);
+      reconciliationRequired.current = false;
+      setReconciliation(null);
+      setFeedback("Persisted ROAD state confirmed. No mutation was sent again.");
+    } catch (caught) {
+      const readMessage = caught instanceof Error ? caught.message : "The persisted ROAD state is still unavailable.";
+      requireReconciliation(`Mutations remain locked because saved-state read-back failed again: ${readMessage}`);
+    } finally {
+      reconciliationInFlight.current = false;
+      setReconciling(false);
+    }
+  }
+
+  async function mutate(key: string, action: () => Promise<unknown>, successMessage: string) {
+    if (mutationInFlight.current || reconciliationRequired.current) {
+      throw new EscortExecutionError("A ROAD update is already being saved.", "REQUEST_FAILED");
     }
     mutationInFlight.current = true;
     setBusyKey(key);
     setError("");
     setErrorCode("");
     setFeedback("");
+    let writeSucceeded = false;
     try {
-      await service.recordRoadWelfare(params.executionId, input);
-      const persisted = await service.getAssignedRoadExecution(params.executionId);
-      setExecution(persisted);
-      setFeedback(input.eventType === "CHECKPOINT"
-        ? "Checkpoint welfare saved and read back from the service state."
-        : "Final welfare saved and read back from the service state.");
+      await action();
+      writeSucceeded = true;
+      try {
+        const persisted = await service.getAssignedRoadExecution(params.executionId);
+        setExecution(persisted);
+        setFeedback(successMessage);
+      } catch (caught) {
+        const readMessage = caught instanceof Error ? caught.message : "The persisted ROAD state could not be read back.";
+        requireReconciliation(`The update was accepted, but its persisted result could not be confirmed: ${readMessage}`);
+        throw caught;
+      }
     } catch (caught) {
-      const nextMessage = caught instanceof Error ? caught.message : "We couldn't save this welfare update.";
+      if (writeSucceeded) throw caught;
+      const nextMessage = caught instanceof Error ? caught.message : "We couldn't save this ROAD update.";
       const nextCode = caught instanceof EscortExecutionError ? caught.code : "REQUEST_FAILED";
-      if (nextCode === "STALE_STATE") {
+      const uncertainNetworkWrite = caught instanceof EscortExecutionError
+        && caught.details?.apiCode === "NETWORK_ERROR";
+      if (nextCode === "STALE_STATE" || uncertainNetworkWrite) {
         try {
           setExecution(await service.getAssignedRoadExecution(params.executionId));
-        } catch {
-          setExecution(null);
+          setFeedback(uncertainNetworkWrite
+            ? "The connection failed after submission. The latest persisted ROAD state was loaded and the mutation was not replayed."
+            : "The ROAD state changed and the latest persisted state was loaded. No mutation was replayed.");
+        } catch (recoveryError) {
+          const recoveryMessage = recoveryError instanceof Error ? recoveryError.message : "The latest persisted ROAD state could not be loaded.";
+          requireReconciliation(`${uncertainNetworkWrite ? "The submission result is uncertain" : "The ROAD state changed"}, and recovery read-back failed: ${recoveryMessage}`);
         }
+      } else {
+        setError(nextMessage);
+        setErrorCode(nextCode);
       }
-      setError(nextMessage);
-      setErrorCode(nextCode);
       throw caught;
     } finally {
       mutationInFlight.current = false;
       setBusyKey("");
     }
+  }
+
+  function recordWelfare(
+    key: string,
+    input: RecordRoadWelfareInput,
+  ) {
+    return mutate(
+      key,
+      () => service.recordRoadWelfare(params.executionId, input),
+      input.eventType === "CHECKPOINT"
+        ? "Checkpoint welfare saved and read back from the service state."
+        : "Final welfare saved and read back from the service state.",
+    );
+  }
+
+  function recordProofOfDelivery(input: ProofOfDeliveryInput) {
+    if (!execution) return Promise.reject(new EscortExecutionError("The ROAD execution is unavailable.", "STALE_STATE"));
+    return mutate(
+      "proof-of-delivery",
+      () => service.recordRoadProofOfDelivery(execution.roadLegVehicleId, input),
+      "Proof of Delivery saved and read back from the service state.",
+    );
   }
 
   if (accessState === "checking") {
@@ -144,6 +194,7 @@ export default function RoadExecutionDetailPage() {
 
   const previewSuffix = preview ? `?preview=1&escortId=${encodeURIComponent(previewEscortId)}` : "";
   const queueHref = `/escort${previewSuffix}`;
+  const busy = Boolean(busyKey) || Boolean(reconciliation) || reconciling;
 
   return (
     <EscortWorkspaceFrame preview={preview} previewEscortId={previewEscortId} previewEscortName={previewEscortName}>
@@ -168,11 +219,12 @@ export default function RoadExecutionDetailPage() {
               <h1>{execution.vehiclePlateNumber} <small>{execution.vehicleName}</small></h1>
               <p>{execution.origin} <b aria-hidden="true">→</b> {execution.destination}</p>
             </div>
-            <div><Link className="customer-secondary-button" href={queueHref}>Back to queue</Link><button className="customer-secondary-button" type="button" disabled={loading || Boolean(busyKey)} onClick={() => void loadExecution(true)}>Refresh</button></div>
+            <div><Link className="customer-secondary-button" href={queueHref}>Back to queue</Link><button className="customer-secondary-button" type="button" disabled={loading || busy} onClick={() => void loadExecution(true)}>Refresh</button></div>
           </header>
 
           {feedback && <p className="customer-feedback" role="status">{feedback}</p>}
-          {error && <div className="customer-alert" role="alert"><span>{error}</span><button type="button" disabled={loading || Boolean(busyKey)} onClick={() => void loadExecution(true)}>Refresh saved state</button></div>}
+          {error && <div className="customer-alert" role="alert"><span>{error}</span><button type="button" disabled={loading || busy} onClick={() => void loadExecution(true)}>Refresh saved state</button></div>}
+          {reconciliation && <div className="customer-alert escort-reconciliation-alert" role="alert"><span>{reconciliation.message} The original mutation will not be sent again.</span><button type="button" disabled={reconciling} onClick={() => void retryReconciliation()}>{reconciling ? "Reading saved state..." : "Retry saved-state read-back"}</button></div>}
 
           <dl className="escort-execution-facts">
             <div><dt>Vehicle status</dt><dd><span className={`escort-status is-${execution.status.toLowerCase()}`}>{label(execution.status)}</span></dd></div>
@@ -205,14 +257,14 @@ export default function RoadExecutionDetailPage() {
                       <article>
                         <header><div><span>Checkpoint {checkpoint.sequenceNo} · {label(checkpoint.checkpointType)}</span><h3>{checkpoint.name}</h3></div><strong>{checkpoint.arrivedAt ? `Reached ${formatDateTime(checkpoint.arrivedAt)}` : "Not reached"}</strong></header>
                         {checkpoint.welfareEvidence ? (
-                          <WelfareReadback evidence={checkpoint.welfareEvidence} />
+                          <WelfareEvidenceReadback evidence={checkpoint.welfareEvidence} />
                         ) : canRecord ? (
-                          <RoadWelfareForm
+                          <WelfareEvidenceForm
                             formId={`checkpoint-${checkpoint.id}`}
                             contextLabel={`${checkpoint.name} checkpoint`}
                             title="Record checkpoint welfare"
                             description={`Attach evidence for ${execution.vehiclePlateNumber} at this reached checkpoint.`}
-                            busy={Boolean(busyKey)}
+                            busy={busy}
                             onSubmit={(photo, note) => recordWelfare(checkpoint.id, { eventType: "CHECKPOINT", checkpointId: checkpoint.id, photo, note })}
                           />
                         ) : (
@@ -228,18 +280,18 @@ export default function RoadExecutionDetailPage() {
 
           <section className={`escort-final-welfare ${execution.destinationArrivedAt ? "is-ready" : "is-locked"}`} aria-labelledby="escort-final-title">
             <div className="escort-section-heading">
-              <div><span>Destination boundary</span><h2 id="escort-final-title">Final welfare</h2><p>Final welfare is separate from Proof of Delivery. This task never completes the final RouteLeg or Order.</p></div>
+              <div><span>Destination boundary</span><h2 id="escort-final-title">Final welfare</h2><p>Final welfare is separate from Proof of Delivery and never completes the final RouteLeg or Order by itself.</p></div>
               <strong>{execution.isFinalLeg ? "Final leg" : "Non-final leg"}</strong>
             </div>
             {execution.finalWelfareEvidence ? (
-              <WelfareReadback evidence={execution.finalWelfareEvidence} />
+              <WelfareEvidenceReadback evidence={execution.finalWelfareEvidence} />
             ) : execution.availableActions.finalWelfare ? (
-              <RoadWelfareForm
+              <WelfareEvidenceForm
                 formId="final-welfare"
                 contextLabel={`${execution.vehiclePlateNumber} final destination`}
                 title="Record final destination welfare"
                 description={`Driver arrival was saved ${formatDateTime(execution.destinationArrivedAt ?? "")}. Record the final welfare evidence for this Vehicle.`}
-                busy={Boolean(busyKey)}
+                busy={busy}
                 submitLabel="Save final welfare"
                 onSubmit={(photo, note) => recordWelfare("final", { eventType: "FINAL_DESTINATION", photo, note })}
               />
@@ -247,6 +299,31 @@ export default function RoadExecutionDetailPage() {
               <p className="escort-locked-note">The assigned Driver must record destination arrival before final welfare becomes available.</p>
             )}
           </section>
+
+          {execution.isFinalLeg && (
+            <section className={`escort-pod-section ${execution.proofOfDelivery ? "is-complete" : execution.availableActions.proofOfDelivery ? "is-ready" : "is-locked"}`} aria-labelledby="road-pod-title">
+              <div className="escort-section-heading">
+                <div><span>Final handover</span><h2 id="road-pod-title">Proof of Delivery</h2><p>Confirm only the Horses assigned to {execution.vehiclePlateNumber}. Proof evidence remains separate from final welfare.</p></div>
+                <strong>{execution.handoverProgress.completedHandovers}/{execution.handoverProgress.requiredHandovers} handovers</strong>
+              </div>
+              {execution.proofOfDelivery ? (
+                <ProofOfDeliveryReadback proof={execution.proofOfDelivery} progress={execution.handoverProgress} />
+              ) : reconciliation ? (
+                <p className="escort-locked-note">Handover actions are locked until saved-state read-back succeeds.</p>
+              ) : execution.availableActions.proofOfDelivery ? (
+                <ProofOfDeliveryForm
+                  formId="road-proof-of-delivery"
+                  contextLabel={`${execution.vehiclePlateNumber} and its ${execution.horses.length} assigned Horse${execution.horses.length === 1 ? "" : "s"}`}
+                  busy={busy}
+                  onSubmit={recordProofOfDelivery}
+                />
+              ) : execution.handoverProgress.orderStatus === "DELIVERED" ? (
+                <div className="escort-air-handover is-complete" role="status"><strong>Order delivered</strong><p>The service confirmed every required final ROAD handover.</p></div>
+              ) : (
+                <p className="escort-locked-note">Proof of Delivery becomes available after this final Vehicle reaches destination and its final welfare is persisted.</p>
+              )}
+            </section>
+          )}
         </>
       )}
     </EscortWorkspaceFrame>

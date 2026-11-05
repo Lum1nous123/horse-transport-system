@@ -41,14 +41,14 @@ describe("useEscortAccess", () => {
   });
 
   it("allows an authenticated ESCORT", async () => {
-    accessMocks.getCurrentUser.mockResolvedValue({ role: "ESCORT" });
+    accessMocks.getCurrentUser.mockResolvedValue({ role: "ESCORT", status: "ACTIVE" });
     render(<AccessProbe />);
 
     expect(await screen.findByText("allowed:")).toBeInTheDocument();
   });
 
   it("renders a forbidden state for another authenticated role", async () => {
-    accessMocks.getCurrentUser.mockResolvedValue({ role: "CUSTOMER" });
+    accessMocks.getCurrentUser.mockResolvedValue({ role: "CUSTOMER", status: "ACTIVE" });
     render(<AccessProbe />);
 
     expect(await screen.findByText(/forbidden:You don't have permission/)).toBeInTheDocument();
@@ -65,7 +65,7 @@ describe("useEscortAccess", () => {
   it("retries a transient profile failure", async () => {
     accessMocks.getCurrentUser
       .mockRejectedValueOnce(new Error("NETWORK_ERROR"))
-      .mockResolvedValueOnce({ role: "ESCORT" });
+      .mockResolvedValueOnce({ role: "ESCORT", status: "ACTIVE" });
     render(<AccessProbe />);
 
     expect(await screen.findByText(/failed:We couldn't verify your access/)).toBeInTheDocument();

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   AssignedRoadExecutionDetail,
+  ProofOfDelivery,
   WelfareEvidence,
 } from "@/lib/escort-execution/types";
 import RoadExecutionDetailPage from "./page";
@@ -21,6 +22,7 @@ const detailMocks = vi.hoisted(() => ({
   },
   getAssignedRoadExecution: vi.fn(),
   recordRoadWelfare: vi.fn(),
+  recordRoadProofOfDelivery: vi.fn(),
   replace: vi.fn(),
 }));
 
@@ -50,6 +52,7 @@ vi.mock("@/lib/escort-execution/service", async () => {
       listAssignedRoadWork: vi.fn(),
       getAssignedRoadExecution: detailMocks.getAssignedRoadExecution,
       recordRoadWelfare: detailMocks.recordRoadWelfare,
+      recordRoadProofOfDelivery: detailMocks.recordRoadProofOfDelivery,
     }),
   };
 });
@@ -76,9 +79,32 @@ function evidence(note: string, checkpointId: string | null = "checkpoint-1"): W
   };
 }
 
+function proof(): ProofOfDelivery {
+  return {
+    id: "pod-road-1",
+    mode: "ROAD",
+    roadLegVehicleId: "road-vehicle-2074-a",
+    roadVehicleExecutionId: "road-execution-2074-a",
+    routeLegId: "leg-2074-1",
+    transportedOrderHorseIds: ["horse-1"],
+    recipientName: "Camille Martin",
+    proofPhotoUrl: "data:image/png;base64,cHJvb2Y=",
+    proofPhotoName: "proof.png",
+    proofPhotoIsPreview: true,
+    handoverNote: null,
+    confirmedByEscortId: "escort-mia",
+    deliveredAt: "2026-10-28T19:00:00-04:00",
+    completedHandovers: 1,
+    requiredHandovers: 1,
+    routeLegStatus: "COMPLETED",
+    orderStatus: "DELIVERED",
+  };
+}
+
 function execution(overrides: Partial<AssignedRoadExecutionDetail> = {}): AssignedRoadExecutionDetail {
   return {
     executionId: "road-execution-2074-a",
+    roadLegVehicleId: "road-vehicle-2074-a",
     orderId: "order-2074",
     orderCode: "ORD-2074",
     routeLegId: "leg-2074-1",
@@ -96,6 +122,9 @@ function execution(overrides: Partial<AssignedRoadExecutionDetail> = {}): Assign
     pendingCheckpointWelfareCount: 1,
     destinationArrivedAt: null,
     finalWelfareRecorded: false,
+    proofOfDeliveryRecorded: false,
+    proofOfDeliveryAvailable: false,
+    handoverProgress: { completedHandovers: 0, requiredHandovers: 0, routeLegStatus: "IN_PROGRESS", orderStatus: "IN_PROGRESS" },
     assignedEscortId: "escort-mia",
     assignedEscortName: "Mia Laurent",
     driverName: "Noah Williams",
@@ -119,7 +148,8 @@ function execution(overrides: Partial<AssignedRoadExecutionDetail> = {}): Assign
       },
     ],
     finalWelfareEvidence: null,
-    availableActions: { checkpointWelfareIds: ["checkpoint-1"], finalWelfare: false },
+    proofOfDelivery: null,
+    availableActions: { checkpointWelfareIds: ["checkpoint-1"], finalWelfare: false, proofOfDelivery: false },
     lastUpdatedAt: "2026-10-28T14:18:00-04:00",
     ...overrides,
   };
@@ -157,7 +187,7 @@ describe("RoadExecutionDetailPage", () => {
     detailMocks.getAssignedRoadExecution.mockResolvedValueOnce(execution({
       status: "DESTINATION",
       destinationArrivedAt: "2026-10-28T18:15:00-05:00",
-      availableActions: { checkpointWelfareIds: [], finalWelfare: true },
+      availableActions: { checkpointWelfareIds: [], finalWelfare: true, proofOfDelivery: false },
     }));
     render(<RoadExecutionDetailPage />);
 
@@ -211,7 +241,7 @@ describe("RoadExecutionDetailPage", () => {
         { ...execution().checkpoints[0], welfareEvidence: evidence("Persisted by the service.") },
         execution().checkpoints[1],
       ],
-      availableActions: { checkpointWelfareIds: [], finalWelfare: false },
+      availableActions: { checkpointWelfareIds: [], finalWelfare: false, proofOfDelivery: false },
     });
     detailMocks.getAssignedRoadExecution
       .mockResolvedValueOnce(execution())
@@ -229,7 +259,7 @@ describe("RoadExecutionDetailPage", () => {
     await user.type(screen.getByLabelText("Welfare note for Bluegrass rest area checkpoint"), "Local note");
     await user.click(screen.getByRole("button", { name: "Save welfare update" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("The execution changed while saving.");
+    expect(await screen.findByRole("status")).toHaveTextContent("latest persisted state was loaded");
     expect(await screen.findByText("Persisted by the service.")).toBeInTheDocument();
     expect(detailMocks.getAssignedRoadExecution).toHaveBeenCalledTimes(2);
   });
@@ -242,7 +272,7 @@ describe("RoadExecutionDetailPage", () => {
         ...checkpoint,
         arrivedAt: "2026-10-28T14:18:00-04:00",
       })),
-      availableActions: { checkpointWelfareIds: ["checkpoint-1", "checkpoint-2"], finalWelfare: false },
+      availableActions: { checkpointWelfareIds: ["checkpoint-1", "checkpoint-2"], finalWelfare: false, proofOfDelivery: false },
     });
     const saved = execution({
       pendingCheckpointWelfareCount: 0,
@@ -250,7 +280,7 @@ describe("RoadExecutionDetailPage", () => {
         ...checkpoint,
         welfareEvidence: evidence(`Saved ${checkpoint.name}.`, checkpoint.id),
       })),
-      availableActions: { checkpointWelfareIds: [], finalWelfare: false },
+      availableActions: { checkpointWelfareIds: [], finalWelfare: false, proofOfDelivery: false },
     });
     const mutation = deferred<void>();
     detailMocks.getAssignedRoadExecution
@@ -278,5 +308,130 @@ describe("RoadExecutionDetailPage", () => {
     expect(await screen.findByText("Saved Bluegrass rest area.")).toBeInTheDocument();
     expect(screen.getByText("Saved Chicago cargo gate.")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("saved and read back from the service state");
+  });
+
+  it("submits one ROAD PoD at a time and renders persisted proof read-back", async () => {
+    const ready = execution({
+      isFinalLeg: true,
+      status: "COMPLETED",
+      destinationArrivedAt: "2026-10-28T18:15:00-05:00",
+      finalWelfareRecorded: true,
+      finalWelfareEvidence: evidence("Final welfare is saved.", null),
+      proofOfDeliveryAvailable: true,
+      handoverProgress: { completedHandovers: 0, requiredHandovers: 1, routeLegStatus: "IN_PROGRESS", orderStatus: "IN_PROGRESS" },
+      availableActions: { checkpointWelfareIds: [], finalWelfare: false, proofOfDelivery: true },
+    });
+    const saved = execution({
+      ...ready,
+      routeLegStatus: "COMPLETED",
+      proofOfDeliveryRecorded: true,
+      proofOfDeliveryAvailable: false,
+      proofOfDelivery: proof(),
+      handoverProgress: { completedHandovers: 1, requiredHandovers: 1, routeLegStatus: "COMPLETED", orderStatus: "DELIVERED" },
+      availableActions: { checkpointWelfareIds: [], finalWelfare: false, proofOfDelivery: false },
+    });
+    const mutation = deferred<ProofOfDelivery>();
+    detailMocks.getAssignedRoadExecution.mockResolvedValueOnce(ready).mockResolvedValueOnce(saved);
+    detailMocks.recordRoadProofOfDelivery.mockReturnValueOnce(mutation.promise);
+    const user = userEvent.setup();
+    const { container } = render(<RoadExecutionDetailPage />);
+
+    await user.type(await screen.findByLabelText(/Recipient name/), "Camille Martin");
+    await user.upload(screen.getByLabelText(/Proof photo for/), new File(["proof"], "proof.png", { type: "image/png" }));
+    await user.click(screen.getByRole("button", { name: "Confirm handover" }));
+    await waitFor(() => expect(detailMocks.recordRoadProofOfDelivery).toHaveBeenCalledOnce());
+    expect(screen.getByRole("button", { name: "Refresh" })).toBeDisabled();
+    fireEvent.submit(container.querySelector(".escort-pod-form")!);
+    expect(detailMocks.recordRoadProofOfDelivery).toHaveBeenCalledOnce();
+
+    await act(async () => mutation.resolve(proof()));
+    expect(await screen.findByText("Saved Proof of Delivery")).toBeInTheDocument();
+    expect(screen.getByText("Camille Martin")).toBeInTheDocument();
+    expect(screen.getByText(/Preview image from original file/)).toBeInTheDocument();
+    expect(screen.getByText("Delivered")).toBeInTheDocument();
+  });
+
+  it("does not replay a pending PoD when navigating away and reads the persisted handover on return", async () => {
+    const ready = execution({
+      isFinalLeg: true,
+      status: "COMPLETED",
+      destinationArrivedAt: "2026-10-28T18:15:00-05:00",
+      finalWelfareRecorded: true,
+      finalWelfareEvidence: evidence("Final welfare is saved.", null),
+      proofOfDeliveryAvailable: true,
+      handoverProgress: { completedHandovers: 0, requiredHandovers: 1, routeLegStatus: "IN_PROGRESS", orderStatus: "IN_PROGRESS" },
+      availableActions: { checkpointWelfareIds: [], finalWelfare: false, proofOfDelivery: true },
+    });
+    const saved = execution({
+      ...ready,
+      routeLegStatus: "COMPLETED",
+      proofOfDeliveryRecorded: true,
+      proofOfDeliveryAvailable: false,
+      proofOfDelivery: proof(),
+      handoverProgress: { completedHandovers: 1, requiredHandovers: 1, routeLegStatus: "COMPLETED", orderStatus: "DELIVERED" },
+      availableActions: { checkpointWelfareIds: [], finalWelfare: false, proofOfDelivery: false },
+    });
+    const mutation = deferred<ProofOfDelivery>();
+    detailMocks.getAssignedRoadExecution
+      .mockResolvedValueOnce(ready)
+      .mockResolvedValueOnce(saved)
+      .mockResolvedValueOnce(saved);
+    detailMocks.recordRoadProofOfDelivery.mockReturnValueOnce(mutation.promise);
+    const user = userEvent.setup();
+    const mounted = render(<RoadExecutionDetailPage />);
+
+    await user.type(await screen.findByLabelText(/Recipient name/), "Camille Martin");
+    await user.upload(screen.getByLabelText(/Proof photo for/), new File(["proof"], "proof.png", { type: "image/png" }));
+    await user.click(screen.getByRole("button", { name: "Confirm handover" }));
+    mounted.unmount();
+    await act(async () => mutation.resolve(proof()));
+
+    render(<RoadExecutionDetailPage />);
+    expect(await screen.findByText("Saved Proof of Delivery")).toBeInTheDocument();
+    expect(detailMocks.recordRoadProofOfDelivery).toHaveBeenCalledOnce();
+  });
+
+  it("locks ROAD mutations through repeated read-back failures and never replays PoD", async () => {
+    const ready = execution({
+      isFinalLeg: true,
+      status: "COMPLETED",
+      destinationArrivedAt: "2026-10-28T18:15:00-05:00",
+      finalWelfareRecorded: true,
+      finalWelfareEvidence: evidence("Final welfare is saved.", null),
+      proofOfDeliveryAvailable: true,
+      handoverProgress: { completedHandovers: 0, requiredHandovers: 1, routeLegStatus: "IN_PROGRESS", orderStatus: "IN_PROGRESS" },
+      availableActions: { checkpointWelfareIds: [], finalWelfare: false, proofOfDelivery: true },
+    });
+    const saved = execution({
+      ...ready,
+      routeLegStatus: "COMPLETED",
+      proofOfDeliveryRecorded: true,
+      proofOfDeliveryAvailable: false,
+      proofOfDelivery: proof(),
+      handoverProgress: { completedHandovers: 1, requiredHandovers: 1, routeLegStatus: "COMPLETED", orderStatus: "DELIVERED" },
+      availableActions: { checkpointWelfareIds: [], finalWelfare: false, proofOfDelivery: false },
+    });
+    detailMocks.getAssignedRoadExecution
+      .mockResolvedValueOnce(ready)
+      .mockRejectedValueOnce(new Error("Read-back unavailable."))
+      .mockRejectedValueOnce(new Error("Still unavailable."))
+      .mockResolvedValueOnce(saved);
+    detailMocks.recordRoadProofOfDelivery.mockResolvedValueOnce(proof());
+    const user = userEvent.setup();
+    render(<RoadExecutionDetailPage />);
+
+    await user.type(await screen.findByLabelText(/Recipient name/), "Camille Martin");
+    await user.upload(screen.getByLabelText(/Proof photo for/), new File(["proof"], "proof.png", { type: "image/png" }));
+    await user.click(screen.getByRole("button", { name: "Confirm handover" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("persisted result could not be confirmed");
+    expect(screen.getByRole("button", { name: "Refresh" })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Retry saved-state read-back" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("failed again");
+    expect(detailMocks.recordRoadProofOfDelivery).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole("button", { name: "Retry saved-state read-back" }));
+
+    expect(await screen.findByText("Saved Proof of Delivery")).toBeInTheDocument();
+    expect(detailMocks.recordRoadProofOfDelivery).toHaveBeenCalledOnce();
   });
 });

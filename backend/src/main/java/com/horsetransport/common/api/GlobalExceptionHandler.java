@@ -12,6 +12,7 @@ import com.horsetransport.document.DocumentStorageException;
 import com.horsetransport.document.DocumentVersionConflictException;
 import com.horsetransport.document.DocumentVersionNotFoundException;
 import com.horsetransport.document.HorseDocumentNotFoundException;
+import com.horsetransport.delivery.ProofOfDeliveryNotFoundException;
 import com.horsetransport.horse.DuplicateMicrochipException;
 import com.horsetransport.order.InvalidOrderHorsesException;
 import com.horsetransport.order.InvalidOrderStaffAssignmentException;
@@ -34,6 +35,8 @@ import com.horsetransport.quotation.QuotationValidationException;
 import com.horsetransport.route.RoutePlanNotEditableException;
 import com.horsetransport.route.RoutePlanNotFoundException;
 import com.horsetransport.route.RoutePlanValidationException;
+import com.horsetransport.route.ExecutionConflictException;
+import com.horsetransport.route.ExecutionNotFoundException;
 import com.horsetransport.security.CurrentUserUnavailableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -46,6 +49,21 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+	@ExceptionHandler(ProofOfDeliveryNotFoundException.class)
+	public ResponseEntity<ApiError> handleProofOfDeliveryNotFound(ProofOfDeliveryNotFoundException exception) {
+		return error(HttpStatus.NOT_FOUND, "PROOF_OF_DELIVERY_NOT_FOUND", exception.getMessage());
+	}
+
+	@ExceptionHandler(ExecutionNotFoundException.class)
+	public ResponseEntity<ApiError> handleExecutionNotFound(ExecutionNotFoundException exception) {
+		return error(HttpStatus.NOT_FOUND, "EXECUTION_NOT_FOUND", exception.getMessage());
+	}
+
+	@ExceptionHandler(ExecutionConflictException.class)
+	public ResponseEntity<ApiError> handleExecutionConflict(ExecutionConflictException exception) {
+		return error(HttpStatus.CONFLICT, "EXECUTION_CONFLICT", exception.getMessage());
+	}
 
 	@ExceptionHandler({ HorseDocumentNotFoundException.class, DocumentVersionNotFoundException.class })
 	public ResponseEntity<ApiError> handleDocumentNotFound(RuntimeException exception) {

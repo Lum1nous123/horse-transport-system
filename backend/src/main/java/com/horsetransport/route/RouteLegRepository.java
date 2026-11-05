@@ -1,6 +1,7 @@
 package com.horsetransport.route;
 
 import java.util.List;
+import java.util.Collection;
 import java.util.UUID;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.Lock;
@@ -13,6 +14,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface RouteLegRepository extends JpaRepository<RouteLeg, UUID> {
 
 	List<RouteLeg> findAllByRoutePlanIdOrderBySequenceNoAsc(UUID routePlanId);
+
+	List<RouteLeg> findAllByRoutePlanIdIn(Collection<UUID> routePlanIds);
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select leg from RouteLeg leg where leg.routePlanId = :routePlanId order by leg.sequenceNo asc")

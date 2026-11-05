@@ -29,9 +29,11 @@ public class SecurityConfig {
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.exceptionHandling(exceptions -> exceptions
 						.authenticationEntryPoint((request, response, exception) ->
-								response.setStatus(HttpStatus.UNAUTHORIZED.value()))
+								SecurityApiErrorWriter.write(response, HttpStatus.UNAUTHORIZED.value(),
+										"UNAUTHORIZED", "Authentication is required"))
 						.accessDeniedHandler((request, response, exception) ->
-								response.setStatus(HttpStatus.FORBIDDEN.value())))
+								SecurityApiErrorWriter.write(response, HttpStatus.FORBIDDEN.value(),
+										"FORBIDDEN", "Access is forbidden")))
 				.authorizeHttpRequests(authorize -> authorize
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login").permitAll()
@@ -76,6 +78,8 @@ public class SecurityConfig {
 								.hasAnyRole("CUSTOMER", "LOGISTICS_MANAGER")
 						.requestMatchers(HttpMethod.GET, "/api/v1/orders/{orderId}/tracking")
 								.hasAnyRole("CUSTOMER", "LOGISTICS_MANAGER")
+						.requestMatchers(HttpMethod.GET, "/api/v1/lm/tracking-orders")
+								.hasRole("LOGISTICS_MANAGER")
 						.requestMatchers("/api/v1/orders/**").hasRole("CUSTOMER")
 						.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/v1/frc/planning-queue")
