@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { clearAccessToken } from "@/lib/auth";
 import type { DriverSession } from "@/lib/driver-execution/types";
+import DriverDashboardDecor from "./DriverDashboardDecor";
 import BrandMark from "@/components/BrandMark";
 import styles from "./execution.module.css";
 
@@ -14,13 +15,14 @@ export default function ExecutionWorkspaceFrame({ session, children, focused = f
 }) {
   const router = useRouter();
   function signOut() { clearAccessToken(); router.replace("/login"); }
-  return <main className={styles.shell}>
+  return <main className={`${styles.shell} ${focused ? "" : styles.dashboardShell}`}>
     <a className={styles.skipLink} href="#execution-content">Skip to execution work</a>
     <header className={styles.topbar}>
       <Link className={styles.brand} href="/" aria-label="Horse Transport System home"><BrandMark className={styles.brandMark} /><span>Horse Transport System</span></Link>
       <nav aria-label="Driver workspace"><Link className={styles.navLink} href={`/driver${session.previewQuery}`}>My ROAD work</Link></nav>
       <div className={styles.account}><span>{session.fullName} <span className={styles.accountRole}>· Driver</span></span><button type="button" onClick={signOut}>Sign out</button></div>
     </header>
+    {!focused && <DriverDashboardDecor />}
     {session.preview && <div className={styles.preview} role="status"><strong>Interface preview</strong><span>Sample data for this browser session. No real journey is changed.</span></div>}
     <div id="execution-content" className={focused ? styles.focusedContent : styles.content}>{children}</div>
   </main>;
