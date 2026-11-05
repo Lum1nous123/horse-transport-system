@@ -162,6 +162,102 @@
 .accessCard { display: grid; justify-items: start; gap: 15px; max-width: 470px; padding: 34px; border: 1px solid var(--color-border); border-radius: 12px; background: white; }
 .accessCard h1 { margin: 10px 0 0; font-size: 25px; color: var(--color-navy); }
 .accessCard p { margin: 0 0 8px; color: var(--color-body); }
+
+/* The dashboard keeps its own wayfinding identity; the focused journey keeps its map layout. */
+.dashboardShell {
+  --color-primary: #1667d9;
+  --color-primary-hover: #1056b6;
+  --color-navy: #102a4c;
+  --color-body: #506783;
+  --color-muted: #61748d;
+  --color-surface-blue: #eaf3ff;
+  --color-border: #d7e2f0;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: #f5f8fd;
+}
+.dashboardShell .topbar {
+  position: relative;
+  z-index: 2;
+  min-height: 62px;
+  gap: clamp(20px, 3vw, 38px);
+  box-shadow: 0 2px 12px #16385b0a;
+}
+.dashboardShell .brand { color: #15344d; }
+.dashboardShell .brandMark { background: #15344d; }
+.dashboardShell .navLink { min-height: 62px; padding-inline: 4px; border-bottom-width: 2px; font-weight: 700; }
+.dashboardShell .account button:hover { text-decoration: underline; text-underline-offset: 3px; }
+.dashboardShell .preview { position: relative; z-index: 2; }
+.dashboardShell .content { position: relative; z-index: 1; max-width: 1480px; padding-top: 23px; padding-bottom: 48px; }
+.dashboardDecor { position: absolute; inset: 62px 0 0; z-index: 0; pointer-events: none; color: #83afe3; overflow: hidden; }
+.roadDecor { position: absolute; width: min(56vw, 700px); height: auto; right: 5%; top: 4px; }
+.terrainDecor { position: absolute; width: min(31vw, 360px); left: -12px; bottom: -5px; stroke: #cbdcf1; stroke-width: 1.5; }
+.compassDecor { position: absolute; width: 54px; right: 22px; bottom: 18px; color: #90aacf; stroke: currentColor; stroke-width: 1.4; }
+.compassDecor text { fill: currentColor; stroke: none; font-size: 10px; font-weight: 700; }
+.dashboardShell .pageHeading { position: relative; min-height: 58px; align-items: center; margin-bottom: 17px; }
+.dashboardShell .pageHeading h1 { font-size: clamp(30px, 2.7vw, 36px); font-weight: 720; letter-spacing: -.035em; }
+.dashboardShell .pageHeading p { margin-top: 3px; font-size: 14px; }
+.dashboardShell .secondaryButton { min-height: 40px; padding: 8px 16px; border-radius: 7px; box-shadow: 0 2px 6px #1667d90c; }
+.dashboardShell .secondaryButton:hover:not(:disabled) { border-color: #8abaf5; box-shadow: 0 4px 12px #1667d915; }
+.dashboardShell .primaryButton { border-radius: 7px; box-shadow: 0 4px 9px #1667d929; }
+.dashboardShell .primaryButton:hover:not(:disabled) { box-shadow: 0 6px 14px #1667d938; }
+.dashboardShell .primaryButton:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 2px 5px #1667d926; }
+.dashboardShell .workspace { grid-template-columns: minmax(240px, 285px) minmax(0, 1fr); gap: 22px; }
+.dashboardShell .queue, .dashboardShell .vehicleSummary, .dashboardShell .plan {
+  border-color: var(--color-border);
+  border-radius: 11px;
+  box-shadow: 0 5px 18px #16385b0b, 0 1px 3px #16385b08;
+}
+.dashboardShell .queue { min-width: 0; padding: 16px 13px; }
+.dashboardShell .queue h2 { margin: 0 2px 13px; font-size: 17px; font-weight: 700; letter-spacing: -.025em; }
+.dashboardShell .queue ul { max-height: clamp(320px, calc(100dvh - 265px), 680px); overflow-y: auto; padding: 2px 3px 3px 0; gap: 8px; scrollbar-color: #bdcfe4 transparent; scrollbar-width: thin; }
+.dashboardShell .assignment { min-width: 0; gap: 5px; padding: 12px 11px; border-radius: 7px; border-left-width: 3px; font-size: 12px; line-height: 1.42; overflow-wrap: anywhere; transition: background .15s ease, border-color .15s ease, box-shadow .15s ease; }
+.dashboardShell .assignment:hover:not(:disabled) { border-color: #adcdf4; box-shadow: 0 3px 9px #1667d911; }
+.dashboardShell .assignment.selectedAssignment { background: #eaf3ff; border-color: #9fc5f4; border-left-color: var(--color-primary); box-shadow: inset 0 0 0 1px #dcecff; }
+.dashboardShell .assignmentTop { align-items: center; gap: 5px; }
+.dashboardShell .assignmentTop > strong { min-width: 0; font-size: 15px; line-height: 1.2; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.dashboardShell .queueBadge { padding: 3px 6px; border-radius: 5px; background: #edf2f8; color: #3c5572; font-size: 10px; white-space: normal; text-align: center; }
+.dashboardShell .selectedAssignment .queueBadge { background: #d7e9ff; color: #1056b6; }
+.dashboardShell .assignmentVehicle { gap: 5px; align-items: baseline; flex-wrap: wrap; }
+.dashboardShell .assignmentVehicle svg { width: 16px; height: 16px; align-self: center; flex: 0 0 auto; }
+.dashboardShell .assignmentVehicle strong { color: var(--color-navy); }
+.dashboardShell .assignment small { margin-top: 2px; font-size: 10px; }
+.dashboardShell .detail { gap: 11px; }
+.dashboardShell .detailHeading { grid-template-columns: minmax(0, 1fr) minmax(150px, .32fr); align-items: start; gap: 16px; padding: 0 0 3px; }
+.dashboardShell .orderTitle { gap: 10px; }
+.dashboardShell .orderTitle h2 { font-size: clamp(23px, 2.3vw, 30px); font-weight: 750; overflow-wrap: anywhere; }
+.dashboardShell .badge, .dashboardShell .savedStatuses dd { border-radius: 5px; background: #e4f0ff; color: #1455a6; font-weight: 650; }
+.dashboardShell .detailHeading > div > p { margin: 4px 0 0; }
+.dashboardShell .detailHeading h3 { margin-top: 5px; font-size: clamp(18px, 1.9vw, 24px); font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+.dashboardShell .detailHeading .legSequence { justify-content: center; }
+.dashboardShell .detailHeading .legSequence li { max-width: 90px; }
+.dashboardShell .sequenceHint { margin-top: 3px !important; line-height: 1.3; }
+.dashboardShell .vehicleSummary { gap: 15px; padding: 16px 18px; }
+.dashboardShell .vehicleIdentity { gap: 12px; flex: 1.35; min-width: 0; }
+.dashboardShell .vehicleIdentity > svg { width: 37px; height: 37px; }
+.dashboardShell .vehicleIdentity strong { font-size: 19px; line-height: 1.25; overflow-wrap: anywhere; }
+.dashboardShell .savedStatuses { flex: 2; justify-content: space-between; gap: 8px; }
+.dashboardShell .savedStatuses > div { flex: 1; min-width: 0; padding-left: 14px; }
+.dashboardShell .savedStatuses dt { margin-bottom: 5px; font-size: 11px; }
+.dashboardShell .savedStatuses dd { display: inline-block; max-width: 100%; overflow-wrap: anywhere; padding: 3px 7px; line-height: 1.3; }
+.dashboardShell .plan { padding: 14px 18px 12px; }
+.dashboardShell .plan h3 { font-size: 17px; font-weight: 700; letter-spacing: -.02em; }
+.dashboardShell .plan > p { margin: 2px 0 7px; }
+.dashboardShell .planList li { gap: 15px; min-height: 36px; padding: 4px 0; align-items: flex-start; }
+.dashboardShell .planList li:not(:last-child)::before { left: 8px; top: 23px; bottom: -8px; background: #bfd0e4; }
+.dashboardShell .planList li > div { min-width: 0; gap: 5px 10px; line-height: 1.35; }
+.dashboardShell .planList strong { color: var(--color-navy); font-weight: 650; overflow-wrap: anywhere; }
+.dashboardShell .planList small { background: #eef3f9; color: #536a86; white-space: nowrap; }
+.dashboardShell .planMeta { color: var(--color-muted); font-size: 11px; }
+.dashboardShell .endpointDot { background: #516a8b; border-color: #516a8b; }
+.dashboardShell .plan .noStops { margin-top: 8px; padding-top: 10px; }
+.dashboardShell .startPanel { min-width: 0; gap: 18px; padding: 17px 21px; border-color: #bfd9fa; border-radius: 10px; background: #e8f2ff; box-shadow: 0 5px 16px #1667d90e; }
+.dashboardShell .startPanel h3 { font-size: clamp(21px, 2vw, 25px); font-weight: 740; }
+.dashboardShell .startAction { align-items: stretch; }
+.dashboardShell .startAction .primaryButton { min-width: 200px; }
+.dashboardShell .startAction small { text-align: center; }
+.planMeta { color: var(--color-muted); font-size: 11px; }
 @media (min-width: 1600px) {
   .mapCanvas { min-height: 560px; }
 }
@@ -232,4 +328,45 @@
   .savedStatuses dd { font-size: 10px; padding-inline: 5px; }
   .mapLabel { max-width: 125px; padding: 5px 7px; }
   .mapLabel strong { font-size: 11px; }
+}
+@media (max-width: 1100px) {
+  .dashboardShell .workspace { grid-template-columns: minmax(215px, 245px) minmax(0, 1fr); gap: 18px; }
+  .dashboardShell .detailHeading { grid-template-columns: 1fr; gap: 7px; }
+  .dashboardShell .detailHeading .legSequence { justify-content: flex-start; max-width: 340px; }
+  .dashboardShell .sequenceHint { text-align: left; }
+  .dashboardShell .vehicleSummary { flex-wrap: wrap; }
+  .dashboardShell .savedStatuses { flex-basis: 100%; }
+  .dashboardShell .startPanel { align-items: stretch; flex-direction: column; gap: 13px; }
+  .dashboardShell .startAction { align-items: stretch; }
+  .roadDecor { display: none; }
+}
+@media (max-width: 760px) {
+  .dashboardShell .topbar { min-height: 66px; gap: 16px; }
+  .dashboardShell .navLink { min-height: 66px; }
+  .dashboardShell .content { padding-top: 23px; padding-bottom: 34px; }
+  .dashboardShell .pageHeading { align-items: flex-start; margin-bottom: 18px; }
+  .dashboardShell .pageHeading h1 { font-size: 29px; }
+  .dashboardShell .pageHeading .secondaryButton { flex: 0 0 auto; padding: 8px 11px; }
+  .dashboardShell .workspace { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .dashboardShell .queue { padding: 14px 12px; }
+  .dashboardShell .queue ul { display: flex; max-height: none; overflow-x: auto; overflow-y: hidden; gap: 9px; padding: 2px 2px 7px; }
+  .dashboardShell .queue li { flex: 0 0 min(275px, 83%); }
+  .dashboardShell .detailHeading { gap: 12px; }
+  .dashboardShell .detailHeading .legSequence { max-width: none; justify-content: center; }
+  .dashboardShell .sequenceHint { text-align: center; }
+  .dashboardShell .vehicleSummary { padding: 15px; }
+  .dashboardShell .savedStatuses { flex-wrap: wrap; gap: 12px; }
+  .dashboardShell .savedStatuses > div { flex: 1 1 100px; border-left: 0; padding-left: 0; }
+  .dashboardShell .plan { padding: 16px; }
+  .dashboardShell .startPanel { padding: 17px; }
+  .dashboardShell .startAction .primaryButton { min-width: 0; width: 100%; min-height: 48px; }
+  .roadDecor, .terrainDecor, .compassDecor { display: none; }
+}
+@media (max-width: 400px) {
+  .dashboardShell .topbar { gap: 10px; }
+  .dashboardShell .brand { gap: 7px; }
+  .dashboardShell .account button { border-left: 0; padding-left: 0; }
+  .dashboardShell .pageHeading { gap: 10px; }
+  .dashboardShell .pageHeading h1 { font-size: 25px; }
+  .dashboardShell .pageHeading p { font-size: 12px; }
 }

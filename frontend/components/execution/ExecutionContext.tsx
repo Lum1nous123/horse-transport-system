@@ -42,12 +42,12 @@ export function CheckpointPlan({ execution }: { execution: DriverExecution }) {
   return <section className={styles.plan} aria-labelledby="checkpoint-plan-title">
     <h3 id="checkpoint-plan-title">Shared checkpoint plan</h3><p>Arrival times are recorded for your vehicle.</p>
     <ol className={styles.planList}>
-      <li><span className={styles.endpointDot} /><div><strong>{leg.origin}</strong><small>Origin{execution.startedAt ? ` · Started ${timeLabel(execution.startedAt)}` : ""}</small></div></li>
+      <li><span className={styles.endpointDot} /><div><strong>{leg.origin}</strong><small>Origin</small>{execution.startedAt && <span className={styles.planMeta}>Started {timeLabel(execution.startedAt)}</span>}</div></li>
       {orderedCheckpoints(execution).map((checkpoint) => {
         const arrival = checkpointArrival(execution, checkpoint.id);
-        return <li key={checkpoint.id}><span className={arrival ? styles.arrivedDot : styles.pendingDot}>{arrival && <ExecutionIcon name="check" />}</span><div><span>{checkpoint.sequenceNo}. {checkpoint.name}</span><small>{arrival ? `Arrived ${timeLabel(arrival.arrivedAt)}` : "Upcoming"}</small></div></li>;
+        return <li key={checkpoint.id}><span className={arrival ? styles.arrivedDot : styles.pendingDot}>{arrival && <ExecutionIcon name="check" />}</span><div><strong>{checkpoint.sequenceNo}. {checkpoint.name}</strong><small>Checkpoint</small><span className={styles.planMeta}>{arrival ? `Arrived ${timeLabel(arrival.arrivedAt)}` : "Upcoming"}</span></div></li>;
       })}
-      <li><span className={styles.endpointDot} /><div><strong>{leg.destination}</strong><small>Destination{execution.destinationArrivedAt ? ` · Arrived ${timeLabel(execution.destinationArrivedAt)}` : ""}</small></div></li>
+      <li><span className={styles.endpointDot} /><div><strong>{leg.destination}</strong><small>Destination</small>{execution.destinationArrivedAt && <span className={styles.planMeta}>Arrived {timeLabel(execution.destinationArrivedAt)}</span>}</div></li>
     </ol>
     {orderedCheckpoints(execution).length === 0 && <p className={styles.noStops}>No intermediate checkpoints. After Start, your next arrival is the destination.</p>}
   </section>;
