@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { clearAccessToken } from "@/lib/auth";
 import BrandMark from "@/components/BrandMark";
+import TransportSpecialistIcon from "@/components/TransportSpecialistIcon";
 
 type TransportSpecialistWorkspaceFrameProps = {
   children: ReactNode;
@@ -38,12 +39,12 @@ export default function TransportSpecialistWorkspaceFrame({
         </Link>
         <nav className="ts-topbar-nav" aria-label="Transport Specialist workspace">
           <Link className="is-current" href={`/transport-specialist${previewSuffix}`} aria-current="page">
-            Assigned Orders
+            <TransportSpecialistIcon name="truck" />Assigned Orders
           </Link>
         </nav>
         <div className="customer-topbar-actions">
-          <span>Transport Specialist</span>
-          <button type="button" className="customer-link-button" onClick={signOut}>Sign out</button>
+          <span className="ts-role"><TransportSpecialistIcon name="user" />Transport Specialist</span>
+          <button type="button" className="customer-link-button" onClick={signOut}><TransportSpecialistIcon name="signOut" />Sign out</button>
         </div>
       </header>
       <div className="customer-content ts-workspace-content">
