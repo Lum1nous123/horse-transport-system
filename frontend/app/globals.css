@@ -7672,6 +7672,107 @@ button.ts-workflow-step-header:focus-visible {
   .customer-dashboard-nav a { transition: none; }
 }
 
+/* Customer dashboard visual layer. Keep these rules scoped to this workspace. */
+.customer-dashboard-page { position: relative; isolation: isolate; overflow: hidden; background: linear-gradient(180deg,#eef5fc 0,#f7fbff 60%,#eaf4ff 100%); }
+.customer-dashboard-page::after { position: absolute; z-index: -1; right: -5%; bottom: -65px; left: -5%; height: 150px; border-radius: 50% 50% 0 0; background: #dcecff; content: ""; transform: rotate(-2deg); }
+.customer-dashboard-page .customer-topbar { z-index: 2; width: calc(100% - 48px); min-height: 60px; margin: 8px auto 0; border: 1px solid #dae7f5; border-radius: 15px; padding: 6px 24px; background: #fff; box-shadow: 0 7px 19px rgb(23 70 118 / 10%); }
+.customer-dashboard-page .customer-brand { min-width: 0; gap: 12px; color: #0b183d; font-size: 1.08rem; font-weight: 750; white-space: nowrap; }
+.customer-dashboard-page .customer-brand-mark { width: 43px; height: 43px; }
+.customer-dashboard-nav { gap: 25px; }
+.customer-dashboard-nav a { display: inline-flex; align-items: center; gap: 9px; padding: 9px 10px; color: #10234c; font-size: .9rem; font-weight: 700; white-space: nowrap; }
+.customer-dashboard-nav .customer-dashboard-icon { width: 22px; height: 22px; }
+.customer-dashboard-page .customer-topbar-actions { gap: 18px; color: #0d397d; font-size: .82rem; font-weight: 700; white-space: nowrap; }
+.customer-role { display: inline-flex; align-items: center; gap: 6px; border-radius: 9px; padding: 6px 10px; background: #e9f2ff; }
+.customer-dashboard-page .customer-link-button { display: inline-flex; min-height: 40px; align-items: center; gap: 7px; border-left: 1px solid #c9d9ec; padding-left: 18px; color: #09458f; font: inherit; }
+.customer-dashboard-page .customer-link-button:hover { color: #082c60; }
+.customer-dashboard-content { width: calc(100% - 56px); padding: 14px 0 80px; }
+.customer-dashboard-heading { position: relative; min-height: 147px; align-items: center; margin: 0 0 18px; isolation: isolate; }
+.customer-dashboard-heading::before { position: absolute; z-index: -1; inset: -14px -28px -9px; background: linear-gradient(90deg,#eff6ff 0%,rgb(239 246 255 / 96%) 40%,rgb(239 246 255 / 23%) 73%,rgb(239 246 255 / 10%) 100%); content: ""; }
+.customer-hero-copy { position: relative; z-index: 1; min-width: 0; padding: 13px 0 10px 14px; }
+.customer-dashboard-heading .customer-eyebrow { margin-bottom: 7px; color: #104c9e; font-size: .76rem; font-weight: 800; letter-spacing: .11em; }
+.customer-dashboard-heading h1 { color: #0b183d; font-family: var(--font-geist-sans),system-ui,sans-serif; font-size: clamp(2.25rem,3.5vw,2.75rem); font-weight: 720; line-height: 1.14; letter-spacing: -.035em; }
+.customer-dashboard-heading .customer-intro { max-width: 650px; margin-top: 7px; color: #334e6c; font-size: .94rem; line-height: 1.45; }
+.customer-hero-accent { display: block; width: 62px; height: 4px; margin-top: 13px; border-radius: 10px; background: #0b5fc2; }
+.customer-hero-art { position: absolute; z-index: -2; inset: -18px -28px -12px 42%; background: url('/images/customer-transport-illustration.svg') center 45% / cover no-repeat; opacity: .78; mask-image: linear-gradient(90deg,transparent,#000 24%); }
+.customer-dashboard-heading > .customer-primary-button { z-index: 1; flex: 0 0 auto; align-self: flex-end; min-height: 45px; margin: 0 2px 19px auto; border-radius: 9px; padding-inline: 18px; background: #062e69; box-shadow: 0 6px 14px rgb(13 57 116 / 19%); font-weight: 700; white-space: nowrap; }
+.customer-dashboard-heading > .customer-primary-button:hover,.customer-dashboard-empty .customer-primary-button:hover { background: #0b4a9a; }
+.customer-dashboard-page :is(a,button,input,select):focus-visible { outline: 3px solid #3183d8; outline-offset: 3px; }
+.customer-dashboard-summary { gap: 14px; margin-bottom: 23px; }
+.customer-dashboard-summary article { min-height: 79px; gap: 17px; border-color: #cadcf0; border-radius: 15px; padding: 13px 16px; box-shadow: 0 6px 14px rgb(25 73 122 / 9%); }
+.customer-summary-icon { width: 52px; height: 52px; border-radius: 11px; background: #e2efff; color: #0d58b4; }
+.customer-summary-icon .customer-dashboard-icon { width: 27px; height: 27px; }
+.customer-dashboard-summary strong { color: #0b183d; font-size: clamp(1.8rem,2.6vw,2.18rem); font-weight: 750; line-height: 1; }
+.customer-dashboard-summary article > div > span { color: #334b6b; font-size: .89rem; white-space: normal; }
+.customer-dashboard-grid { grid-template-columns: minmax(0,1.7fr) minmax(0,1fr); align-items: stretch; gap: 15px; }
+.customer-dashboard-panel { border-color: #cbdcf0; border-radius: 15px; box-shadow: 0 9px 22px rgb(23 70 118 / 10%); scroll-margin-top: 15px; }
+.customer-dashboard-panel-heading { min-height: 68px; gap: 11px; margin: 0 19px; border-bottom-color: #d3e0ee; padding: 13px 0 12px; }
+.customer-panel-icon { align-self: flex-start; flex: 0 0 auto; margin-top: 2px; color: #0b397e; }
+.customer-panel-icon .customer-dashboard-icon { width: 30px; height: 30px; }
+.customer-dashboard-panel-heading > div { min-width: 0; flex: 1; }
+.customer-dashboard-panel-heading h2 { color: #0b183d; font-size: clamp(1.25rem,1.8vw,1.48rem); font-weight: 750; letter-spacing: -.03em; }
+.customer-dashboard-panel-heading p { margin-top: 2px; color: #3e5373; font-size: .78rem; line-height: 1.35; }
+.customer-dashboard-panel-heading .customer-count { flex: 0 0 auto; background: #e5f1ff; color: #164c94; font-size: .75rem; white-space: nowrap; }
+.customer-horses-panel { position: static; }
+.customer-horses-panel .customer-secondary-button.compact { flex: 0 0 auto; min-height: 35px; gap: 4px; border-color: #1c5cad; border-radius: 7px; padding-inline: 9px; color: #104c9e; font-size: .78rem; font-weight: 700; }
+.customer-horses-panel .customer-secondary-button.compact:hover { background: #edf5ff; }
+.customer-dashboard-empty { min-height: 230px; flex-direction: column; justify-content: center; gap: 5px; border: 0; padding: 9px 20px 16px; text-align: center; }
+.customer-empty-art { width: min(100%,410px); height: 112px; object-fit: cover; object-position: center 73%; }
+.customer-dashboard-empty h3,.customer-horses-panel .horse-empty p { color: #0b183d; font-size: 1.24rem; font-weight: 750; line-height: 1.2; }
+.customer-dashboard-empty p,.customer-horses-panel .horse-empty span { margin-top: 5px; color: #3d5373; font-size: .9rem; }
+.customer-dashboard-empty .customer-primary-button { min-height: 39px; margin: 6px 0 0; border-radius: 8px; background: #062e69; box-shadow: 0 5px 12px rgb(13 57 116 / 16%); }
+.customer-horses-panel .horse-empty { display: flex; min-height: 230px; flex-direction: column; align-items: center; justify-content: center; padding: 11px 16px 19px; text-align: center; }
+.customer-horse-art { width: min(100%,260px); height: 112px; object-fit: contain; }
+.customer-horses-panel .horse-empty p { margin: 3px 0 0; }
+.customer-filter-empty { flex-direction: row; justify-content: flex-start; text-align: left; }
+.customer-filter-empty .customer-secondary-button { margin-left: auto; }
+
+@media (max-width: 1100px) {
+  .customer-dashboard-page .customer-topbar { padding-inline: 16px; }
+  .customer-dashboard-nav { position: static; gap: 4px; transform: none; }
+  .customer-dashboard-nav a { font-size: .78rem; }
+  .customer-dashboard-summary article { gap: 10px; padding: 11px; }
+  .customer-summary-icon { width: 44px; height: 44px; }
+  .customer-dashboard-grid { grid-template-columns: minmax(0,1fr); }
+}
+@media (max-width: 820px) {
+  .customer-dashboard-page .customer-topbar { flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }
+  .customer-dashboard-nav { display: flex; order: 3; width: 100%; justify-content: center; border-top: 1px solid #e5eef8; }
+  .customer-dashboard-nav a { min-height: 40px; }
+  .customer-dashboard-heading { min-height: 165px; }
+  .customer-hero-art { left: 36%; opacity: .5; }
+  .customer-dashboard-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 680px) {
+  .customer-dashboard-page .customer-topbar { width: calc(100% - 24px); margin-top: 7px; padding: 5px 10px; }
+  .customer-dashboard-page .customer-brand { gap: 6px; font-size: .86rem; }
+  .customer-dashboard-page .customer-brand-mark { width: 33px; height: 33px; }
+  .customer-dashboard-page .customer-topbar-actions { gap: 5px; font-size: .73rem; }
+  .customer-role { padding: 5px; }
+  .customer-dashboard-page .customer-link-button { min-height: 32px; gap: 4px; padding-left: 7px; }
+  .customer-dashboard-page .customer-topbar-actions .customer-dashboard-icon { width: 15px; height: 15px; }
+  .customer-dashboard-content { width: calc(100% - 24px); padding-top: 17px; }
+  .customer-dashboard-heading { min-height: 0; flex-direction: column; align-items: flex-start; gap: 14px; padding: 7px 2px 16px; }
+  .customer-dashboard-heading h1 { font-size: clamp(2rem,8vw,2.5rem); }
+  .customer-hero-copy { padding: 0 4px; }
+  .customer-hero-art { inset: 0 -12px 0 30%; opacity: .22; }
+  .customer-dashboard-heading > .customer-primary-button { align-self: flex-start; margin: 0 0 0 4px; }
+  .customer-dashboard-panel-heading { margin-inline: 13px; }
+  .customer-panel-icon .customer-dashboard-icon { width: 24px; height: 24px; }
+  .customer-dashboard-panel-heading h2 { font-size: 1.18rem; }
+  .customer-dashboard-panel-heading p { font-size: .76rem; }
+  .customer-dashboard-summary article > div > span { font-size: .78rem; }
+}
+@media (max-width: 420px) {
+  .customer-dashboard-page .customer-topbar { justify-content: center; }
+  .customer-dashboard-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .customer-dashboard-summary article { min-height: 78px; flex-direction: column; align-items: flex-start; gap: 5px; }
+  .customer-dashboard-summary strong { font-size: 1.6rem; }
+  .customer-summary-icon { width: 35px; height: 35px; }
+  .customer-summary-icon .customer-dashboard-icon { width: 20px; height: 20px; }
+  .customer-horses-panel .customer-dashboard-panel-heading { flex-wrap: wrap; }
+  .customer-horses-panel .customer-dashboard-panel-heading > .customer-secondary-button { margin-left: 35px; }
+}
+
 /* Compact Logistics Manager order-review workspace. */
 .logistics-manager-page {
   --lm-border: #dfe6ed;
