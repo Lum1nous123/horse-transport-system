@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import TransportSpecialistWorkspaceFrame from "@/components/TransportSpecialistWorkspaceFrame";
+import TransportSpecialistIcon from "@/components/TransportSpecialistIcon";
 import {
   getTransportSpecialistWorkspaceService,
   type AssignedSpecialistOrderSummary,
@@ -83,13 +84,15 @@ export default function TransportSpecialistPage() {
   return (
     <TransportSpecialistWorkspaceFrame preview={preview} previewSpecialistId={previewSpecialistId} previewSpecialistName={previewSpecialistName}>
       <header className="ts-heading-row ts-queue-heading">
-        <div>
+        <span className="ts-hero-art" aria-hidden="true" />
+        <div className="ts-hero-copy">
           <p className="customer-eyebrow">DOCUMENT PHASE</p>
           <h1>Assigned Orders</h1>
           <p className="customer-intro">Review only the Orders assigned to you and carry each document phase through Final Confirm.</p>
+          <span className="ts-hero-accent" aria-hidden="true" />
         </div>
         <button className="customer-secondary-button ts-refresh-button" type="button" disabled={loading} onClick={() => void loadQueue()}>
-          <span aria-hidden="true">↻</span>
+          <TransportSpecialistIcon name="refresh" />
           {loading ? "Refreshing…" : "Refresh queue"}
         </button>
       </header>

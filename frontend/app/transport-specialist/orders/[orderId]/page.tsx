@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import type { KeyboardEvent } from "react";
 import TransportSpecialistWorkspaceFrame from "@/components/TransportSpecialistWorkspaceFrame";
+import TransportSpecialistIcon from "@/components/TransportSpecialistIcon";
 import {
   SpecialistWorkspaceError,
   getTransportSpecialistWorkspaceService,
@@ -253,10 +254,10 @@ export default function AssignedOrderDetailPage() {
           )}
 
           <dl className="ts-order-facts">
-            <div><dt>Requested departure</dt><dd>{formatDateTime(order.requestedDepartureAt)}</dd></div>
-            <div><dt>Transport mode</dt><dd>{order.transportMode}</dd></div>
-            <div><dt>Horses</dt><dd>{order.horseCount}</dd></div>
-            <div><dt>Fleet &amp; Route Coordinator</dt><dd>{order.assignedFleetRouteCoordinatorName}</dd></div>
+            <div><span className="ts-fact-icon"><TransportSpecialistIcon name="calendar" /></span><dt>Requested departure</dt><dd>{formatDateTime(order.requestedDepartureAt)}</dd></div>
+            <div><span className="ts-fact-icon"><TransportSpecialistIcon name={order.transportMode === "AIR" ? "plane" : order.transportMode === "ROAD" ? "truck" : "route"} /></span><dt>Transport mode</dt><dd>{order.transportMode}</dd></div>
+            <div><span className="ts-fact-icon"><TransportSpecialistIcon name="horse" /></span><dt>Horses</dt><dd>{order.horseCount}</dd></div>
+            <div><span className="ts-fact-icon"><TransportSpecialistIcon name="user" /></span><dt>Fleet &amp; Route Coordinator</dt><dd>{order.assignedFleetRouteCoordinatorName}</dd></div>
           </dl>
 
           <div className="ts-guided-workflow" aria-label="Document Phase workflow">
