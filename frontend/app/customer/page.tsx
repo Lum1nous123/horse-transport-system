@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import BrandMark from "@/components/BrandMark";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -65,13 +66,17 @@ type RemainingBalanceSummary = {
   paymentStatus: "PENDING" | "PAID" | "REFUNDED";
   checkoutEligible: boolean;
 };
-type CustomerIconName = "orders" | "draft" | "journey" | "horse" | "search" | "route" | "calendar";
+type CustomerIconName = "orders" | "draft" | "journey" | "horse" | "truck" | "user" | "logout" | "plus" | "search" | "route" | "calendar";
 
 const customerIconPaths: Record<CustomerIconName, string[]> = {
   orders: ["M6 3h9l4 4v14H6z", "M15 3v5h4M9 12h6m-6 4h6"],
   draft: ["M4 20h4l11-11-4-4L4 16v4Z", "m13.5 3.5 4 4"],
   journey: ["M5 19V7m0 0 3 3M5 7 2 3", "M5 16h9a5 5 0 0 0 5-5V5"],
-  horse: ["M8.5 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7-1a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z", "M3 20a5.5 5.5 0 0 1 11 0m0-6a5 5 0 0 1 7 4.6V20"],
+  horse: ["m3 20 2-7 4-3 2-5 4 2 2 4 3 2-2 2-3-1-2 2-1 4", "m11 5 1-2m3 4 2-3", "M5 13 3 11m14 2 3 1"],
+  truck: ["M2 6h12v11H2z", "M14 10h4l4 4v3h-8z", "M7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm11 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"],
+  user: ["M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z", "M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2z"],
+  logout: ["M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5", "m16 7 5 5-5 5m5-5H9"],
+  plus: ["M12 4v16M4 12h16"],
   search: ["M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z", "m20 20-4-4"],
   route: ["M5 6a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm14 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z", "M5 6h7a4 4 0 0 1 4 4v0a4 4 0 0 1-4 4H5"],
   calendar: ["M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Z", "M8 2v4m8-4v4M3 9h18"],
@@ -476,16 +481,17 @@ export default function CustomerPage() {
         <Link className="customer-brand" href="/" aria-label="Horse Transport System home">
           <BrandMark /><span>Horse Transport System</span>
         </Link>
-        <nav className="customer-dashboard-nav" aria-label="Customer workspace sections"><a href="#requests">Transport requests</a><a href="#horses">Horse profiles</a></nav>
-        <div className="customer-topbar-actions"><span>Customer</span><button type="button" className="customer-link-button" onClick={signOut}>Sign out</button></div>
+        <nav className="customer-dashboard-nav" aria-label="Customer workspace sections"><a href="#requests"><CustomerIcon name="truck" />Transport requests</a><a href="#horses"><CustomerIcon name="horse" />Horse profiles</a></nav>
+        <div className="customer-topbar-actions"><span className="customer-role"><CustomerIcon name="user" />Customer</span><button type="button" className="customer-link-button" onClick={signOut}><CustomerIcon name="logout" />Sign out</button></div>
       </header>
 
       <div className="customer-content customer-dashboard-content">
         {preview && <div className="customer-preview-banner" role="status"><strong>Preview mode</strong><span>Sample data only. Changes stay in this tab and are not sent to the backend.</span></div>}
-        <div className="customer-heading-row customer-dashboard-heading">
-          <div><p className="customer-eyebrow">CUSTOMER WORKSPACE</p><h1>Your transport workspace</h1><p className="customer-intro">Create requests, follow each journey, and keep horse information ready in one place.</p></div>
-          <button className="customer-primary-button" type="button" onClick={startNewOrder}>New transport request <span aria-hidden="true">＋</span></button>
-        </div>
+        <section className="customer-heading-row customer-dashboard-heading" aria-labelledby="customer-workspace-heading">
+          <div className="customer-hero-copy"><p className="customer-eyebrow">CUSTOMER WORKSPACE</p><h1 id="customer-workspace-heading">Your transport workspace</h1><p className="customer-intro">Create requests, follow each journey, and keep horse information ready in one place.</p><span className="customer-hero-accent" aria-hidden="true" /></div>
+          <div className="customer-hero-art" aria-hidden="true" />
+          <button className="customer-primary-button" type="button" onClick={startNewOrder}><CustomerIcon name="plus" />New transport request</button>
+        </section>
 
         {feedback && <p className="customer-feedback" role="status">{feedback}</p>}
         {loadError && <div className="customer-alert" role="alert"><span>{loadError}</span><button type="button" onClick={() => void loadWorkspace()}>Try again</button></div>}
@@ -499,9 +505,9 @@ export default function CustomerPage() {
 
           <div className="customer-dashboard-grid">
           <section className="customer-section customer-dashboard-panel customer-orders-panel" id="requests" aria-labelledby="orders-heading">
-            <div className="customer-section-heading customer-dashboard-panel-heading"><div><h2 id="orders-heading">Transport requests</h2><p>Review status and continue with the actions available for each request.</p></div><span className="customer-count">{orders.length} {orders.length === 1 ? "request" : "requests"}</span></div>
+            <div className="customer-section-heading customer-dashboard-panel-heading"><span className="customer-panel-icon" aria-hidden="true"><CustomerIcon name="truck" /></span><div><h2 id="orders-heading">Transport requests</h2><p>Review status and continue with the actions available for each request.</p></div><span className="customer-count">{orders.length} {orders.length === 1 ? "request" : "requests"}</span></div>
             {orders.length > 0 && <div className="customer-order-toolbar"><label className="customer-order-search"><span className="sr-only">Search transport requests</span><CustomerIcon name="search" /><input type="search" value={orderQuery} onChange={(event) => setOrderQuery(event.target.value)} placeholder="Search order, route, or recipient" autoComplete="off" /></label><label className="customer-order-status-filter"><span className="sr-only">Filter transport requests by status</span><select value={orderStatus} onChange={(event) => setOrderStatus(event.target.value)}><option value="">All statuses</option>{availableStatuses.map((status) => <option value={status} key={status}>{status.replaceAll("_", " ")}</option>)}</select></label></div>}
-            {orders.length === 0 ? <div className="customer-empty"><div className="customer-empty-icon" aria-hidden="true">↗</div><div><h3>Start with a transport request</h3><p>Your saved and submitted requests will appear here.</p></div><button className="customer-secondary-button" type="button" onClick={startNewOrder}>Create request</button></div> : visibleOrders.length === 0 ? <div className="customer-empty customer-filter-empty"><span className="customer-empty-icon"><CustomerIcon name="search" /></span><div><h3>No matching requests</h3><p>Try a different search term or status.</p></div><button className="customer-secondary-button compact" type="button" onClick={() => { setOrderQuery(""); setOrderStatus(""); }}>Clear filters</button></div> : <div className="customer-order-list">
+            {orders.length === 0 ? <div className="customer-empty customer-dashboard-empty"><Image className="customer-empty-art" src="/images/customer-transport-illustration.svg" width={900} height={300} alt="" unoptimized /><div><h3>Start with a transport request</h3><p>Your saved and submitted requests will appear here.</p></div><button className="customer-primary-button" type="button" onClick={startNewOrder}><CustomerIcon name="plus" />Create request</button></div> : visibleOrders.length === 0 ? <div className="customer-empty customer-filter-empty"><span className="customer-empty-icon"><CustomerIcon name="search" /></span><div><h3>No matching requests</h3><p>Try a different search term or status.</p></div><button className="customer-secondary-button compact" type="button" onClick={() => { setOrderQuery(""); setOrderStatus(""); }}>Clear filters</button></div> : <div className="customer-order-list">
               {visibleOrders.map((order) => <article className="customer-order-row customer-dashboard-order" key={order.id}>
                 <div className="order-route-icon" aria-hidden="true"><CustomerIcon name="route" /></div>
                 <div className="customer-order-main"><div className="customer-order-title"><h3>{order.orderCode}</h3><span className={`order-status status-${order.status.toLowerCase()}`}>{order.status.replaceAll("_", " ")}</span></div><p>{[order.originAddress || order.originCountry || "Origin pending", order.destinationAddress || order.destinationCountry || "Destination pending"].join("  →  ")}</p><div className="customer-order-meta"><span>{order.horseIds.length} {order.horseIds.length === 1 ? "horse" : "horses"}</span>{order.transportMode && <span>{order.transportMode}</span>}<span><CustomerIcon name="calendar" />{order.requestedDepartureAt ? new Date(order.requestedDepartureAt).toLocaleString() : "Departure not set"}</span></div></div>
@@ -523,7 +529,7 @@ export default function CustomerPage() {
           </section>
 
           <section className="customer-section horse-section customer-dashboard-panel customer-horses-panel" id="horses" aria-labelledby="horses-heading">
-            <div className="customer-section-heading customer-dashboard-panel-heading"><div><h2 id="horses-heading">Horse profiles</h2><p>Profiles available for transport requests.</p></div><button className="customer-secondary-button compact" type="button" onClick={() => { setHorseFormOpen((open) => !open); setFormError(""); }}>{horseFormOpen ? "Close" : "Add horse"}</button></div>
+            <div className="customer-section-heading customer-dashboard-panel-heading"><span className="customer-panel-icon" aria-hidden="true"><CustomerIcon name="horse" /></span><div><h2 id="horses-heading">Horse profiles</h2><p>Profiles available for transport requests.</p></div><button className="customer-secondary-button compact" type="button" onClick={() => { setHorseFormOpen((open) => !open); setFormError(""); }}>{!horseFormOpen && <CustomerIcon name="plus" />}{horseFormOpen ? "Close" : "Add horse"}</button></div>
             {horseFormOpen && <form className="customer-form horse-form" onSubmit={createHorse}>
               <div className="customer-form-title"><h3>New horse profile</h3><p>Name and microchip ID are required.</p></div>
               <div className="customer-field-grid"><Field label="Horse name" name="name" required maxLength={120} /><Field label="Microchip ID" name="microchipId" required maxLength={50} /><Field label="Passport number" name="passportNumber" maxLength={100} /><Field label="Breed" name="breed" maxLength={100} /><label className="customer-field"><span>Sex</span><select name="sex" defaultValue=""><option value="">Select if known</option><option value="MARE">Mare</option><option value="STALLION">Stallion</option><option value="GELDING">Gelding</option><option value="OTHER">Other</option></select></label><Field label="Date of birth" name="dateOfBirth" type="date" /></div>
@@ -531,7 +537,7 @@ export default function CustomerPage() {
               {formError && <p className="customer-form-error" role="alert">{formError}</p>}
               <div className="customer-form-actions"><button type="button" className="customer-text-button" onClick={() => setHorseFormOpen(false)}>Cancel</button><button type="submit" className="customer-primary-button" disabled={horseBusy}>{horseBusy ? "Saving…" : "Save horse profile"}</button></div>
             </form>}
-            {horses.length === 0 ? <div className="horse-empty"><p>No horse profiles yet.</p><span>Add a profile before preparing a request.</span></div> : <ul className="horse-list">{horses.map((horse) => <li key={horse.id}><span className="horse-avatar" aria-hidden="true">{horse.name.slice(0, 1).toUpperCase()}</span><span className="horse-list-name"><strong>{horse.name}</strong><small>Microchip · {horse.microchipId}</small></span><span className="horse-breed">{horse.breed || "Breed not specified"}</span></li>)}</ul>}
+            {horses.length === 0 ? <div className="horse-empty"><Image className="customer-horse-art" src="/images/customer-horse-illustration.svg" width={360} height={180} alt="" unoptimized /><p>No horse profiles yet.</p><span>Add a profile before preparing a request.</span></div> : <ul className="horse-list">{horses.map((horse) => <li key={horse.id}><span className="horse-avatar" aria-hidden="true">{horse.name.slice(0, 1).toUpperCase()}</span><span className="horse-list-name"><strong>{horse.name}</strong><small>Microchip · {horse.microchipId}</small></span><span className="horse-breed">{horse.breed || "Breed not specified"}</span></li>)}</ul>}
           </section>
           </div>
         </>}
