@@ -159,6 +159,24 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### Fleet & Route Coordinator UI redesign — local implementation (2026-11-07)
+
+- The owner-approved Queue and Order Detail screenshot designs are implemented
+  locally with the existing Customer Workspace font, original logo, rounded
+  header, blue palette, illustrated summary cards, and original decorative SVG
+  hero artwork. Styles are scoped to `.frc-workspace-page`.
+- Existing authentication, preview gating, service adapters, queue filtering,
+  navigation, leg forms, ROAD setup, validation, revisions, and submission
+  conditions are preserved. The existing `Revise` action and queue Refresh
+  remain; no Fleet operations destination was added because none exists.
+- Production build/TypeScript, ESLint, all 235 Frontend tests, and browser
+  preview checks pass. Browser checks include successful/blocked submission,
+  leg CRUD/reordering, ROAD setup, read-only/returned/error/access states, and
+  1024/768/390px layouts. Customer header styles remain unchanged after loading
+  the FRC stylesheet. This UI-only task did not replay real Backend workflows.
+- Evidence and file inventory: `docs/reports/FRC_UI_REDESIGN_LOCAL_VERIFICATION.md`.
+  Work is local and uncommitted; no GitHub workflow status was changed.
+
 ### Sprint 3 final E2E and manual validation (2026-11-01)
 
 - Core authenticated browser E2E scenarios pass: single-leg ROAD, sequential

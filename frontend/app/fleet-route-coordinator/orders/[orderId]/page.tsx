@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import FleetRouteCoordinatorWorkspaceFrame from "@/components/FleetRouteCoordinatorWorkspaceFrame";
 import RoutePlanEditor from "@/components/RoutePlanEditor";
+import { FleetTransportIllustration } from "@/components/FleetRouteArtwork";
 import {
   CoordinatorWorkspaceError,
   getFleetRouteCoordinatorService,
@@ -109,8 +110,9 @@ export default function FleetRouteCoordinatorOrderPage() {
       ) : (
         <>
           <header className="frc-detail-heading">
-            <div><span>{order.orderCode}</span><h1>{order.origin} <b aria-hidden="true">→</b> {order.destination}</h1><p>Construct and validate the ordered journey for this assigned Order.</p></div>
-            <div><Link className="customer-secondary-button" href={queueHref}>Back to queue</Link><button className="customer-secondary-button" type="button" disabled={refreshing} onClick={() => void loadOrder(true)}>{refreshing ? "Refreshing..." : "Refresh"}</button></div>
+            <div className="frc-hero-copy"><h1>{order.origin} <b aria-hidden="true">→</b> {order.destination}</h1><p>Construct and validate the ordered journey for this assigned Order.</p><span className="frc-hero-accent" aria-hidden="true" /></div>
+            <FleetTransportIllustration />
+            <div className="frc-detail-actions"><Link className="customer-secondary-button" href={queueHref}>Back to queue</Link><button className="customer-secondary-button" type="button" disabled={refreshing} onClick={() => void loadOrder(true)}>{refreshing ? "Refreshing..." : "Refresh"}</button></div>
           </header>
 
           {feedback && <p className="customer-feedback" role="status">{feedback}</p>}
@@ -122,7 +124,7 @@ export default function FleetRouteCoordinatorOrderPage() {
             <div><span>Transport</span><strong>{order.transportMode}</strong></div>
             <div><span>Horses</span><strong>{order.horseCount}</strong></div>
             <div><span>Transport Specialist</span><strong>{order.assignedTransportSpecialistName}</strong></div>
-            <div><span>Payment</span><strong className="is-complete">Paid</strong></div>
+            <div><span>Payment status</span><strong className="is-complete">Paid</strong></div>
           </section>
 
           {order.routePlanStatus === "RETURNED" && order.returnReason && <section className="frc-return-reason" aria-labelledby="frc-return-title"><span aria-hidden="true">↩</span><div><h2 id="frc-return-title">Returned by Logistics Manager</h2><p>{order.returnReason}</p></div></section>}

@@ -159,7 +159,7 @@ export default function RoutePlanEditor({ orderId, service }: Props) {
       <div className={`route-plan-layout${showForm ? " has-inspector" : ""}`}>
         <div className="route-plan-table-wrap">
           {plan.legs.length === 0 ? (
-            <div className="route-plan-empty"><span aria-hidden="true">&#8644;</span><h3>No journey legs yet</h3><p>Add the first ROAD or AIR leg. Validation and submit use the saved plan.</p>{!plan.readOnly && <button className="customer-primary-button" type="button" onClick={beginAdd}>Add first leg</button>}</div>
+            <div className="route-plan-empty"><span aria-hidden="true">&#8644;</span><h3>No journey leg yet</h3><p>Add the first leg to build the journey and validate the plan.</p>{!plan.readOnly && <button className="customer-primary-button" type="button" onClick={beginAdd}>Add first leg</button>}</div>
           ) : (
             <table className="route-plan-table">
               <thead><tr><th scope="col">#</th><th scope="col">Type</th><th scope="col">Route</th><th scope="col">Departure</th><th scope="col">Arrival</th><th scope="col">AIR details</th>{!plan.readOnly && <th scope="col"><span className="sr-only">Actions</span></th>}</tr></thead>
