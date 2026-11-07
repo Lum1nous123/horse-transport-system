@@ -1,23 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AssignmentWorkspaceFrame from "@/components/AssignmentWorkspaceFrame";
-import {
-  getLogisticsRouteReviewService,
-  type RouteReviewSummary,
-} from "@/lib/logistics-route-review/service";
+import { LogisticsDateTime } from "@/components/LogisticsWorkspaceUI";
+import { getLogisticsRouteReviewService, type RouteReviewSummary } from "@/lib/logistics-route-review/service";
 import { useLogisticsAccess } from "@/lib/staff-assignment/use-logistics-access";
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
 
 export default function RouteReviewQueuePage() {
   const { state: accessState, preview, message: accessMessage } = useLogisticsAccess();
@@ -25,22 +13,20 @@ export default function RouteReviewQueuePage() {
   const [pending, setPending] = useState<RouteReviewSummary[]>([]);
   const [locked, setLocked] = useState<RouteReviewSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const inFlight = useRef(false);
 
   const loadQueue = useCallback(async () => {
-    setLoading(true);
-    setError("");
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setLoading(true); setError("");
     try {
       const queue = await service.listReviews();
-      setPending(queue.pending);
-      setLocked(queue.locked);
-    } catch (caught) {
-      setPending([]);
-      setLocked([]);
-      setError(caught instanceof Error ? caught.message : "We couldn't load Route Reviews.");
-    } finally {
-      setLoading(false);
-    }
+      setPending(queue.pending); setLocked(queue.locked); setLoaded(true);
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "We couldn't load Route Reviews."); }
+    finally { inFlight.current = false; setLoading(false); }
   }, [service]);
 
   useEffect(() => {
@@ -49,81 +35,40 @@ export default function RouteReviewQueuePage() {
     return () => window.clearTimeout(timer);
   }, [accessState, loadQueue]);
 
-  if (accessState !== "allowed") {
-    const checking = accessState === "checking";
-    return (
-      <main className="customer-page">
-        <div className="customer-content assignment-access-state">
-          <p className="customer-loading" role={checking ? "status" : "alert"}>{checking ? "Checking Logistics Manager access..." : accessMessage}</p>
-          {!checking && <Link className="customer-secondary-button" href="/login">Return to sign in</Link>}
-        </div>
-      </main>
-    );
-  }
+  const visible = useMemo(() => {
+    const needle = query.trim().toLocaleLowerCase();
+    return pending.filter((order) => !needle || [order.orderCode, order.origin, order.destination, order.assignedFleetRouteCoordinatorName].some((value) => value.toLocaleLowerCase().includes(needle)))
+      .toSorted((a, b) => Date.parse(a.submittedAt) - Date.parse(b.submittedAt) || a.orderCode.localeCompare(b.orderCode));
+  }, [pending, query]);
 
-  const previewSuffix = preview ? "?preview=1" : "";
+  if (accessState !== "allowed") return <main className="customer-page"><div className="customer-content assignment-access-state"><p className="customer-loading" role={accessState === "checking" ? "status" : "alert"}>{accessState === "checking" ? "Checking Logistics Manager access…" : accessMessage}</p>{accessState !== "checking" && <Link className="customer-secondary-button" href="/login">Return to sign in</Link>}</div></main>;
 
-  return (
-    <AssignmentWorkspaceFrame preview={preview} activeSection="reviews">
-      <nav className="assignment-breadcrumb" aria-label="Breadcrumb">
-        <Link href={`/logistics${previewSuffix}`}>Logistics</Link><span aria-hidden="true">/</span><span aria-current="page">Route Reviews</span>
-      </nav>
-
-      <header className="route-review-page-heading">
-        <div><h1>Route Reviews</h1><p>Review submitted Route Plans before they are permanently locked.</p></div>
-        <button className="customer-secondary-button" type="button" disabled={loading} onClick={() => void loadQueue()}>{loading ? "Refreshing..." : "Refresh queue"}</button>
-      </header>
-
-      {error && <div className="customer-alert" role="alert"><span>{error}</span><button type="button" onClick={() => void loadQueue()}>Try again</button></div>}
-
-      {loading ? (
-        <div className="route-review-queue-skeleton" role="status" aria-label="Loading Route Reviews"><span /><span /><span /></div>
-      ) : !error && pending.length === 0 && locked.length === 0 ? (
-        <section className="route-review-empty"><span aria-hidden="true">✓</span><div><h2>No Route Plans to review</h2><p>Submitted plans and locked results will appear here.</p></div></section>
-      ) : !error && (
-        <>
-          <ReviewSection title="Pending review" description="Plans waiting for your decision." orders={pending} preview={preview} empty="No plans are waiting for review." />
-          <ReviewSection title="Locked results" description="Approved plans retained with their automatic staffing result." orders={locked} preview={preview} empty="Confirmed plans will appear here." locked />
-        </>
-      )}
-    </AssignmentWorkspaceFrame>
-  );
+  return <AssignmentWorkspaceFrame preview={preview} activeSection="reviews">
+    <header className="lm-page-heading"><div><h1>Route reviews</h1><p>Review pending plans, then confirm and lock or return to the assigned FRC.</p></div><button className="customer-secondary-button compact" type="button" disabled={loading} onClick={() => void loadQueue()}>{loading ? "Refreshing…" : "Refresh queue"}</button></header>
+    {error && <div className="customer-alert" role="alert"><span>{error}{loaded && " Previously loaded results may be outdated."}</span><button type="button" disabled={loading} onClick={() => void loadQueue()}>Try again</button></div>}
+    <section className="lm-management-panel" aria-labelledby="pending-reviews-heading">
+      <div className="lm-panel-heading"><h2 id="pending-reviews-heading">Pending review <span className="lm-tab-count">{loading || error ? "—" : pending.length}</span></h2><span>Oldest submission first</span></div>
+      <div className="lm-list-toolbar"><label className="lm-search"><span className="sr-only">Search pending reviews</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search order, route or FRC" /></label></div>
+      {loading ? <p className="lm-list-state" role="status">Loading Route Reviews…</p> : !loaded ? <p className="lm-list-state">Pending reviews are unavailable. Retry the request above.</p>
+        : visible.length === 0 ? <div className="lm-list-state"><h2>{query ? "No matching reviews" : "No pending Route Plans"}</h2><p>{query ? "Try another order code, route or FRC." : "New submitted plans will appear here. Locked and returned review history is not available from the real service."}</p>{query && <button className="customer-text-button" type="button" onClick={() => setQuery("")}>Clear search</button>}</div>
+        : <ReviewTable orders={visible} preview={preview} />}
+      {!loading && loaded && <p className="lm-list-footer">{visible.length} of {pending.length} loaded pending reviews{error && " · Results may be outdated"}</p>}
+    </section>
+    <p className="lm-scope-note">This queue contains pending reviews only. Historical locked and returned reviews are unavailable here. Approved journeys are available in <Link href="/logistics/tracking">Journeys</Link>.</p>
+    {preview && locked.length > 0 && <details className="lm-preview-history"><summary>Development preview fixtures</summary><h2>Locked results (preview only)</h2><p>Sample saved results for interface review; this is not real review history.</p>{locked.map((order) => <p key={order.orderId}><Link href={`/logistics/route-reviews/${order.orderId}?preview=1`}>{order.orderCode} — View preview result</Link></p>)}</details>}
+  </AssignmentWorkspaceFrame>;
 }
 
-function ReviewSection({ title, description, orders, preview, empty, locked = false }: {
-  title: string;
-  description: string;
-  orders: RouteReviewSummary[];
-  preview: boolean;
-  empty: string;
-  locked?: boolean;
-}) {
-  return (
-    <section className="route-review-queue-section" aria-labelledby={`route-review-${locked ? "locked" : "pending"}`}>
-      <div className="route-review-section-heading">
-        <div><h2 id={`route-review-${locked ? "locked" : "pending"}`}>{title}</h2><p>{description}</p></div>
-        <span>{orders.length}</span>
-      </div>
-      {orders.length === 0 ? <p className="route-review-section-empty">{empty}</p> : (
-        <div className="route-review-table-wrap">
-          <table className="route-review-queue-table">
-            <thead><tr><th>Order</th><th>Route</th><th>Departure</th><th>Horses</th><th>Mode</th><th>FRC</th><th>{locked ? "Reviewed" : "Submitted"}</th><th><span className="sr-only">Action</span></th></tr></thead>
-            <tbody>{orders.map((order) => {
-              const query = preview ? "?preview=1" : "";
-              return <tr key={order.orderId}>
-                <td data-label="Order"><strong>{order.orderCode}</strong><small>{locked ? "Locked" : "Pending review"}</small></td>
-                <td data-label="Route"><strong>{order.origin}</strong><small>→ {order.destination}</small></td>
-                <td data-label="Departure"><time dateTime={order.requestedDepartureAt}>{formatDateTime(order.requestedDepartureAt)}</time></td>
-                <td data-label="Horses">{order.horseCount}</td>
-                <td data-label="Mode"><span className="route-review-mode">{order.transportMode}</span></td>
-                <td data-label="FRC">{order.assignedFleetRouteCoordinatorName}</td>
-                <td data-label={locked ? "Reviewed" : "Submitted"}>{formatDateTime(locked && order.reviewedAt ? order.reviewedAt : order.submittedAt)}</td>
-                <td data-label="Action"><Link className="route-review-open" href={`/logistics/route-reviews/${order.orderId}${query}`}>{locked ? "View result" : "Review"}<span aria-hidden="true">→</span></Link>{locked && <Link className="route-review-open" href={`/logistics/orders/${order.orderId}/tracking${query}`}>Track journey <span aria-hidden="true">→</span></Link>}</td>
-              </tr>;
-            })}</tbody>
-          </table>
-        </div>
-      )}
-    </section>
-  );
+function ReviewTable({ orders, preview }: { orders: RouteReviewSummary[]; preview: boolean }) {
+  return <div className="lm-table-scroll"><table className="lm-management-table" aria-label="Pending route reviews">
+    <thead><tr><th scope="col">Order</th><th scope="col" className="lm-route-column">Route</th><th scope="col">Departure</th><th scope="col">FRC</th><th scope="col">Submitted</th><th scope="col">Action</th></tr></thead>
+    <tbody>{orders.map((order) => <tr key={order.orderId}>
+      <td data-label="Order"><strong>{order.orderCode}</strong></td>
+      <td data-label="Route" className="lm-route-cell"><span>{order.origin}</span><span className="lm-destination"><b aria-hidden="true">→</b> {order.destination}</span></td>
+      <td data-label="Departure"><LogisticsDateTime value={order.requestedDepartureAt} /></td>
+      <td data-label="FRC">{order.assignedFleetRouteCoordinatorName}</td>
+      <td data-label="Submitted"><LogisticsDateTime value={order.submittedAt} /></td>
+      <td data-label="Action"><Link className="customer-primary-button compact" href={`/logistics/route-reviews/${order.orderId}${preview ? "?preview=1" : ""}`} aria-label={`Review ${order.orderCode}`}>Review <span aria-hidden="true">→</span></Link></td>
+    </tr>)}</tbody>
+  </table></div>;
 }

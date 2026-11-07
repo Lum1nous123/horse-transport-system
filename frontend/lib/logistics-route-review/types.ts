@@ -25,8 +25,8 @@ export type RouteReviewValidation = {
 
 export type ExecutionStaff = {
   id: string;
-  fullName: string;
-  email: string;
+  fullName?: string | null;
+  email?: string | null;
 };
 
 export type RouteReviewCheckpoint = {
@@ -44,6 +44,7 @@ export type RouteReviewRoadVehicle = {
   vehicleName: string;
   horseCapacity: number;
   horseNames: string[];
+  orderHorseIds?: string[];
   driver: ExecutionStaff | null;
   escort: ExecutionStaff | null;
 };
@@ -65,9 +66,9 @@ export type RouteReviewLeg = {
 };
 
 export type RouteReviewDetail = RouteReviewSummary & {
-  customerName: string;
+  customerName?: string | null;
   orderStatus: RouteReviewOrderStatus;
-  revision: number;
+  revision?: number | null;
   lockedAt: string | null;
   returnReason: string | null;
   legs: RouteReviewLeg[];
@@ -82,8 +83,8 @@ export type RouteReviewQueues = {
 export interface LogisticsRouteReviewService {
   listReviews(): Promise<RouteReviewQueues>;
   getReview(orderId: string): Promise<RouteReviewDetail>;
-  returnPlan(orderId: string, reason: string): Promise<void>;
-  confirmPlan(orderId: string): Promise<void>;
+  returnPlan(orderId: string, reason: string): Promise<RouteReviewDetail>;
+  confirmPlan(orderId: string): Promise<RouteReviewDetail>;
 }
 
 export type RouteReviewErrorCode =
@@ -107,7 +108,7 @@ export function hasCompleteLockedStaffing(review: RouteReviewDetail) {
     return false;
   }
 
-  return review.legs.every((leg) => {
+  return review.legs.length > 0 && review.legs.every((leg) => {
     if (leg.legType === "AIR") {
       return Boolean(leg.airEscort);
     }

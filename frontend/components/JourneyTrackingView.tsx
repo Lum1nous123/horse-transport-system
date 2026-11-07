@@ -8,6 +8,7 @@ import { previewJourneyScenario, previewTracking } from "@/lib/journey-tracking/
 import { JourneyReadError, readJourneyNotifications, readJourneyTracking } from "@/lib/journey-tracking/service";
 import type { JourneyLeg, JourneyNotification, JourneyTracking, JourneyVehicle } from "@/lib/journey-tracking/types";
 import BrandMark from "@/components/BrandMark";
+import { LogisticsNavigation } from "@/components/LogisticsWorkspaceUI";
 import "./journey-tracking.css";
 
 type Role = "CUSTOMER" | "LOGISTICS_MANAGER";
@@ -109,7 +110,7 @@ export default function JourneyTrackingView({ role }: { role: Role }) {
   }, [load]);
 
   return <main className={`customer-page journey-page${role === "LOGISTICS_MANAGER" ? " logistics-manager-page" : ""}`}>
-    <header className="customer-topbar"><Link className="customer-brand" href="/" aria-label="Horse Transport System home"><BrandMark /><span>Horse Transport System</span></Link>{role === "LOGISTICS_MANAGER" && <nav className="logistics-primary-nav" aria-label="Logistics workspaces"><Link href={preview ? "/logistics?preview=1" : "/logistics"}>Logistics workspace</Link><Link href={preview ? "/logistics/assignments?preview=1" : "/logistics/assignments"}>Staff assignment</Link><Link href={preview ? "/logistics/route-reviews?preview=1" : "/logistics/route-reviews"}>Route reviews</Link><Link className="is-current" href="/logistics/tracking" aria-current="page">Order tracking</Link></nav>}<div className="customer-topbar-actions"><span>{role === "CUSTOMER" ? "Customer" : "Logistics Manager"}</span><button className="customer-link-button" type="button" onClick={() => { clearAccessToken(); router.replace("/login"); }}>Sign out</button></div></header>
+    <header className="customer-topbar"><Link className="customer-brand" href="/" aria-label="Horse Transport System home"><BrandMark /><span>Horse Transport System</span></Link>{role === "LOGISTICS_MANAGER" && <LogisticsNavigation section="tracking" preview={preview} />}<div className="customer-topbar-actions"><span>{role === "CUSTOMER" ? "Customer" : "Logistics Manager"}</span><button className="customer-link-button" type="button" onClick={() => { clearAccessToken(); router.replace("/login"); }}>Sign out</button></div></header>
     <div className="customer-content journey-content">
       {preview && <div className="customer-preview-banner" role="status"><strong>Preview mode</strong><span>Sample journey data. No backend request is sent.</span></div>}
       <nav className="journey-breadcrumb" aria-label="Breadcrumb"><Link href={preview ? `${backHref}?preview=1` : backHref}>{role === "CUSTOMER" ? "My Orders" : "Orders"}</Link><span>/</span><span>{tracking?.orderCode ?? orderId}</span></nav>

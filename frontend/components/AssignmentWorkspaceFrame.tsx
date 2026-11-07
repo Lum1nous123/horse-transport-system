@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { clearAccessToken } from "@/lib/auth";
 import BrandMark from "@/components/BrandMark";
+import { LogisticsNavigation } from "@/components/LogisticsWorkspaceUI";
 
 type AssignmentWorkspaceFrameProps = {
   children: ReactNode;
@@ -14,7 +15,6 @@ type AssignmentWorkspaceFrameProps = {
 
 export default function AssignmentWorkspaceFrame({ children, preview, activeSection = "assignments" }: AssignmentWorkspaceFrameProps) {
   const router = useRouter();
-  const previewSuffix = preview ? "?preview=1" : "";
 
   function signOut() {
     clearAccessToken();
@@ -28,18 +28,7 @@ export default function AssignmentWorkspaceFrame({ children, preview, activeSect
           <BrandMark />
           <span>Horse Transport System</span>
         </Link>
-        <nav className="assignment-topbar-nav" aria-label="Logistics workspace">
-          <Link className={activeSection === "orders" ? "is-current" : undefined} href={`/logistics${previewSuffix}`} aria-current={activeSection === "orders" ? "page" : undefined}>Logistics workspace</Link>
-          <Link className={activeSection === "assignments" ? "is-current" : undefined} href={`/logistics/assignments${previewSuffix}`} aria-current={activeSection === "assignments" ? "page" : undefined}>
-            Staff Assignment
-          </Link>
-          <Link className={activeSection === "reviews" ? "is-current" : undefined} href={`/logistics/route-reviews${previewSuffix}`} aria-current={activeSection === "reviews" ? "page" : undefined}>
-            Route Reviews
-          </Link>
-          <Link className={activeSection === "tracking" ? "is-current" : undefined} href="/logistics/tracking" aria-current={activeSection === "tracking" ? "page" : undefined}>
-            Order Tracking
-          </Link>
-        </nav>
+        <LogisticsNavigation section={activeSection} preview={preview} />
         <div className="customer-topbar-actions">
           <span>Logistics Manager</span>
           <button type="button" className="customer-link-button" onClick={signOut}>Sign out</button>

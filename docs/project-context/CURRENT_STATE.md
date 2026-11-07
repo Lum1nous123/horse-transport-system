@@ -159,6 +159,56 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### LM UX Phase 1 — local implementation (2026-11-07)
+
+- Work remains in `D:\project\horse-transport-system-lm-phase0`; branch
+  `feature/lm-phase1-ux-improvements` was created with `git switch -c` in the
+  existing worktree at `3c7bcc7`. All uncommitted Phase 0 work is preserved.
+- Assignment queue is one full-width table with Needs assignment/Assigned tabs,
+  source collection counts, client route/code search and departure sorting.
+- Orders keep master-detail; saved quotation drafts show a compact summary and
+  explicit Edit action. Preparing opens the editor; hiding retains local edits;
+  successful Save collapses back to the saved summary. Existing validators remain.
+- Route Review queue prioritizes pending plans in a compact table; preview-only
+  locked fixtures are secondary disclosure, never real history.
+- Journeys group actual API states into Active, Delivered and Other trackable;
+  search/mode/status filters operate on fetched data only. Shared LM navigation
+  has Orders & quotations, Staff assignment and Route reviews; Journeys is an
+  Orders subtab. Existing URLs and authorization are retained.
+- No Overview/charts or Phase 2 work. No Backend/dependency/schema changes.
+- Verification: 275/275 Vitest tests; lint, TypeScript and production build pass;
+  6/6 Chromium desktop/mobile checks pass with no page-level horizontal overflow.
+  Browser checks use dev previews and intercepted API fixtures, not real Backend E2E.
+- Dev server runs from this worktree at http://localhost:3000 for PO visual review.
+  The configured default Backend is localhost:8080; it was not listening during
+  verification. Real Journeys require Backend/auth; no app-level fake fallback added.
+- Changes remain uncommitted and unpushed. Stop for PO visual feedback.
+
+### LM UX Phase 0 — latest-main local implementation (2026-11-06)
+
+- Isolated worktree `D:\\project\\horse-transport-system-lm-phase0`, branch
+  `feature/lm-phase0-truthful-review`, base `3c7bcc74f96d84f49c2d3f45829048f4d2395457`.
+  The original `s3-clean` backup worktree and untracked audit remain intact.
+- Revalidated the LM audit against latest main. The eight newer commits affect
+  Customer/TS/Driver presentation; LM Phase 0 findings remain applicable.
+- Route Review no longer fabricates validation pass, revision, customer names,
+  staff names or horse names. Real IDs are labelled. Pending-only history and
+  server detail reads versus saved mutation responses are explicitly distinguished.
+- Removed the real review mutation cache. Confirm/Return use the Backend's
+  persisted decision response; uncertain outcomes lock actions and offer GET-only
+  recovery. Assignment uses synchronous single-flight protection and persisted
+  readback with repeatable read retry. Quotation unavailable states offer GET retry.
+- Existing pending-only review GET cannot reload a decision once the plan leaves
+  pending. If a mutation response is lost, FE stays locked and explains the limit;
+  it never automatically replays the decision.
+- Verification: 267/267 Frontend tests, ESLint and production build pass.
+  No Backend, schema, dependency or business-transition changes.
+- Overview/charts/navigation redesign are deferred to separate Phase 1 approval.
+  Pending Actions chart was removed from the plan as duplicate KPI presentation.
+  Full plan and file manifest: `docs/plans/lm-workspace-ux-audit-and-redesign.md`.
+  Work is uncommitted; no push/PR was performed.
+
+
 ### Sprint 3 final E2E and manual validation (2026-11-01)
 
 - Core authenticated browser E2E scenarios pass: single-leg ROAD, sequential
