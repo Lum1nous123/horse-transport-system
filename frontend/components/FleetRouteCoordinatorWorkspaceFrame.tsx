@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { clearAccessToken } from "@/lib/auth";
 import BrandMark from "@/components/BrandMark";
+import TransportSpecialistIcon from "@/components/TransportSpecialistIcon";
+import "./fleet-route-workspace.css";
 
 type FleetRouteCoordinatorWorkspaceFrameProps = {
   children: ReactNode;
@@ -38,12 +40,12 @@ export default function FleetRouteCoordinatorWorkspaceFrame({
         </Link>
         <nav className="frc-topbar-nav" aria-label="Fleet and Route Coordinator workspace">
           <Link className="is-current" href={`/fleet-route-coordinator${previewSuffix}`} aria-current="page">
-            Planning queue
+            <TransportSpecialistIcon name="route" />Planning queue
           </Link>
         </nav>
         <div className="customer-topbar-actions">
-          <span>Fleet &amp; Route Coordinator</span>
-          <button type="button" className="customer-link-button" onClick={signOut}>Sign out</button>
+          <span className="frc-role"><TransportSpecialistIcon name="user" />Fleet &amp; Route Coordinator</span>
+          <button type="button" className="customer-link-button" onClick={signOut}><TransportSpecialistIcon name="signOut" />Sign out</button>
         </div>
       </header>
 
