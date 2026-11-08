@@ -36,6 +36,7 @@ public class SecurityConfig {
 										"FORBIDDEN", "Access is forbidden")))
 				.authorizeHttpRequests(authorize -> authorize
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+						.requestMatchers(HttpMethod.GET, "/api/v1/health").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/payments/stripe/webhook").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
