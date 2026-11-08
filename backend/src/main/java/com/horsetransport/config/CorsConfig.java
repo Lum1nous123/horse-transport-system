@@ -1,20 +1,28 @@
 package com.horsetransport.config;
 
+import java.util.Arrays;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration(proxyBeanMethods = false)
-@Profile("local")
-public class LocalCorsConfig implements WebMvcConfigurer {
+public class CorsConfig implements WebMvcConfigurer {
 
-	private static final String LOCAL_FRONTEND_ORIGIN = "http://localhost:3000";
+	private final String[] allowedOrigins;
+
+	public CorsConfig(@Value("${app.cors.allowed-origins}") String allowedOrigins) {
+		this.allowedOrigins = Arrays.stream(allowedOrigins.split(","))
+				.map(String::trim)
+				.filter(origin -> !origin.isEmpty())
+				.toArray(String[]::new);
+	}
 
 	@Override
 	public void addCorsMappings(CorsRegistry registry) {
 		registry.addMapping("/**")
-				.allowedOrigins(LOCAL_FRONTEND_ORIGIN)
+				.allowedOrigins(allowedOrigins)
 				.allowedMethods("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
 				.allowedHeaders("Accept", "Authorization", "Content-Type", "Origin", "X-Requested-With")
 				.maxAge(3600);

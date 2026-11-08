@@ -159,6 +159,25 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### Render staging backend readiness — completed (2026-11-08)
+
+- The Backend is prepared for one shared Render staging service while teammates
+  run Next.js locally: Java 21 multi-stage Docker build, non-root runtime,
+  Render `PORT`/`0.0.0.0` binding, environment-based CORS allowlist, bounded
+  HikariCP settings, and a public database-independent health endpoint.
+- Stripe's existing signed webhook path, transactional provider-event
+  idempotency, payment state transitions, and server-side confirmation remain
+  unchanged. Deployment instructions cover the Stripe Dashboard test-mode
+  endpoint and required events without Stripe CLI.
+- Verification on a clean branch from `origin/main`: 433 non-container Backend
+  tests and Maven packaging pass. Docker/Testcontainers verification is
+  environment-blocked because the Docker daemon is unavailable.
+- No Flyway migration was modified or executed against the shared/demo Supabase
+  database. No Render deployment or external-service configuration has been
+  performed. Deployment and external smoke tests still require explicit human
+  approval and target verification.
+- Runbook: `docs/RENDER_DEPLOYMENT.md`.
+
 ### Fleet & Route Coordinator UI redesign — local implementation (2026-11-07)
 
 - The owner-approved Queue and Order Detail screenshot designs are implemented
