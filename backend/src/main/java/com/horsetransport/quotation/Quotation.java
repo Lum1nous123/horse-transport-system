@@ -1,13 +1,11 @@
 package com.horsetransport.quotation;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -29,6 +27,7 @@ import org.hibernate.type.SqlTypes;
 public class Quotation {
 
 	public static final String CURRENCY_USD = "USD";
+	private static final BigDecimal DEPOSIT_RATE = new BigDecimal("0.10");
 
 	@Id
 	private UUID id;
@@ -98,26 +97,11 @@ public class Quotation {
 	}
 
 	void replace(UpdateQuotationRequest request) {
-		Map<Integer, QuotationLineItem> existingBySequence = lineItems.stream()
-				.collect(Collectors.toMap(QuotationLineItem::getSequenceNo, Function.identity()));
-		List<QuotationLineItem> replacements = request.safeLineItems().stream()
-				.map(item -> {
-					QuotationLineItem existing = existingBySequence.get(item.sequenceNo());
-					if (existing != null) {
-						existing.update(item);
-						return existing;
-					}
-					return new QuotationLineItem(this, item);
-				})
-				.toList();
-		lineItems.removeIf(item -> !replacements.contains(item));
-		replacements.stream().filter(item -> !lineItems.contains(item)).forEach(lineItems::add);
-		lineItems.sort(java.util.Comparator.comparingInt(QuotationLineItem::getSequenceNo));
-		totalAmount = lineItems.isEmpty() ? null : lineItems.stream()
-				.map(QuotationLineItem::getAmount)
-				.reduce(BigDecimal.ZERO, BigDecimal::add);
-		depositAmount = request.depositAmount();
-		remainingAmount = depositAmount == null ? null : totalAmount.subtract(depositAmount);
+		lineItems.clear();
+		totalAmount = request.totalAmount();
+		depositAmount = totalAmount == null ? null
+				: totalAmount.multiply(DEPOSIT_RATE).setScale(2, RoundingMode.HALF_UP);
+		remainingAmount = totalAmount == null ? null : totalAmount.subtract(depositAmount);
 		notes = normalize(request.notes());
 	}
 

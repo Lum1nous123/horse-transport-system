@@ -88,23 +88,31 @@ class QuotationServiceTest {
 	}
 
 	@Test
-	void replacesLineItemsAndCalculatesAmounts() {
+	void calculatesDepositAndRemainingBalanceFromTotalAmount() {
 		Quotation quotation = quotation();
 		stubDraft(quotation);
 
-		QuotationResponse first = service.update(ORDER_ID, request("300.00",
-				item(1, "Road", "800.00"), item(2, "Air", "700.00")));
-		QuotationResponse second = service.update(ORDER_ID, request("200.00",
-				item(1, "Updated road", "900.00")));
+		QuotationResponse first = service.update(ORDER_ID, request("500.00"));
+		QuotationResponse second = service.update(ORDER_ID, request("900.00"));
 
-		assertThat(first.totalAmount()).isEqualByComparingTo("1500.00");
-		assertThat(first.remainingAmount()).isEqualByComparingTo("1200.00");
+		assertThat(first.totalAmount()).isEqualByComparingTo("500.00");
+		assertThat(first.depositAmount()).isEqualByComparingTo("50.00");
+		assertThat(first.remainingAmount()).isEqualByComparingTo("450.00");
 		assertThat(second.totalAmount()).isEqualByComparingTo("900.00");
-		assertThat(second.remainingAmount()).isEqualByComparingTo("700.00");
-		assertThat(second.lineItems()).singleElement().satisfies(item -> {
-			assertThat(item.description()).isEqualTo("Updated road");
-			assertThat(item.amount()).isEqualByComparingTo("900.00");
-		});
+		assertThat(second.depositAmount()).isEqualByComparingTo("90.00");
+		assertThat(second.remainingAmount()).isEqualByComparingTo("810.00");
+		assertThat(second.lineItems()).isEmpty();
+	}
+
+	@Test
+	void roundsAutomaticDepositToCurrencyScale() {
+		Quotation quotation = quotation();
+		stubDraft(quotation);
+
+		QuotationResponse response = service.update(ORDER_ID, request("100.05"));
+
+		assertThat(response.depositAmount()).isEqualByComparingTo("10.01");
+		assertThat(response.remainingAmount()).isEqualByComparingTo("90.04");
 	}
 
 	@Test
@@ -112,7 +120,7 @@ class QuotationServiceTest {
 		Quotation quotation = quotation();
 		stubDraft(quotation);
 
-		QuotationResponse response = service.update(ORDER_ID, new UpdateQuotationRequest(null, null, null));
+		QuotationResponse response = service.update(ORDER_ID, new UpdateQuotationRequest(null, null));
 
 		assertThat(response.totalAmount()).isNull();
 		assertThat(response.remainingAmount()).isNull();
@@ -120,24 +128,12 @@ class QuotationServiceTest {
 	}
 
 	@Test
-	void rejectsNonPositiveAmountAndDuplicateSequence() {
+	void rejectsNonPositiveTotalAmount() {
 		Quotation quotation = quotation();
 		stubDraft(quotation);
 
-		assertThatThrownBy(() -> service.update(ORDER_ID, request(null, item(1, "Road", "0"))))
-				.isInstanceOf(QuotationValidationException.class).hasMessageContaining("amount");
-		assertThatThrownBy(() -> service.update(ORDER_ID, request(null,
-				item(1, "Road", "10"), item(1, "Air", "20"))))
-				.isInstanceOf(QuotationValidationException.class).hasMessageContaining("unique");
-	}
-
-	@Test
-	void rejectsInvalidDepositInDraft() {
-		Quotation quotation = quotation();
-		stubDraft(quotation);
-
-		assertThatThrownBy(() -> service.update(ORDER_ID, request("100.00", item(1, "Road", "100.00"))))
-				.isInstanceOf(QuotationValidationException.class).hasMessageContaining("depositAmount");
+		assertThatThrownBy(() -> service.update(ORDER_ID, request("0")))
+				.isInstanceOf(QuotationValidationException.class).hasMessageContaining("totalAmount");
 	}
 
 	@Test
@@ -169,7 +165,7 @@ class QuotationServiceTest {
 
 		assertThatThrownBy(() -> service.send(ORDER_ID))
 				.isInstanceOf(QuotationValidationException.class)
-				.hasMessageContaining("line item");
+				.hasMessageContaining("totalAmount");
 		verify(auditLogRepository, never()).saveAllAndFlush(any());
 	}
 
@@ -210,7 +206,7 @@ class QuotationServiceTest {
 		when(quotationRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(quotation));
 		when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order(OrderStatus.QUOTATION_SENT)));
 
-		assertThatThrownBy(() -> service.update(ORDER_ID, new UpdateQuotationRequest(null, null, null)))
+		assertThatThrownBy(() -> service.update(ORDER_ID, new UpdateQuotationRequest(null, null)))
 				.isInstanceOf(QuotationNotEditableException.class);
 		assertThatThrownBy(() -> service.send(ORDER_ID)).isInstanceOf(QuotationNotEditableException.class);
 	}
@@ -268,7 +264,7 @@ class QuotationServiceTest {
 
 	private Quotation validQuotation() {
 		Quotation quotation = quotation();
-		quotation.replace(request("200.00", item(1, "Road", "1000.00")));
+		quotation.replace(request("1000.00"));
 		return quotation;
 	}
 
@@ -276,13 +272,8 @@ class QuotationServiceTest {
 		return new Quotation(ORDER_ID, LM_ID);
 	}
 
-	private UpdateQuotationRequest request(String deposit, QuotationLineItemRequest... items) {
-		return new UpdateQuotationRequest(deposit == null ? null : new BigDecimal(deposit), " Notes ",
-				List.of(items));
-	}
-
-	private QuotationLineItemRequest item(int sequence, String description, String amount) {
-		return new QuotationLineItemRequest(sequence, description, new BigDecimal(amount));
+	private UpdateQuotationRequest request(String total) {
+		return new UpdateQuotationRequest(total == null ? null : new BigDecimal(total), " Notes ");
 	}
 
 	private TransportOrder order(OrderStatus status) {

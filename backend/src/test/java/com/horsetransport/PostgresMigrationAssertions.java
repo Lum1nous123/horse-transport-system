@@ -27,7 +27,9 @@ final class PostgresMigrationAssertions {
 				new HistoryRow("1", "V1__initial_schema.sql", -1027814250, true),
 				new HistoryRow("2", "V2__deposit_refund_retries.sql", 1542157360, true),
 				new HistoryRow("3", "V3__add_frc_eligible_to_transport_orders.sql", 0, true),
-				new HistoryRow("5", "V5__add_transport_order_code_sequence.sql", 125409323, true));
+				new HistoryRow("5", "V5__add_transport_order_code_sequence.sql", 125409323, true),
+				new HistoryRow("6", "V6__add_order_cancelled_notification_type.sql", -2077767481, true),
+				new HistoryRow("7", "V7__add_document_correction_deadline.sql", -808977492, true));
 	}
 
 	static void assertRefundSchema(JdbcTemplate jdbcTemplate) {
@@ -102,6 +104,14 @@ final class PostgresMigrationAssertions {
 				""", String.class);
 		assertThat(uniqueConstraints).anySatisfy(definition ->
 				assertThat(definition).contains("recipient_user_id", "source_event_key"));
+
+		List<String> notificationTypes = jdbcTemplate.queryForList("""
+				select enumlabel
+				from pg_enum
+				join pg_type on pg_type.oid = pg_enum.enumtypid
+				where pg_type.typname = 'notification_type'
+				""", String.class);
+		assertThat(notificationTypes).contains("ORDER_CANCELLED");
 	}
 
 	static void assertFrcEligibleColumnIsAbsent(JdbcTemplate jdbcTemplate) {
@@ -113,6 +123,21 @@ final class PostgresMigrationAssertions {
 					and column_name = 'frc_eligible'
 				""", Integer.class);
 		assertThat(frcEligibleColumns).isZero();
+	}
+
+	static void assertCorrectionDeadlineSchema(JdbcTemplate jdbcTemplate) {
+		ColumnMetadata correctionDeadline = jdbcTemplate.queryForObject("""
+				select data_type, is_nullable, column_default
+				from information_schema.columns
+				where table_schema = 'public'
+					and table_name = 'horse_documents'
+					and column_name = 'correction_deadline_at'
+				""", (resultSet, rowNumber) -> new ColumnMetadata(
+				resultSet.getString("data_type"), resultSet.getString("is_nullable"),
+				resultSet.getString("column_default")));
+		assertThat(correctionDeadline.dataType()).isEqualTo("timestamp without time zone");
+		assertThat(correctionDeadline.nullable()).isEqualTo("YES");
+		assertThat(correctionDeadline.defaultValue()).isNull();
 	}
 
 	private static ColumnMetadata column(JdbcTemplate jdbcTemplate, String columnName) {

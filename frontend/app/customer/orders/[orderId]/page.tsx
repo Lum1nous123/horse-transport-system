@@ -134,7 +134,7 @@ export default function CustomerRefundResultPage() {
   return (
     <main className="customer-page refund-result-page">
       <header className="customer-topbar refund-topbar">
-        <Link className="customer-brand" href="/" aria-label="Horse Transport System home">
+        <Link className="customer-brand" href="/customer" aria-label="Customer home workspace">
           <BrandMark />
           <span>Horse Transport System</span>
         </Link>

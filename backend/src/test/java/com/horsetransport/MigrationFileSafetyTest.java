@@ -20,6 +20,8 @@ class MigrationFileSafetyTest {
 		Path v2 = migrations.resolve("V2__deposit_refund_retries.sql");
 		Path v3 = migrations.resolve("V3__add_frc_eligible_to_transport_orders.sql");
 		Path v5 = migrations.resolve("V5__add_transport_order_code_sequence.sql");
+		Path v6 = migrations.resolve("V6__add_order_cancelled_notification_type.sql");
+		Path v7 = migrations.resolve("V7__add_document_correction_deadline.sql");
 
 		try (var files = Files.list(migrations)) {
 			assertThat(files.map(path -> path.getFileName().toString()).sorted().toList())
@@ -27,7 +29,9 @@ class MigrationFileSafetyTest {
 							"V1__initial_schema.sql",
 							"V2__deposit_refund_retries.sql",
 							"V3__add_frc_eligible_to_transport_orders.sql",
-							"V5__add_transport_order_code_sequence.sql");
+							"V5__add_transport_order_code_sequence.sql",
+							"V6__add_order_cancelled_notification_type.sql",
+							"V7__add_document_correction_deadline.sql");
 		}
 
 		assertThat(flywayChecksum(v1)).isEqualTo(-1027814250);
@@ -35,6 +39,8 @@ class MigrationFileSafetyTest {
 		assertThat(Files.readString(v3)).isEmpty();
 		assertThat(flywayChecksum(v3)).isZero();
 		assertThat(flywayChecksum(v5)).isEqualTo(125409323);
+		assertThat(flywayChecksum(v6)).isEqualTo(-2077767481);
+		assertThat(flywayChecksum(v7)).isEqualTo(-808977492);
 	}
 
 	@Test

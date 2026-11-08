@@ -88,6 +88,24 @@ public class NotificationService {
 	}
 
 	@Transactional
+	public void createOrderCancelledForDocumentDeadline(UUID customerId, UUID orderId) {
+		createIfAbsent(customerId, orderId, NotificationType.ORDER_CANCELLED,
+				NotificationEventCatalog.orderCancelledForDocumentDeadline(orderId),
+				"Order cancelled",
+				"Your Order was cancelled because mandatory documents were incomplete at the deadline. "
+						+ "Your paid Deposit is non-refundable.");
+	}
+
+	@Transactional
+	public void createOrderCancelledForCorrectionDeadline(UUID customerId, UUID orderId) {
+		createIfAbsent(customerId, orderId, NotificationType.ORDER_CANCELLED,
+				NotificationEventCatalog.orderCancelledForCorrectionDeadline(orderId),
+				"Order cancelled",
+				"Correction deadline missed. Your Order has been cancelled. "
+						+ "The paid Deposit is non-refundable.");
+	}
+
+	@Transactional
 	public void createPaymentResult(UUID customerId, UUID orderId, UUID paymentId, PaymentType paymentType) {
 		String paymentName = paymentType == PaymentType.DEPOSIT ? "Deposit" : "Remaining Balance";
 		createIfAbsent(customerId, orderId, NotificationType.PAYMENT_RESULT,

@@ -32,7 +32,4 @@ public class DocumentDeadlineService {
 		return new DocumentDeadlineEvaluationResult(dueOrderIds.size(), cancelled);
 	}
 
-	public boolean handlePostDeadlineRejection(UUID orderId) {
-		return orderProcessor.cancelForPostDeadlineRejection(orderId, LocalDateTime.now(clock));
-	}
 }

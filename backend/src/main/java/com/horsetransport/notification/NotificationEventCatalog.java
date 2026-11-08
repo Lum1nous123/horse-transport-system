@@ -35,6 +35,14 @@ public final class NotificationEventCatalog {
 		return "order-delivered:order:" + orderId;
 	}
 
+	public static String orderCancelledForDocumentDeadline(UUID orderId) {
+		return "order-cancelled:document-deadline:order:" + orderId;
+	}
+
+	public static String orderCancelledForCorrectionDeadline(UUID orderId) {
+		return "order-cancelled:correction-deadline:order:" + orderId;
+	}
+
 	public static String paymentPaid(UUID paymentId) {
 		return "payment-result:payment:" + paymentId + ":paid";
 	}

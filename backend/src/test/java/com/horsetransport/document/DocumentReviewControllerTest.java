@@ -41,7 +41,8 @@ class DocumentReviewControllerTest {
 		mockMvc.perform(post(path("reject")).contentType(MediaType.APPLICATION_JSON)
 				.content("{\"rejectionReason\":\"Invalid certificate\"}"))
 				.andExpect(status().isOk()).andExpect(jsonPath("$.status").value("REJECTED"))
-				.andExpect(jsonPath("$.rejectionReason").value("Invalid certificate"));
+				.andExpect(jsonPath("$.rejectionReason").value("Invalid certificate"))
+				.andExpect(jsonPath("$.correctionDeadlineAt").value("2026-10-10T14:00:00"));
 	}
 
 	@Test
@@ -67,8 +68,11 @@ class DocumentReviewControllerTest {
 	}
 
 	private DocumentVersionResponse response(DocumentVersionStatus status, String reason) {
+		LocalDateTime correctionDeadline = status == DocumentVersionStatus.REJECTED
+				? LocalDateTime.of(2026, 10, 10, 14, 0) : null;
 		return new DocumentVersionResponse(VERSION_ID, DOCUMENT_ID, 1, status, true,
 				"https://example.test/document.pdf", "horse-passport.pdf", null, LocalDateTime.of(2026, 9, 29, 12, 0),
-				LocalDateTime.of(2026, 9, 29, 13, 0), LocalDateTime.of(2026, 9, 29, 14, 0), reason);
+				LocalDateTime.of(2026, 9, 29, 13, 0), LocalDateTime.of(2026, 9, 29, 14, 0), reason,
+				correctionDeadline);
 	}
 }

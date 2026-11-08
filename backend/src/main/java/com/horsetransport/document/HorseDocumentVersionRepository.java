@@ -15,6 +15,8 @@ public interface HorseDocumentVersionRepository extends JpaRepository<HorseDocum
 
 	List<HorseDocumentVersion> findAllByHorseDocument_IdOrderByVersionNoDesc(UUID horseDocumentId);
 
+	long countByHorseDocument_IdAndStatus(UUID horseDocumentId, DocumentVersionStatus status);
+
 	@Query("select coalesce(max(version.versionNo), 0) from HorseDocumentVersion version "
 			+ "where version.horseDocument.id = :documentId")
 	int findMaximumVersionNo(@Param("documentId") UUID documentId);

@@ -6,7 +6,7 @@ import { apiFetch } from "@/lib/api";
 
 type DocumentKey = "HORSE_PASSPORT_OR_IDENTIFICATION" | "VACCINATION_CERTIFICATE" | "VETERINARY_HEALTH_CERTIFICATE" | "OWNERSHIP_CERTIFICATE" | "EXPORT_IMPORT_PERMIT";
 type VersionStatus = "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
-type Version = { id: string; documentId: string; versionNo: number; fileUrl: string; expiryDate: string | null; status: VersionStatus; isCurrent: boolean; uploadedAt: string; submittedAt: string | null; reviewedAt: string | null; rejectionReason: string | null };
+type Version = { id: string; documentId: string; versionNo: number; fileUrl: string; expiryDate: string | null; status: VersionStatus; isCurrent: boolean; uploadedAt: string; submittedAt: string | null; reviewedAt: string | null; rejectionReason: string | null; correctionDeadlineAt: string | null };
 type DocumentItem = { id: string; type: DocumentKey; required: boolean; versions: Version[] };
 type HorseProfile = { id: string; name: string };
 type ChecklistResponse = { orderId: string; horses: { horseId: string; documents: { id: string; documentType: DocumentKey; required: boolean }[] }[] };
@@ -26,6 +26,7 @@ function sampleDocuments(): DocumentItem[] {
     status: (["APPROVED", "REJECTED", "DRAFT", "PENDING_REVIEW"] as VersionStatus[])[index], isCurrent: true, uploadedAt: "2026-09-22T09:15:00",
     submittedAt: index === 2 ? null : "2026-09-26T10:30:00", reviewedAt: index < 2 ? "2026-09-27T10:00:00" : null,
     rejectionReason: index === 1 ? "Please upload a current vaccination certificate." : null,
+    correctionDeadlineAt: index === 1 ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() : null,
   }] }));
 }
 
@@ -33,6 +34,13 @@ function fileLabel(fileUrl: string) {
   if (!fileUrl.startsWith("http")) return fileUrl;
   try { return decodeURIComponent(new URL(fileUrl).pathname.split("/").pop() || "Open document"); }
   catch { return "Open document"; }
+}
+
+function correctionTimeRemaining(deadline: string, now: number) {
+  const remainingMinutes = Math.max(0, Math.ceil((new Date(deadline).getTime() - now) / 60_000));
+  const hours = Math.floor(remainingMinutes / 60);
+  const minutes = remainingMinutes % 60;
+  return hours > 0 ? `${hours}h ${minutes}m remaining` : `${minutes}m remaining`;
 }
 
 export default function DocumentWorkspace({ orderId, orderCode, horses, preview, editable, onClose }: { orderId: string; orderCode: string; horses: HorseProfile[]; preview: boolean; editable: boolean; onClose: () => void }) {
@@ -47,6 +55,7 @@ export default function DocumentWorkspace({ orderId, orderCode, horses, preview,
   const [submitCandidate, setSubmitCandidate] = useState<DocumentKey | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [clockNow, setClockNow] = useState(() => Date.now());
 
   const documentRequest = useCallback(async (path: string, init?: RequestInit) => {
     const token = getAccessToken();
@@ -84,6 +93,10 @@ export default function DocumentWorkspace({ orderId, orderCode, horses, preview,
     const timer = window.setTimeout(() => { void loadDocuments(); }, 0);
     return () => window.clearTimeout(timer);
   }, [loadDocuments, preview]);
+  useEffect(() => {
+    const timer = window.setInterval(() => setClockNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
   const documents = documentsByHorse[selectedHorseId] ?? [];
   const selectedHorse = horses.find((horse) => horse.id === selectedHorseId);
 
@@ -98,7 +111,8 @@ export default function DocumentWorkspace({ orderId, orderCode, horses, preview,
     const draft = item?.versions.find((version) => version.status === "DRAFT" && version.isCurrent);
     if (!item || !selectedFile) { setFormError(draft ? "Choose a replacement file to update this draft." : "Choose a file to create this draft."); return; }
     if (preview) {
-      const next: Version = { id: draft?.id ?? `preview-${Date.now()}`, documentId: item.id, versionNo: draft?.versionNo ?? Math.max(0, ...item.versions.map((version) => version.versionNo)) + 1, fileUrl: selectedFile.name, expiryDate: expiryDate || null, status: "DRAFT", isCurrent: true, uploadedAt: new Date().toISOString(), submittedAt: null, reviewedAt: null, rejectionReason: null };
+      const current = item.versions.find((version) => version.isCurrent);
+      const next: Version = { id: draft?.id ?? `preview-${Date.now()}`, documentId: item.id, versionNo: draft?.versionNo ?? Math.max(0, ...item.versions.map((version) => version.versionNo)) + 1, fileUrl: selectedFile.name, expiryDate: expiryDate || null, status: "DRAFT", isCurrent: true, uploadedAt: new Date().toISOString(), submittedAt: null, reviewedAt: null, rejectionReason: null, correctionDeadlineAt: current?.correctionDeadlineAt ?? null };
       setDocumentsByHorse((current) => ({ ...current, [selectedHorseId]: documents.map((document) => document.id === item.id ? { ...document, versions: draft ? document.versions.map((version) => version.id === draft.id ? next : version) : [next, ...document.versions.map((version) => ({ ...version, isCurrent: false }))] } : document) }));
       setEditingType(null); setSelectedFile(null); setMessage(draft ? "Draft updated in this preview." : "Draft created in this preview."); return;
     }
@@ -143,6 +157,7 @@ export default function DocumentWorkspace({ orderId, orderCode, horses, preview,
       {selectedHorse && <div className="document-workspace-heading"><div><h3>{selectedHorse.name}</h3><p>All checklist documents are required for this horse.</p></div><span className="document-workspace-count">{documents.filter((item) => item.versions.some((version) => version.status === "APPROVED" && version.isCurrent)).length} of {documents.length} approved</span></div>}
       {message && <p className="customer-feedback document-workspace-feedback" role="status">{message}</p>}
       <div className="document-item-list">{documentTypes.map(({ key, label }) => { const item = documents.find((document) => document.type === key); if (!item) return null; const current = item.versions.find((version) => version.isCurrent); const draft = current?.status === "DRAFT" ? current : undefined; const canCreate = !current || current.status === "REJECTED"; return <article className="document-item-card" key={item.id}><div className="document-item-heading"><div><h4>{label}</h4><p>{item.required ? "Required document" : "Document"}</p></div><span className={`document-version-status ${current?.status.toLowerCase() ?? "missing"}`}>{current ? statusLabels[current.status] : "Not uploaded"}</span></div>{renderHistory(item)}
+        {current?.correctionDeadlineAt && <div className={`document-correction-window ${current.status === "PENDING_REVIEW" || current.status === "APPROVED" ? "complete" : ""}`}><strong>Correction Deadline: {new Date(current.correctionDeadlineAt).toLocaleString()}</strong><span>{current.status === "PENDING_REVIEW" ? "Submitted on time — Awaiting Transport Specialist review." : current.status === "APPROVED" ? "Corrected version approved." : correctionTimeRemaining(current.correctionDeadlineAt, clockNow)}</span></div>}
         {editable && !current?.status.match(/^(PENDING_REVIEW|APPROVED)$/) && <div className="document-item-actions">{canCreate && <button className="customer-primary-button compact" disabled={busy} type="button" onClick={() => beginDraft(key)}>{current?.status === "REJECTED" ? "Upload new version" : "Upload document"}</button>}{draft && <><button className="customer-secondary-button compact" disabled={busy} type="button" onClick={() => beginDraft(key)}>Edit draft</button><button className="customer-text-button compact" disabled={busy} type="button" onClick={() => void deleteDraft(key)}>Delete draft</button><button className="customer-secondary-button compact" disabled={busy} type="button" onClick={() => setSubmitCandidate(key)}>Submit for review</button></>}</div>}
         {editable && editingType === key && <div className="document-draft-editor"><h5>{draft ? "Edit draft" : current?.status === "REJECTED" ? "Create resubmission" : "Create document draft"}</h5><label className="customer-field"><span>Document file <b aria-hidden="true">*</b></span><input type="file" accept="application/pdf,image/jpeg,image/png" disabled={busy} onChange={(event) => { setSelectedFile(event.target.files?.[0] ?? null); setFormError(""); }} />{draft && <small>Choose a file to replace the current draft file.</small>}</label><label className="customer-field"><span>Expiry date <em>Optional</em></span><input type="date" disabled={busy} value={expiryDate} onChange={(event) => setExpiryDate(event.target.value)} /></label>{formError && <p className="customer-form-error" role="alert">{formError}</p>}<div className="customer-form-actions"><button type="button" className="customer-text-button" disabled={busy} onClick={() => { setEditingType(null); setFormError(""); }}>Cancel</button><button type="button" className="customer-primary-button" disabled={busy} onClick={() => void saveDraft()}>{busy ? "Saving…" : "Save draft"}</button></div></div>}
       </article>; })}</div></>}

@@ -181,6 +181,12 @@ public class TransportOrder {
 		this.cancelledAt = cancelledAt;
 	}
 
+	public void cancelForDocumentCorrectionLimit(LocalDateTime cancelledAt) {
+		status = OrderStatus.CANCELLED;
+		cancellationReason = "Maximum document correction attempts reached";
+		this.cancelledAt = cancelledAt;
+	}
+
 	void reject(String reason) {
 		status = OrderStatus.REJECTED;
 		rejectionReason = reason.trim();

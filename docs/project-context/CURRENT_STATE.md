@@ -60,7 +60,7 @@ The Functional Requirements filename still contains `Proposed`, but the document
   `RETURNED`.
 - Every Horse receives the same fixed checklist: Horse Passport/Identification, Vaccination Certificate, Veterinary Health Certificate, Ownership Certificate, and Export/Import Permit.
 - Only the Customer uploads/submits document versions. The assigned TS reviews them, approves or rejects with a reason, and explicitly performs Final Confirm after all required current versions are approved.
-- One Document Completion Deadline applies to the Order. Missing or DRAFT documents at the deadline cause cancellation and a full Deposit refund; pending TS review does not. A post-deadline rejection causes immediate cancellation and refund.
+- One Document Completion Deadline applies to the Order. Missing, DRAFT, or unsubmitted mandatory documents at the deadline cause cancellation; pending TS review does not. A post-deadline rejection causes immediate cancellation. Deposit remains `PAID` and is non-refundable in every case.
 - After Remaining Balance payment, the FRC creates an ordered ROAD/AIR Route Plan. The FRC submits it for LM review; LM may Confirm or Return with a reason. Confirmation permanently locks the Route Plan.
 - Each Horse is allocated to exactly one Vehicle in every ROAD RouteLeg. Capacity is validated per Vehicle, and allocations may differ between ROAD legs.
 - Vehicle is existing fleet/reference data; Vehicle management is not MVP
@@ -78,7 +78,7 @@ The Functional Requirements filename still contains `Proposed`, but the document
 - ROAD checkpoint definitions belong to the RouteLeg and are shared; each Vehicle records its own checkpoint arrivals against that plan.
 - The assigned Escort records Vehicle-specific ROAD welfare evidence or AIR-leg welfare evidence, including required final-destination evidence.
 - A final ROAD leg requires separate Proof of Delivery for every Vehicle; a final AIR leg requires one Proof of Delivery for the leg. Recipient login, OTP, signature, or Customer receipt confirmation is not required.
-- Tracking is milestone/checkpoint based. Customer-facing journey, payment, and refund notifications are in-app and system-generated.
+- Tracking is milestone/checkpoint based. Customer-facing journey, payment, delivery, and document-deadline cancellation notifications are in-app and system-generated.
 - FR-020 audit scope is exactly `TRANSPORT_ORDER`, `TRANSPORT_ORDER_HORSE`, `HORSE_DOCUMENT_VERSION`, `ROUTE_LEG`, and `QUOTATION`. Each covered status transition and its audit record must commit atomically.
 
 ## Explicit MVP Non-Scope
@@ -99,7 +99,7 @@ The Functional Requirements filename still contains `Proposed`, but the document
 - Vehicle CRUD, procurement, maintenance calendar, third-party fleet/provider
   booking, external fleet API, or GPS tracking
 - Recipient account, OTP, or electronic signature
-- Partial refunds
+- Deposit refunds and partial refunds
 - Currency conversion
 
 ## Architecture / ERD State
@@ -412,7 +412,7 @@ Order. Customer owners and Transport Specialists can read the checklist; any
 Transport Specialist can set the Order-level document deadline once. Checklist
 generation joins the BE-05 approval transaction, and generation/deadline do not
 create artificial status audits. Upload, document versions/review, deadline
-enforcement, refund, and deadline notification remain outside BE-06.
+enforcement and deadline cancellation notification remain outside BE-06.
 
 LM Order Inbox is available at `GET /api/v1/orders/inbox?status=SUBMITTED`, and
 LM can read Order detail through the existing detail endpoint. Customer list
@@ -507,7 +507,7 @@ cannot start in the current environment. Contract evidence is in
 - Transport Specialist Document Inbox support
 - BE-08 Transport Specialist document review lifecycle, merged through PR #57
 - BE-09 Transactional Audit hardening, merged through PR #58
-- BE-10 Logistics Manager Order Staff Assignment, BE-11 assigned TS Final Confirm, BE-12 document deadline evaluation, and BE-13 Deposit refunds/notifications, merged through PR #89
+- BE-10 Logistics Manager Order Staff Assignment, BE-11 assigned TS Final Confirm, and BE-12 document deadline evaluation, merged through PR #89. The former BE-13 Deposit-refund runtime flow is superseded by the confirmed non-refundable Deposit rule; its legacy schema remains for separate cleanup.
 - BE-14 Remaining Balance payment, merged through PR #93
 - BE-15 assigned FRC planning queue, merged through PR #98
 - BE-16 Route Plan and leg lifecycle, merged through PR #103

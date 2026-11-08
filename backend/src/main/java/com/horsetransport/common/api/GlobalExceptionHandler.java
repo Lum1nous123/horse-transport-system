@@ -14,6 +14,8 @@ import com.horsetransport.document.DocumentVersionNotFoundException;
 import com.horsetransport.document.HorseDocumentNotFoundException;
 import com.horsetransport.delivery.ProofOfDeliveryNotFoundException;
 import com.horsetransport.horse.DuplicateMicrochipException;
+import com.horsetransport.horse.HorseInUseException;
+import com.horsetransport.horse.HorseNotFoundException;
 import com.horsetransport.order.InvalidOrderHorsesException;
 import com.horsetransport.order.InvalidOrderStaffAssignmentException;
 import com.horsetransport.order.InvalidOrderTransitionException;
@@ -215,6 +217,16 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(DuplicateMicrochipException.class)
 	public ResponseEntity<ApiError> handleDuplicateMicrochip(DuplicateMicrochipException exception) {
 		return error(HttpStatus.CONFLICT, "DUPLICATE_MICROCHIP", exception.getMessage());
+	}
+
+	@ExceptionHandler(HorseNotFoundException.class)
+	public ResponseEntity<ApiError> handleHorseNotFound(HorseNotFoundException exception) {
+		return error(HttpStatus.NOT_FOUND, "HORSE_NOT_FOUND", exception.getMessage());
+	}
+
+	@ExceptionHandler(HorseInUseException.class)
+	public ResponseEntity<ApiError> handleHorseInUse(HorseInUseException exception) {
+		return error(HttpStatus.CONFLICT, "HORSE_IN_USE", exception.getMessage());
 	}
 
 	@ExceptionHandler(DuplicateEmailException.class)

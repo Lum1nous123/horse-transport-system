@@ -3,6 +3,7 @@ package com.horsetransport.security;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
@@ -75,6 +76,26 @@ class HorseAuthorizationTest {
 		mockMvc.perform(get("/api/v1/horses")
 				.header(HttpHeaders.AUTHORIZATION, "Bearer invalid-token"))
 				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void allowsCustomerToDeleteOwnHorse() throws Exception {
+		UserAccount customer = user(UserRole.CUSTOMER);
+		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(customer));
+
+		mockMvc.perform(delete("/api/v1/horses/{horseId}", UUID.randomUUID())
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + jwtService.createToken(customer)))
+				.andExpect(status().isNoContent());
+	}
+
+	@Test
+	void rejectsNonCustomerFromDeletingHorses() throws Exception {
+		UserAccount logisticsManager = user(UserRole.LOGISTICS_MANAGER);
+		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(logisticsManager));
+
+		mockMvc.perform(delete("/api/v1/horses/{horseId}", UUID.randomUUID())
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + jwtService.createToken(logisticsManager)))
+				.andExpect(status().isForbidden());
 	}
 
 	private UserAccount user(UserRole role) {

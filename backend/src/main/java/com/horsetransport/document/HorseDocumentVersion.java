@@ -75,6 +75,11 @@ public class HorseDocumentVersion {
 
 	HorseDocumentVersion(HorseDocument document, int versionNo, String fileUrl, LocalDate expiryDate,
 			UUID uploadedBy) {
+		this(document, versionNo, fileUrl, expiryDate, uploadedBy, LocalDateTime.now());
+	}
+
+	HorseDocumentVersion(HorseDocument document, int versionNo, String fileUrl, LocalDate expiryDate,
+			UUID uploadedBy, LocalDateTime uploadedAt) {
 		this.id = UUID.randomUUID();
 		this.horseDocument = document;
 		this.versionNo = versionNo;
@@ -83,7 +88,7 @@ public class HorseDocumentVersion {
 		this.status = DocumentVersionStatus.DRAFT;
 		this.current = true;
 		this.uploadedBy = uploadedBy;
-		this.uploadedAt = LocalDateTime.now();
+		this.uploadedAt = uploadedAt;
 		this.createdAt = this.uploadedAt;
 	}
 
@@ -101,11 +106,16 @@ public class HorseDocumentVersion {
 	}
 
 	void replaceDraft(String replacementUrl, LocalDate replacementExpiryDate, UUID actorUserId) {
+		replaceDraft(replacementUrl, replacementExpiryDate, actorUserId, LocalDateTime.now());
+	}
+
+	void replaceDraft(String replacementUrl, LocalDate replacementExpiryDate, UUID actorUserId,
+			LocalDateTime replacementUploadedAt) {
 		requireCurrentDraft("replaced");
 		fileUrl = replacementUrl;
 		expiryDate = replacementExpiryDate;
 		uploadedBy = actorUserId;
-		uploadedAt = LocalDateTime.now();
+		uploadedAt = replacementUploadedAt;
 	}
 
 	void restoreAfterReplaceFailure(String previousUrl, LocalDate previousExpiryDate,
@@ -117,28 +127,47 @@ public class HorseDocumentVersion {
 	}
 
 	void submit() {
+		submit(LocalDateTime.now());
+	}
+
+	void submit(LocalDateTime submittedAt) {
 		requireCurrentDraft("submitted");
 		status = DocumentVersionStatus.PENDING_REVIEW;
-		submittedAt = LocalDateTime.now();
+		this.submittedAt = submittedAt;
 	}
 
 	void approve(UUID actorUserId) {
+		approve(actorUserId, LocalDateTime.now());
+	}
+
+	void approve(UUID actorUserId, LocalDateTime approvedAt) {
 		requireCurrentPendingReview();
 		status = DocumentVersionStatus.APPROVED;
 		reviewedBy = actorUserId;
-		reviewedAt = LocalDateTime.now();
+		reviewedAt = approvedAt;
 		rejectionReason = null;
 	}
 
 	void reject(UUID actorUserId, String reason) {
+		reject(actorUserId, reason, LocalDateTime.now());
+	}
+
+	void reject(UUID actorUserId, String reason, LocalDateTime rejectedAt) {
 		requireCurrentPendingReview();
 		if (reason == null || reason.isBlank()) {
 			throw new DocumentReviewValidationException("Rejection reason must not be blank");
 		}
+		if (rejectedAt == null) {
+			throw new DocumentReviewValidationException("Rejection timestamp is required");
+		}
 		status = DocumentVersionStatus.REJECTED;
 		reviewedBy = actorUserId;
-		reviewedAt = LocalDateTime.now();
+		reviewedAt = rejectedAt;
 		rejectionReason = reason.trim();
+	}
+
+	void requireReviewable() {
+		requireCurrentPendingReview();
 	}
 
 	void makeHistorical() {
@@ -192,4 +221,5 @@ public class HorseDocumentVersion {
 	public UUID getReviewedBy() { return reviewedBy; }
 	public LocalDateTime getReviewedAt() { return reviewedAt; }
 	public String getRejectionReason() { return rejectionReason; }
+	public LocalDateTime getCorrectionDeadlineAt() { return horseDocument.getCorrectionDeadlineAt(); }
 }

@@ -1,7 +1,9 @@
 package com.horsetransport.horse;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -84,6 +86,24 @@ class HorseControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].id").value(horseId.toString()))
 				.andExpect(jsonPath("$[0].microchipId").value("985141000123456"));
+	}
+
+	@Test
+	void deletesOwnedHorse() throws Exception {
+		UUID horseId = UUID.fromString("22222222-2222-2222-2222-222222222222");
+
+		mockMvc.perform(delete("/api/v1/horses/{horseId}", horseId))
+				.andExpect(status().isNoContent());
+	}
+
+	@Test
+	void returnsConflictWhenHorseIsUsedByAnOrder() throws Exception {
+		UUID horseId = UUID.fromString("22222222-2222-2222-2222-222222222222");
+		doThrow(new HorseInUseException()).when(horseService).delete(horseId);
+
+		mockMvc.perform(delete("/api/v1/horses/{horseId}", horseId))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("HORSE_IN_USE"));
 	}
 
 	private String validRequest() {

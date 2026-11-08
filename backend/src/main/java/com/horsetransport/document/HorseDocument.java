@@ -39,6 +39,9 @@ public class HorseDocument {
 	@Column(name = "updated_at")
 	private LocalDateTime updatedAt;
 
+	@Column(name = "correction_deadline_at")
+	private LocalDateTime correctionDeadlineAt;
+
 	protected HorseDocument() {
 	}
 
@@ -60,8 +63,20 @@ public class HorseDocument {
 		updatedAt = LocalDateTime.now();
 	}
 
+	void openCorrectionWindow(LocalDateTime deadline) {
+		if (deadline == null) {
+			throw new DocumentReviewValidationException("Correction deadline is required");
+		}
+		correctionDeadlineAt = deadline;
+	}
+
+	void restoreCorrectionDeadline(LocalDateTime previousDeadline) {
+		correctionDeadlineAt = previousDeadline;
+	}
+
 	public UUID getId() { return id; }
 	public UUID getTransportOrderHorseId() { return transportOrderHorse.getId(); }
 	public TransportOrderHorse getTransportOrderHorse() { return transportOrderHorse; }
 	public DocumentType getDocumentType() { return documentType; }
+	public LocalDateTime getCorrectionDeadlineAt() { return correctionDeadlineAt; }
 }

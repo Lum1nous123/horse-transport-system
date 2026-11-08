@@ -38,13 +38,4 @@ class DocumentDeadlineServiceTest {
 		verify(orderProcessor).cancelForIncompleteDeadline(ORDER_ID, NOW);
 	}
 
-	@Test
-	void lateRejectionUsesSameInjectedClock() {
-		Clock clock = Clock.fixed(Instant.parse("2026-10-04T12:00:00Z"), ZoneOffset.UTC);
-		DocumentDeadlineService service = new DocumentDeadlineService(orderRepository, orderProcessor, clock);
-		when(orderProcessor.cancelForPostDeadlineRejection(ORDER_ID, NOW)).thenReturn(true);
-
-		assertThat(service.handlePostDeadlineRejection(ORDER_ID)).isTrue();
-		verify(orderProcessor).cancelForPostDeadlineRejection(ORDER_ID, NOW);
-	}
 }

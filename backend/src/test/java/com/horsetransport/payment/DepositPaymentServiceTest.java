@@ -2,6 +2,7 @@ package com.horsetransport.payment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
@@ -71,5 +72,18 @@ class DepositPaymentServiceTest {
 		assertThat(response.processed()).isTrue();
 		assertThat(response.orderApproved()).isFalse();
 		verify(remainingBalanceTransactionService).processWebhook(event);
+	}
+
+	@Test
+	void legacyRefundWebhookIsIgnoredBecauseDepositIsNonRefundable() {
+		StripeWebhookEvent event = new StripeWebhookEvent("evt_refund", "refund.updated",
+				StripeEventKind.REFUND_SUCCESS, null, "pi_1", 25000L, "usd", Map.of());
+		when(stripeGateway.verifyAndParseWebhook("payload", "signature")).thenReturn(event);
+
+		StripeWebhookResponse response = service.handleWebhook("payload", "signature");
+
+		assertThat(response.processed()).isFalse();
+		verify(transactionService, never()).processWebhook(event);
+		verify(remainingBalanceTransactionService, never()).processWebhook(event);
 	}
 }

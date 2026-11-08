@@ -79,6 +79,6 @@ class DocumentVersionControllerTest {
 	private DocumentVersionResponse response() {
 		return new DocumentVersionResponse(VERSION_ID, DOCUMENT_ID, 1, DocumentVersionStatus.DRAFT, true,
 				"https://res.cloudinary.com/test/document.pdf", "horse-passport.pdf", LocalDate.of(2027, 1, 1),
-				LocalDateTime.of(2026, 9, 29, 12, 0), null, null, null);
+				LocalDateTime.of(2026, 9, 29, 12, 0), null, null, null, null);
 	}
 }

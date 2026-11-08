@@ -16,8 +16,7 @@ import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderHorse;
 import com.horsetransport.order.TransportOrderRepository;
-import com.horsetransport.payment.DepositRefund;
-import com.horsetransport.payment.DepositRefundRepository;
+import com.horsetransport.notification.NotificationService;
 import com.horsetransport.payment.Payment;
 import com.horsetransport.payment.PaymentRepository;
 import com.horsetransport.payment.PaymentStatus;
@@ -29,25 +28,25 @@ import org.springframework.transaction.annotation.Transactional;
 public class DocumentDeadlineOrderProcessor {
 
 	private static final Set<DocumentType> MANDATORY_TYPES = EnumSet.allOf(DocumentType.class);
-	private static final String REFUND_IDEMPOTENCY_PREFIX = "document-deadline-refund-";
+	private enum DeadlineFailure { NONE, ORIGINAL_DEADLINE, CORRECTION_DEADLINE }
 
 	private final TransportOrderRepository orderRepository;
 	private final HorseDocumentRepository documentRepository;
 	private final HorseDocumentVersionRepository versionRepository;
 	private final PaymentRepository paymentRepository;
-	private final DepositRefundRepository refundRepository;
 	private final StatusAuditLogRepository auditRepository;
+	private final NotificationService notificationService;
 
 	public DocumentDeadlineOrderProcessor(TransportOrderRepository orderRepository,
 			HorseDocumentRepository documentRepository, HorseDocumentVersionRepository versionRepository,
-			PaymentRepository paymentRepository, DepositRefundRepository refundRepository,
-			StatusAuditLogRepository auditRepository) {
+			PaymentRepository paymentRepository, StatusAuditLogRepository auditRepository,
+			NotificationService notificationService) {
 		this.orderRepository = orderRepository;
 		this.documentRepository = documentRepository;
 		this.versionRepository = versionRepository;
 		this.paymentRepository = paymentRepository;
-		this.refundRepository = refundRepository;
 		this.auditRepository = auditRepository;
+		this.notificationService = notificationService;
 	}
 
 	@Transactional
@@ -58,23 +57,10 @@ public class DocumentDeadlineOrderProcessor {
 		List<TransportOrderHorse> horses = order.getHorses();
 		List<HorseDocument> documents = horses.isEmpty() ? List.of()
 				: documentRepository.findAllByOrderHorseIds(horses.stream().map(TransportOrderHorse::getId).toList());
-		if (!hasDeadlineFailure(horses, documents)) return false;
+		DeadlineFailure failure = deadlineFailure(horses, documents, evaluatedAt);
+		if (failure == DeadlineFailure.NONE) return false;
 
-		cancelAndRequestRefund(order, evaluatedAt);
-		return true;
-	}
-
-	@Transactional
-	public boolean cancelForPostDeadlineRejection(UUID orderId, LocalDateTime rejectedAt) {
-		TransportOrder order = orderRepository.findByIdForUpdate(orderId).orElse(null);
-		if (order == null || order.getStatus() != OrderStatus.APPROVED
-				|| order.getDocumentCompletionDeadlineAt() == null
-				|| !rejectedAt.isAfter(order.getDocumentCompletionDeadlineAt())
-				|| order.getDocumentsLockedAt() != null || order.getDocumentsFinalConfirmedAt() != null) {
-			return false;
-		}
-
-		cancelAndRequestRefund(order, rejectedAt);
+		cancelWithoutRefund(order, evaluatedAt, failure);
 		return true;
 	}
 
@@ -85,16 +71,18 @@ public class DocumentDeadlineOrderProcessor {
 				&& order.getDocumentsLockedAt() == null && order.getDocumentsFinalConfirmedAt() == null;
 	}
 
-	private boolean hasDeadlineFailure(List<TransportOrderHorse> horses,
-			List<HorseDocument> documents) {
-		if (horses.isEmpty()) return true;
+	private DeadlineFailure deadlineFailure(List<TransportOrderHorse> horses,
+			List<HorseDocument> documents, LocalDateTime evaluatedAt) {
+		if (horses.isEmpty()) return DeadlineFailure.ORIGINAL_DEADLINE;
 		Map<UUID, Set<DocumentType>> typesByHorse = new HashMap<>();
 		for (HorseDocument document : documents) {
 			typesByHorse.computeIfAbsent(document.getTransportOrderHorseId(), ignored -> new HashSet<>())
 					.add(document.getDocumentType());
 		}
 		for (TransportOrderHorse horse : horses) {
-			if (!typesByHorse.getOrDefault(horse.getId(), Set.of()).containsAll(MANDATORY_TYPES)) return true;
+			if (!typesByHorse.getOrDefault(horse.getId(), Set.of()).containsAll(MANDATORY_TYPES)) {
+				return DeadlineFailure.ORIGINAL_DEADLINE;
+			}
 		}
 
 		List<UUID> documentIds = documents.stream().map(HorseDocument::getId).toList();
@@ -103,15 +91,21 @@ public class DocumentDeadlineOrderProcessor {
 			versionRepository.findCurrentByHorseDocumentIds(documentIds)
 					.forEach(version -> currentByDocument.put(version.getHorseDocumentId(), version));
 		}
+		DeadlineFailure result = DeadlineFailure.NONE;
 		for (HorseDocument document : documents) {
 			HorseDocumentVersion current = currentByDocument.get(document.getId());
 			if (current == null || current.getStatus() == DocumentVersionStatus.DRAFT
-					|| current.getStatus() == DocumentVersionStatus.REJECTED) return true;
+					|| current.getStatus() == DocumentVersionStatus.REJECTED) {
+				LocalDateTime correctionDeadline = document.getCorrectionDeadlineAt();
+				if (correctionDeadline == null) return DeadlineFailure.ORIGINAL_DEADLINE;
+				if (!evaluatedAt.isBefore(correctionDeadline)) result = DeadlineFailure.CORRECTION_DEADLINE;
+			}
 		}
-		return false;
+		return result;
 	}
 
-	private void cancelAndRequestRefund(TransportOrder order, LocalDateTime cancelledAt) {
+	private void cancelWithoutRefund(TransportOrder order, LocalDateTime cancelledAt,
+			DeadlineFailure failure) {
 		Payment payment = paymentRepository.findByTransportOrderIdAndPaymentType(
 				order.getId(), PaymentType.DEPOSIT)
 			.orElseThrow(() -> new IllegalStateException("Approved Order has no Deposit payment"));
@@ -124,7 +118,11 @@ public class DocumentDeadlineOrderProcessor {
 		orderRepository.saveAndFlush(order);
 		auditRepository.saveAndFlush(StatusAuditLog.systemTransition(AuditEntityType.TRANSPORT_ORDER,
 				order.getId(), previousStatus.name(), OrderStatus.CANCELLED.name(), cancelledAt));
-		refundRepository.findByPaymentId(payment.getId()).orElseGet(() -> refundRepository.saveAndFlush(
-				new DepositRefund(payment.getId(), REFUND_IDEMPOTENCY_PREFIX + payment.getId(), cancelledAt)));
+		if (failure == DeadlineFailure.CORRECTION_DEADLINE) {
+			notificationService.createOrderCancelledForCorrectionDeadline(order.getCustomerId(), order.getId());
+		}
+		else {
+			notificationService.createOrderCancelledForDocumentDeadline(order.getCustomerId(), order.getId());
+		}
 	}
 }

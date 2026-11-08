@@ -2,36 +2,43 @@
 
 ## Mục đích
 
-Tài liệu này định nghĩa state transition chính thức của Transport Order trong phạm vi MVP của Horse Transport System.
-
-Tài liệu này là nguồn tham chiếu nghiệp vụ cho Senior BA, Scrum Master, Solution Architect, Developer và QA.
-
-## Phạm vi
-
-- Áp dụng cho Transport Order trong MVP.
-- Customer được phép chỉnh sửa Order khi Order ở trạng thái `DRAFT`.
-- Từ trạng thái `SUBMITTED`, Customer không được chỉnh sửa trực tiếp Order.
-- Nếu cần thay đổi sau khi đã `SUBMITTED`, việc xử lý phải tuân theo workflow được định nghĩa trong tài liệu này.
-- Incident Management không thuộc phạm vi MVP hiện tại.
+Tài liệu này tóm tắt state transition chính thức của Transport Order trong phạm vi MVP.
 
 ## State Transition
 
-| From | Action / Event | To  | Actor | Preconditions | Transition Type |
-| ---- | -------------- | --- | ----- | ------------- | --------------- |
-|      |                |     |       |               |                 |
+| From | Action / Event | To | Actor |
+| --- | --- | --- | --- |
+| DRAFT | Customer submits Order | SUBMITTED | Customer |
+| SUBMITTED | LM sends locked quotation | QUOTATION_SENT | Logistics Manager |
+| QUOTATION_SENT | Signed Stripe webhook confirms Deposit PAID | APPROVED | System |
+| APPROVED | Mandatory document is missing, DRAFT, or unsubmitted at Document Completion Deadline | CANCELLED | System |
+| APPROVED | Assigned TS rejects a submitted document after the deadline | CANCELLED | System |
+| APPROVED | Assigned TS Final Confirms all mandatory documents | APPROVED with Document Phase locked | Transport Specialist |
+| READY_TO_SHIP | First RouteLeg starts | IN_PROGRESS | System |
+| IN_PROGRESS | All RouteLegs and final handover complete | DELIVERED | System |
 
-## Cancellation Rules
+## Deposit Rule
 
-TBD
+- Successful Deposit payment changes Payment to `PAID` and Order to `APPROVED`.
+- A paid Deposit is `NON-REFUNDABLE` in every case.
+- Cancellation after Deposit does not change Payment from `PAID` and does not create a Stripe refund.
 
-## Rejection Rules
+## Document Deadline Rule
 
-TBD
+- One Document Completion Deadline applies to the whole Order.
+- Missing, not uploaded, `DRAFT`, or unsubmitted mandatory documents at the deadline cancel the Order.
+- If every mandatory document was submitted and is only `PENDING_REVIEW`, the Order is not cancelled.
+- A rejection before the deadline allows the Customer to create and submit a new version before the same deadline. No supplemental deadline is created.
+- A rejection after the deadline cancels the Order immediately.
+- In every cancellation case above, Deposit remains `PAID` and non-refundable.
 
-## Revision Rules
+## Customer Cancellation Rule
 
-TBD
+- Customer may manually cancel only in `DRAFT`, `SUBMITTED`, and `QUOTATION_SENT`.
+- This rule does not add a manual Customer cancellation action after Deposit.
 
-## Open Questions
+## Final Confirmation
 
-TBD
+- Assigned TS may Final Confirm only when every mandatory document for every Horse is `APPROVED`.
+- Final Confirm permanently locks the Document Phase.
+- Customer then continues to the existing Remaining Balance payment flow.

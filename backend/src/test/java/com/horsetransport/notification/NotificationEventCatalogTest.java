@@ -21,6 +21,10 @@ class NotificationEventCatalogTest {
 		assertThat(NotificationEventCatalog.airFinalDestinationReached(id))
 				.isEqualTo("final-destination:air-execution:" + id);
 		assertThat(NotificationEventCatalog.orderDelivered(id)).isEqualTo("order-delivered:order:" + id);
+		assertThat(NotificationEventCatalog.orderCancelledForDocumentDeadline(id))
+				.isEqualTo("order-cancelled:document-deadline:order:" + id);
+		assertThat(NotificationEventCatalog.orderCancelledForCorrectionDeadline(id))
+				.isEqualTo("order-cancelled:correction-deadline:order:" + id);
 		assertThat(NotificationEventCatalog.paymentPaid(id)).isEqualTo("payment-result:payment:" + id + ":paid");
 		assertThat(NotificationEventCatalog.refundSucceeded(id)).isEqualTo("refund-" + id + "-success");
 		assertThat(NotificationEventCatalog.refundFailed(id, 3)).isEqualTo("refund-" + id + "-failure-3");
