@@ -72,7 +72,7 @@ describe("production Driver execution service", () => {
       .mockResolvedValueOnce(response(detail()));
     const service = createProductionDriverExecutionService(driverId);
     await expect(service.listAssignedWork()).resolves.toEqual([
-      expect.objectContaining({ id: executionId, driverId, permissions: { canStart: false, nextCheckpointId: null, canArriveAtDestination: false, blockedReason: null } }),
+      expect.objectContaining({ id: executionId, driverId, plannedDepartureAt: summary().plannedDepartureAt, permissions: { canStart: false, nextCheckpointId: null, canArriveAtDestination: false, blockedReason: null } }),
     ]);
     await expect(service.getExecution(executionId)).resolves.toMatchObject({
       permissions: { canStart: true },

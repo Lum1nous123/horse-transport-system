@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AssignmentWorkspaceFrame from "@/components/AssignmentWorkspaceFrame";
 import {
-  AssignmentServiceError,
   getStaffAssignmentService,
   type AssignmentCandidate,
   type AssignmentOrderDetail,
@@ -21,6 +20,11 @@ function formatDate(value: string) {
 }
 
 export default function StaffAssignmentDetailPage() {
+  const { orderId } = useParams<{ orderId: string }>();
+  return <AssignmentDetail key={orderId} />;
+}
+
+function AssignmentDetail() {
   const params = useParams<{ orderId: string }>();
   const { state: accessState, preview, message: accessMessage } = useLogisticsAccess();
   const staffAssignmentService = useMemo(() => getStaffAssignmentService(preview), [preview]);
@@ -31,21 +35,30 @@ export default function StaffAssignmentDetailPage() {
   const [assigning, setAssigning] = useState(false);
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
+  const [recoveryRequired, setRecoveryRequired] = useState(false);
+  const inFlight = useRef(false);
+  const unreconciled = useRef(false);
 
   const loadOrder = useCallback(async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setLoading(true);
     setError("");
     try {
       const detail = await staffAssignmentService.getOrder(params.orderId);
       setOrder(detail);
+      unreconciled.current = false;
+      setRecoveryRequired(false);
       if (detail.assignedPair) {
         setTransportSpecialistId(detail.assignedPair.transportSpecialist.id);
         setFleetRouteCoordinatorId(detail.assignedPair.fleetRouteCoordinator.id);
       }
     } catch (loadError) {
-      setOrder(null);
+      unreconciled.current = true;
+      setRecoveryRequired(true);
       setError(loadError instanceof Error ? loadError.message : "We couldn't load this assignment.");
     } finally {
+      inFlight.current = false;
       setLoading(false);
     }
   }, [params.orderId, staffAssignmentService]);
@@ -57,7 +70,7 @@ export default function StaffAssignmentDetailPage() {
   }, [accessState, loadOrder]);
 
   async function assignStaff() {
-    if (!order || assigning || order.assignedPair) return;
+    if (!order || inFlight.current || unreconciled.current || order.assignedPair) return;
     setError("");
     setFeedback("");
     if (!transportSpecialistId || !fleetRouteCoordinatorId) {
@@ -65,6 +78,9 @@ export default function StaffAssignmentDetailPage() {
       return;
     }
 
+    inFlight.current = true;
+    unreconciled.current = true;
+    setRecoveryRequired(true);
     setAssigning(true);
     try {
       await staffAssignmentService.assignStaff(order.id, {
@@ -72,21 +88,16 @@ export default function StaffAssignmentDetailPage() {
         fleetRouteCoordinatorId,
       });
       const saved = await staffAssignmentService.getOrder(order.id);
+      if (!saved.assignedPair) throw new Error("The saved staff pair has not been confirmed. Retry the read.");
       setOrder(saved);
+      unreconciled.current = false;
+      setRecoveryRequired(false);
       setFeedback("Staff assigned. The saved pair is now read-only.");
     } catch (assignError) {
-      if (assignError instanceof AssignmentServiceError && assignError.code === "STALE_STATE") {
-        try {
-          const saved = await staffAssignmentService.getOrder(order.id);
-          setOrder(saved);
-          setFeedback(assignError.message);
-        } catch (refreshError) {
-          setError(refreshError instanceof Error ? refreshError.message : "We couldn't refresh the saved assignment.");
-        }
-      } else {
-        setError(assignError instanceof Error ? assignError.message : "We couldn't assign staff. Try again.");
-      }
+      setError(assignError instanceof Error ? assignError.message : "The assignment outcome could not be verified.");
+      // The POST may have persisted. Recovery is a separate GET, never a replay.
     } finally {
+      inFlight.current = false;
       setAssigning(false);
     }
   }
@@ -121,10 +132,11 @@ export default function StaffAssignmentDetailPage() {
       {error && (
         <div className="customer-alert" role="alert">
           <span>{error}</span>
-          {!order && <button type="button" onClick={() => void loadOrder()}>Try again</button>}
+          <button type="button" disabled={loading || assigning} onClick={() => void loadOrder()}>Retry read</button>
         </div>
       )}
 
+      {recoveryRequired && <p role="status">Assignment outcome is unconfirmed. Editing stays locked until a successful read. Retry reads the saved assignment without submitting it again.</p>}
       {loading ? (
         <div className="assignment-detail-loading" role="status">
           <span /><span /><span />
@@ -145,7 +157,7 @@ export default function StaffAssignmentDetailPage() {
                 {order.assignedPair ? "Assigned" : "Needs assignment"}
               </span>
               <h1>Staff Assignment</h1>
-              <p>Choose one specialist for each role.</p>
+              <p>{order.assignedPair ? "The saved staff pair is read-only." : "Choose one specialist for each role."}</p>
             </div>
             <Link className="assignment-back-link" href={`/logistics/assignments${previewSuffix}`}>← Back to assignment queue</Link>
           </div>
@@ -169,7 +181,7 @@ export default function StaffAssignmentDetailPage() {
                   role="TRANSPORT_SPECIALIST"
                   candidates={order.candidates.transportSpecialists}
                   selectedId={transportSpecialistId}
-                  disabled={assigning}
+                  disabled={assigning || recoveryRequired}
                   onSelect={setTransportSpecialistId}
                 />
                 <CandidateGroup
@@ -178,7 +190,7 @@ export default function StaffAssignmentDetailPage() {
                   role="FLEET_ROUTE_COORDINATOR"
                   candidates={order.candidates.fleetRouteCoordinators}
                   selectedId={fleetRouteCoordinatorId}
-                  disabled={assigning}
+                  disabled={assigning || recoveryRequired}
                   onSelect={setFleetRouteCoordinatorId}
                 />
               </div>
@@ -195,7 +207,7 @@ export default function StaffAssignmentDetailPage() {
                 <button
                   className="customer-primary-button"
                   type="button"
-                  disabled={assigning || !transportSpecialistId || !fleetRouteCoordinatorId}
+                  disabled={assigning || recoveryRequired || !transportSpecialistId || !fleetRouteCoordinatorId}
                   onClick={() => void assignStaff()}
                 >
                   {assigning ? "Assigning staff…" : "Assign staff"}

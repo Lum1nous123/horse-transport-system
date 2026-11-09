@@ -1,9 +1,16 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function openMobileAssignment(page: Page) {
+  if ((page.viewportSize()?.width ?? 1440) <= 980) {
+    await page.getByRole("complementary", { name: "Assigned ROAD executions" }).getByRole("button").first().click();
+  }
+}
 
 test("before Start has no timeline; confirmed Start opens the first checkpoint", async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/driver?preview=1");
+  await openMobileAssignment(page);
   await expect(page.getByRole("heading", { name: "My ROAD work" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Start my vehicle" })).toBeVisible();
   await expect(page.getByRole("region", { name: "ROAD route timeline" })).toHaveCount(0);
@@ -41,18 +48,21 @@ test("a foreign direct assignment is denied", async ({ page }) => {
 
 test("a later leg cannot Start", async ({ page }) => {
   await page.goto("/driver?preview=1&scenario=locked");
+  await openMobileAssignment(page);
   await expect(page.getByText("This leg is not current.", { exact: false })).toBeVisible();
   await expect(page.getByRole("button", { name: "Start my vehicle" })).toHaveCount(0);
 });
 
 test("an additional Driver can Start their own vehicle", async ({ page }) => {
   await page.goto("/driver?preview=1&scenario=additional-driver");
+  await openMobileAssignment(page);
   await page.getByRole("button", { name: "Start my vehicle" }).click();
   await expect(page.getByRole("button", { name: "Confirm checkpoint arrival" })).toBeVisible();
 });
 
 test("a route with no checkpoints proceeds to destination arrival", async ({ page }) => {
   await page.goto("/driver?preview=1&scenario=no-checkpoints");
+  await openMobileAssignment(page);
   await page.getByRole("button", { name: "Start my vehicle" }).click();
   await expect(page.getByRole("button", { name: "Confirm destination arrival" })).toBeVisible();
 });

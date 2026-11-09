@@ -1,0 +1,31 @@
+import { expect, test } from "@playwright/test";
+
+test("customer groups and secondary actions remain usable on desktop and mobile", async ({ page }, testInfo) => {
+  await page.goto("/customer?preview=1");
+  await expect(page.getByRole("button", { name: "Active 5", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".customer-order-row")).toHaveCount(5);
+  await expect(page.getByText("ORD-DEMO-1042", { exact: true })).toHaveCount(0);
+  const journey = page.locator(".customer-order-row").filter({ has: page.getByText("ORD-2068", { exact: true }) });
+  await expect(journey.getByRole("link", { name: "Track journey" })).toBeVisible();
+  await expect(journey.getByRole("button", { name: "Manage documents" })).toBeHidden();
+  await journey.locator("summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(journey.getByRole("button", { name: "Manage documents" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(journey.getByRole("button", { name: "Manage documents" })).toBeHidden();
+  await expect(journey.locator("summary")).toBeFocused();
+  await page.getByRole("combobox", { name: "Filter transport requests by status" }).selectOption("QUOTATION_SENT");
+  await expect(page.locator(".customer-order-row")).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "View bill" })).toBeVisible();
+  await page.getByRole("button", { name: "Drafts 1", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Edit draft" })).toBeVisible();
+  await page.getByRole("button", { name: "History 1", exact: true }).click();
+  await expect(page.getByText("ORD-2058", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "All 7", exact: true }).click();
+  await expect(page.locator(".customer-order-row")).toHaveCount(7);
+  await page.getByRole("searchbox", { name: "Search transport requests" }).fill("no matching route");
+  await expect(page.getByText("No matching requests")).toBeVisible();
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("customer-groups.png"), fullPage: true });
+});

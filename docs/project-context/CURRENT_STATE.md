@@ -159,6 +159,104 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### Driver/Escort assigned-work dashboard improvements (2026-11-09)
+
+- PO visually approved the implementation and authorized commit, push and merge
+  on 2026-11-09. Work is on `feature/lm-phase1-ux-improvements` at base
+  `c6e7f76`, exclusively in the existing LM workspace.
+- Driver retains master-detail, with All assigned/Not started/In progress and
+  conditional Completed execution filters, client search and departure sort.
+  Mobile opens detail after selecting a Vehicle and preserves selection on return.
+  Queue labels describe leg readiness without granting Start permission.
+- Escort now uses one responsive ROAD/AIR table with mode/group/search/sort
+  filters. Sources load/retry independently; failed sources do not masquerade
+  as empty results or retain stale actionable rows. Older responses are ignored.
+- Queue presentation reuses the AIR action resolver; inconsistent states stay
+  discoverable in All with Check state. Completed ROAD work with a valid PoD
+  capability stays In progress. Execution completion is not Order delivery or
+  a full-history claim. Existing detail mutations, authorization and services remain.
+- Driver view models retain optional plannedDepartureAt from the existing
+  read DTO. A narrow journey-grid width fix prevents mobile horizontal overflow.
+  No Backend, API wire contract, dependency or database changes.
+- Verification: 327/327 frontend tests, ESLint without warnings, TypeScript,
+  production build, diff checks and 50/50 Chromium desktop/mobile checks pass.
+  Journey preview tests explicitly open collapsed leg details before checking evidence.
+  Browser checks use intercepted APIs/development preview, including Driver
+  Start/checkpoints/destination and Escort PoD image regression; no real Backend E2E.
+- Publication is approved; the repository history and PR record the resulting
+  commit/merge status. Local UI remains available at /driver and /escort.
+
+### LM workspace integration with latest main (2026-11-09)
+
+- Work remains in `D:\project\horse-transport-system-lm-phase0` on
+  `feature/lm-phase1-ux-improvements`; no other worktree was modified.
+- Previous main integration is saved in `751eab9`; Customer request grouping
+  and quotation response safeguards are checkpointed in `0fb1a6d`.
+- Latest main `714d043` is integrated locally. The teammate's dedicated Customer
+  dashboard/requests/horses architecture, Terms/Deposit acceptance and document
+  workflow changes are retained. Active/Drafts/History/All and compact actions
+  are preserved on the shared Customer workspace.
+- Quotation follows the merged contract from `b837ff8`: PUT sends `totalAmount`
+  and `notes`; Deposit is computed at 10%, with remaining balance derived.
+  Cost-item/manual-deposit editing is removed; response mismatch protection,
+  explicit draft editor and GET retry behavior remain.
+- Verification: 303/303 Frontend unit tests; 19/19 Backend quotation tests;
+  24/24 browser checks across desktop/mobile; ESLint, TypeScript, production
+  build and diff checks pass. Browser APIs use intercepted fixtures/preview;
+  no real Render mutation, shared DB migration or Backend E2E was performed.
+- No push/PR. Backend and dependency files match the incoming main unchanged.
+
+### LM UX Phase 1 — local implementation (2026-11-07)
+
+- Work remains in `D:\project\horse-transport-system-lm-phase0`; branch
+  `feature/lm-phase1-ux-improvements` was created with `git switch -c` in the
+  existing worktree at `3c7bcc7`. All uncommitted Phase 0 work is preserved.
+- Assignment queue is one full-width table with Needs assignment/Assigned tabs,
+  source collection counts, client route/code search and departure sorting.
+- Orders keep master-detail; saved quotation drafts show a compact summary and
+  explicit Edit action. Preparing opens the editor; hiding retains local edits;
+  successful Save collapses back to the saved summary. Existing validators remain.
+- Route Review queue prioritizes pending plans in a compact table; preview-only
+  locked fixtures are secondary disclosure, never real history.
+- Journeys group actual API states into Active, Delivered and Other trackable;
+  search/mode/status filters operate on fetched data only. Shared LM navigation
+  has Orders & quotations, Staff assignment and Route reviews; Journeys is an
+  Orders subtab. Existing URLs and authorization are retained.
+- No Overview/charts or Phase 2 work. No Backend/dependency/schema changes.
+- Verification: 275/275 Vitest tests; lint, TypeScript and production build pass;
+  6/6 Chromium desktop/mobile checks pass with no page-level horizontal overflow.
+  Browser checks use dev previews and intercepted API fixtures, not real Backend E2E.
+- Dev server runs from this worktree at http://localhost:3000 for PO visual review.
+  The configured default Backend is localhost:8080; it was not listening during
+  verification. Real Journeys require Backend/auth; no app-level fake fallback added.
+- LM Phase 0/1 changes are committed locally as `a216dc8`. Integration with
+  `origin/main` at `1dbf079` was completed in `751eab9`; Customer/quotation edits
+  were checkpointed in `0fb1a6d`. Latest main `714d043` is integrated locally; no push.
+
+### LM UX Phase 0 — latest-main local implementation (2026-11-06)
+
+- Isolated worktree `D:\\project\\horse-transport-system-lm-phase0`, branch
+  `feature/lm-phase0-truthful-review`, base `3c7bcc74f96d84f49c2d3f45829048f4d2395457`.
+  The original `s3-clean` backup worktree and untracked audit remain intact.
+- Revalidated the LM audit against latest main. The eight newer commits affect
+  Customer/TS/Driver presentation; LM Phase 0 findings remain applicable.
+- Route Review no longer fabricates validation pass, revision, customer names,
+  staff names or horse names. Real IDs are labelled. Pending-only history and
+  server detail reads versus saved mutation responses are explicitly distinguished.
+- Removed the real review mutation cache. Confirm/Return use the Backend's
+  persisted decision response; uncertain outcomes lock actions and offer GET-only
+  recovery. Assignment uses synchronous single-flight protection and persisted
+  readback with repeatable read retry. Quotation unavailable states offer GET retry.
+- Existing pending-only review GET cannot reload a decision once the plan leaves
+  pending. If a mutation response is lost, FE stays locked and explains the limit;
+  it never automatically replays the decision.
+- Verification: 267/267 Frontend tests, ESLint and production build pass.
+  No Backend, schema, dependency or business-transition changes.
+- Overview/charts/navigation redesign are deferred to separate Phase 1 approval.
+  Pending Actions chart was removed from the plan as duplicate KPI presentation.
+  Full plan and file manifest: `docs/plans/lm-workspace-ux-audit-and-redesign.md`.
+  Phase 0 is included in local commit `a216dc8` together with Phase 1.
+
 ### Render staging backend readiness — completed (2026-11-08)
 
 - The Backend is prepared for one shared Render staging service while teammates
@@ -178,7 +276,8 @@ These follow-ups do not change approved requirements and must not be used to inf
   approval and target verification.
 - Runbook: `docs/RENDER_DEPLOYMENT.md`.
 
-### Fleet & Route Coordinator UI redesign — local implementation (2026-11-07)
+### Fleet & Route Coordinator UI redesign — merged via PR #137 (2026-11-07)
+
 
 - The owner-approved Queue and Order Detail screenshot designs are implemented
   locally with the existing Customer Workspace font, original logo, rounded
@@ -194,7 +293,7 @@ These follow-ups do not change approved requirements and must not be used to inf
   1024/768/390px layouts. Customer header styles remain unchanged after loading
   the FRC stylesheet. This UI-only task did not replay real Backend workflows.
 - Evidence and file inventory: `docs/reports/FRC_UI_REDESIGN_LOCAL_VERIFICATION.md`.
-  Work is local and uncommitted; no GitHub workflow status was changed.
+  The FRC redesign was merged into `main` via PR #137 at `1dbf079`.
 
 ### Sprint 3 final E2E and manual validation (2026-11-01)
 

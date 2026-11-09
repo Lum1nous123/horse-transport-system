@@ -1,42 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AssignmentWorkspaceFrame from "@/components/AssignmentWorkspaceFrame";
-import {
-  getStaffAssignmentService,
-  type AssignmentOrderSummary,
-} from "@/lib/staff-assignment/service";
+import { LogisticsDateTime, LogisticsStatusTabs } from "@/components/LogisticsWorkspaceUI";
+import { getStaffAssignmentService, type AssignmentOrderSummary } from "@/lib/staff-assignment/service";
 import { useLogisticsAccess } from "@/lib/staff-assignment/use-logistics-access";
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
 
 export default function StaffAssignmentQueuePage() {
   const { state: accessState, preview, message: accessMessage } = useLogisticsAccess();
-  const staffAssignmentService = useMemo(() => getStaffAssignmentService(preview), [preview]);
-  const [needsAssignment, setNeedsAssignment] = useState<AssignmentOrderSummary[]>([]);
-  const [assigned, setAssigned] = useState<AssignmentOrderSummary[]>([]);
+  const service = useMemo(() => getStaffAssignmentService(preview), [preview]);
+  const [queues, setQueues] = useState<{ needsAssignment: AssignmentOrderSummary[]; assigned: AssignmentOrderSummary[] }>({ needsAssignment: [], assigned: [] });
+  const [tab, setTab] = useState<"needsAssignment" | "assigned">("needsAssignment");
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("earliest");
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
+  const inFlight = useRef(false);
 
   const loadQueues = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const queues = await staffAssignmentService.listOrders();
-      setNeedsAssignment(queues.needsAssignment);
-      setAssigned(queues.assigned);
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "We couldn't load staff assignments.");
-    } finally {
-      setLoading(false);
-    }
-  }, [staffAssignmentService]);
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setLoading(true); setError("");
+    try { setQueues(await service.listOrders()); setLoaded(true); }
+    catch (caught) { setError(caught instanceof Error ? caught.message : "We couldn't load staff assignments."); }
+    finally { inFlight.current = false; setLoading(false); }
+  }, [service]);
 
   useEffect(() => {
     if (accessState !== "allowed") return;
@@ -44,117 +34,54 @@ export default function StaffAssignmentQueuePage() {
     return () => window.clearTimeout(timer);
   }, [accessState, loadQueues]);
 
-  if (accessState !== "allowed") {
-    const isChecking = accessState === "checking";
-    return (
-      <main className="customer-page">
-        <div className="customer-content assignment-access-state">
-          <p className="customer-loading" role={isChecking ? "status" : "alert"}>
-            {isChecking ? "Checking Logistics Manager access…" : accessMessage}
-          </p>
-          {!isChecking && <Link className="customer-secondary-button" href="/login">Return to sign in</Link>}
-        </div>
-      </main>
-    );
-  }
+  const visible = useMemo(() => {
+    const needle = query.trim().toLocaleLowerCase();
+    return queues[tab].filter((order) => !needle || [order.orderCode, order.origin, order.destination].some((value) => value.toLocaleLowerCase().includes(needle)))
+      .toSorted((a, b) => {
+        const aTime = Date.parse(a.requestedDepartureAt);
+        const bTime = Date.parse(b.requestedDepartureAt);
+        if (!Number.isFinite(aTime)) return Number.isFinite(bTime) ? 1 : a.orderCode.localeCompare(b.orderCode);
+        if (!Number.isFinite(bTime)) return -1;
+        return (sort === "earliest" ? aTime - bTime : bTime - aTime) || a.orderCode.localeCompare(b.orderCode);
+      });
+  }, [queues, query, sort, tab]);
 
-  const previewSuffix = preview ? "?preview=1" : "";
+  if (accessState !== "allowed") return <main className="customer-page"><div className="customer-content assignment-access-state">
+    <p className="customer-loading" role={accessState === "checking" ? "status" : "alert"}>{accessState === "checking" ? "Checking Logistics Manager access…" : accessMessage}</p>
+    {accessState !== "checking" && <Link className="customer-secondary-button" href="/login">Return to sign in</Link>}
+  </div></main>;
 
-  return (
-    <AssignmentWorkspaceFrame preview={preview}>
-      <nav className="assignment-breadcrumb" aria-label="Breadcrumb">
-        <Link href={`/logistics${previewSuffix}`}>Logistics</Link>
-        <span aria-hidden="true">/</span>
-        <span aria-current="page">Staff Assignment</span>
-      </nav>
-
-      <div className="assignment-page-heading">
-        <div className="assignment-title-group">
-          <span className="assignment-title-icon" aria-hidden="true">⇄</span>
-          <div>
-            <p className="customer-eyebrow">STAFFING</p>
-            <h1>Staff Assignment</h1>
-            <p className="customer-intro">Assign one Transport Specialist and one Fleet &amp; Route Coordinator to each order.</p>
-          </div>
-        </div>
-        <button className="customer-secondary-button" type="button" onClick={() => void loadQueues()} disabled={loading}>
-          {loading ? "Refreshing…" : "Refresh queue"}
-        </button>
+  const suffix = preview ? "?preview=1" : "";
+  const count = (value: number) => loading || error ? null : value;
+  return <AssignmentWorkspaceFrame preview={preview}>
+    <header className="lm-page-heading"><div><h1>Staff assignment</h1><p>Select one Transport Specialist and one Fleet &amp; Route Coordinator for each order.</p></div>
+      <button className="customer-secondary-button compact" type="button" disabled={loading} onClick={() => void loadQueues()}>{loading ? "Refreshing…" : "Refresh queue"}</button>
+    </header>
+    {error && <div className="customer-alert" role="alert"><span>{error}{loaded && " Previously loaded orders are shown below and may be outdated."}</span><button type="button" disabled={loading} onClick={() => void loadQueues()}>Try again</button></div>}
+    <section className="lm-management-panel">
+      <LogisticsStatusTabs label="Assignment queues" value={tab} onChange={setTab} panelId="assignment-orders" tabs={[
+        { value: "needsAssignment", label: "Needs assignment", count: count(queues.needsAssignment.length) },
+        { value: "assigned", label: "Assigned", count: count(queues.assigned.length) },
+      ]} />
+      <div className="lm-list-toolbar">
+        <label className="lm-search"><span className="sr-only">Search assignment orders</span><input type="search" placeholder="Search order code or route" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+        <label className="lm-filter"><span>Departure</span><select value={sort} onChange={(event) => setSort(event.target.value)}><option value="earliest">Earliest first</option><option value="latest">Latest first</option></select></label>
       </div>
-
-      {error && (
-        <div className="customer-alert" role="alert">
-          <span>{error}</span>
-          <button type="button" onClick={() => void loadQueues()}>Try again</button>
-        </div>
-      )}
-
-      <div className="assignment-queue-grid">
-      <section className="assignment-queue-section" aria-labelledby="needs-assignment-heading">
-        <div className="assignment-section-heading">
-          <div>
-            <h2 id="needs-assignment-heading">Needs assignment</h2>
-            <p>Orders waiting for both required staff roles.</p>
-          </div>
-          <span className="assignment-count">{needsAssignment.length}</span>
-        </div>
-
-        {loading ? (
-          <div className="assignment-loading-list" role="status" aria-label="Loading orders">
-            <span /><span /><span />
-          </div>
-        ) : needsAssignment.length === 0 ? (
-          <div className="assignment-empty-state">
-            <span className="assignment-empty-mark" aria-hidden="true">✓</span>
-            <div><h3>Assignment queue is clear</h3><p>New eligible orders will appear here when staffing is required.</p></div>
-          </div>
-        ) : (
-          <OrderList orders={needsAssignment} preview={preview} readOnly={false} />
-        )}
-      </section>
-
-      <section className="assignment-queue-section assigned-orders-section" aria-labelledby="assigned-orders-heading">
-        <div className="assignment-section-heading">
-          <div>
-            <h2 id="assigned-orders-heading">Assigned orders</h2>
-            <p>Open an order to review its saved TS and FRC pair.</p>
-          </div>
-          <span className="assignment-count">{assigned.length}</span>
-        </div>
-        {!loading && assigned.length === 0 ? (
-          <p className="assignment-section-empty">Completed assignments will appear here.</p>
-        ) : !loading ? (
-          <OrderList orders={assigned} preview={preview} readOnly />
-        ) : null}
-      </section>
+      <div id="assignment-orders" role="tabpanel" aria-labelledby={`assignment-orders-tab-${tab}`} tabIndex={0}>
+        {loading ? <p className="lm-list-state" role="status">Loading assignment orders…</p> : !loaded ? <p className="lm-list-state">Assignment orders are unavailable. Retry the request above.</p>
+          : visible.length === 0 ? <div className="lm-list-state"><h2>{query ? "No matching orders" : tab === "needsAssignment" ? "No orders need assignment" : "No assigned orders"}</h2><p>{query ? "Try a different order code or route." : tab === "needsAssignment" ? "Eligible orders will appear here when staff assignment is required." : "Non-terminal orders with a saved TS/FRC pair appear here."}</p>{query && <button className="customer-text-button" type="button" onClick={() => setQuery("")}>Clear search</button>}</div>
+          : <div className="lm-table-scroll"><table className="lm-management-table" aria-label={tab === "needsAssignment" ? "Orders needing staff assignment" : "Assigned orders"}>
+            <thead><tr><th scope="col">Order</th><th scope="col" className="lm-route-column">Route</th><th scope="col">Departure</th><th scope="col">Horses / Mode</th><th scope="col">Action</th></tr></thead>
+            <tbody>{visible.map((order) => <tr key={order.id}>
+              <td data-label="Order"><strong>{order.orderCode}</strong></td>
+              <td data-label="Route" className="lm-route-cell"><span>{order.origin}</span><span className="lm-destination"><b aria-hidden="true">→</b> {order.destination}</span></td>
+              <td data-label="Departure"><LogisticsDateTime value={order.requestedDepartureAt} /></td>
+              <td data-label="Horses / Mode"><span>{order.horseCount} {order.horseCount === 1 ? "horse" : "horses"}</span><small>{order.transportMode}</small></td>
+              <td data-label="Action"><Link className={tab === "needsAssignment" ? "customer-primary-button compact" : "lm-row-link"} href={`/logistics/assignments/${order.id}${suffix}`} aria-label={`${tab === "needsAssignment" ? "Assign staff" : "View assignment"} for ${order.orderCode}`}>{tab === "needsAssignment" ? "Assign staff" : "View assignment"} <span aria-hidden="true">→</span></Link></td>
+            </tr>)}</tbody>
+          </table></div>}
       </div>
-    </AssignmentWorkspaceFrame>
-  );
-}
-
-function OrderList({ orders, preview, readOnly }: { orders: AssignmentOrderSummary[]; preview: boolean; readOnly: boolean }) {
-  const previewSuffix = preview ? "?preview=1" : "";
-  return (
-    <ul className="assignment-order-list">
-      {orders.map((order) => (
-        <li key={order.id}>
-          <Link href={`/logistics/assignments/${order.id}${previewSuffix}`}>
-            <span className="assignment-order-main">
-              <strong>{order.orderCode}</strong>
-              <span>{order.origin} <b aria-hidden="true">→</b> {order.destination}</span>
-            </span>
-            <span className="assignment-order-meta">
-              <span>{order.horseCount} {order.horseCount === 1 ? "horse" : "horses"}</span>
-              <span>{order.transportMode}</span>
-              <span>{formatDate(order.requestedDepartureAt)}</span>
-            </span>
-            <span className={`assignment-status${readOnly ? " is-assigned" : ""}`}>
-              {readOnly ? "Assigned" : "Needs assignment"}
-            </span>
-            <span className="assignment-open-label">{readOnly ? "View assignment" : "Assign staff"} <b aria-hidden="true">→</b></span>
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
+      {!loading && loaded && <p className="lm-list-footer" role="status">{visible.length} of {queues[tab].length} loaded orders{error ? " · Refresh failed; results may be outdated" : ""}</p>}
+    </section>
+  </AssignmentWorkspaceFrame>;
 }

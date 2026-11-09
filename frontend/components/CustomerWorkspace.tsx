@@ -9,7 +9,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { clearAccessToken, getAccessToken, getCurrentUser } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
-import { filterCustomerOrders } from "@/lib/customer-order-filter";
+import { filterCustomerOrders, customerOrderGroups, customerOrdersInGroup, type CustomerOrderGroup } from "@/lib/customer-order-filter";
+import CustomerOrderActions, { type CustomerOrderAction } from "@/app/customer/CustomerOrderActions";
+import "@/app/customer/customer-request-list.css";
 import { hideCustomerTermsOnLogin, isCustomerTermsLoginHidden } from "@/lib/customer-terms";
 import DocumentWorkspace from "@/app/customer/DocumentWorkspace";
 import styles from "@/components/customer-workspace/customer-workspace.module.css";
@@ -259,18 +261,20 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
   const [remainingBalances, setRemainingBalances] = useState<Record<string, RemainingBalanceSummary>>({});
   const [orderQuery, setOrderQuery] = useState("");
   const [orderStatus, setOrderStatus] = useState("");
+  const [orderGroup, setOrderGroup] = useState<CustomerOrderGroup>("active");
+  const groupedOrders = useMemo(() => customerOrdersInGroup(orders, orderGroup), [orders, orderGroup]);
   const [horseQuery, setHorseQuery] = useState("");
   const [horseSex, setHorseSex] = useState("");
   const [horseSort, setHorseSort] = useState<"name-asc" | "name-desc">("name-asc");
   const loginTermsEvaluated = useRef(false);
 
   const visibleOrders = useMemo(
-    () => filterCustomerOrders(orders, orderQuery, orderStatus),
-    [orderQuery, orderStatus, orders],
+    () => filterCustomerOrders(groupedOrders, orderQuery, orderStatus),
+    [orderQuery, orderStatus, groupedOrders],
   );
   const availableStatuses = useMemo(
-    () => Array.from(new Set(orders.map((order) => order.status))),
-    [orders],
+    () => Array.from(new Set(groupedOrders.map((order) => order.status))),
+    [groupedOrders],
   );
   const availableHorseSexes = useMemo(
     () => Array.from(new Set(horses.map((horse) => horse.sex).filter((sex): sex is string => Boolean(sex))))
@@ -562,6 +566,38 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
     } finally { setCancelBusy(false); }
   }
 
+  function actionsFor(order: Order): CustomerOrderAction[] {
+    const actions: CustomerOrderAction[] = [];
+    const balance = remainingBalances[order.id];
+    const trackable = ["READY_TO_SHIP", "IN_PROGRESS", "DELIVERED"].includes(order.status);
+    if ((preview && order.id === "preview-balance-order") || (!preview && balance?.checkoutEligible)) {
+      actions.push({ label: "Pay remaining balance", href: `/customer/orders/${order.id}/remaining-balance${preview ? "?preview=1" : ""}` });
+    }
+    if (order.status === "DRAFT") actions.push({ label: "Edit draft", onClick: () => startEdit(order) });
+    if (order.status === "QUOTATION_SENT") actions.push({ label: "View bill", onClick: () => void openQuotation(order) });
+    if (trackable && (!preview || order.id === "order-2068")) {
+      actions.push({ label: "Track journey", href: `/customer/orders/${order.id}/tracking${preview ? "?preview=1" : ""}` });
+    }
+    if (["APPROVED", "READY_TO_SHIP", "IN_PROGRESS", "DELIVERED"].includes(order.status)) {
+      actions.push({ label: "Manage documents", onClick: () => setDocumentOrder(order) });
+    }
+    if (!preview && (balance?.paymentStatus === "PAID" || trackable)) {
+      actions.push({ label: "View payment", href: `/customer/orders/${order.id}/remaining-balance`, secondary: true });
+    }
+    if (preview && order.status === "CANCELLED") {
+      actions.push({ label: "View cancellation & refund", href: `/customer/orders/${order.id}?preview=1`, secondary: true });
+    }
+    if (["DRAFT", "SUBMITTED", "QUOTATION_SENT"].includes(order.status)) {
+      actions.push({ label: "Cancel order", secondary: true, onClick: () => { setCancelOrder(order); setCancelError(""); } });
+    }
+    return actions;
+  }
+
+  const requestGroupFilters = orders.length > 0 && <div className="customer-request-groups" role="group" aria-label="Request groups">
+    {customerOrderGroups.map((group) => <button key={group.id} type="button" aria-pressed={orderGroup === group.id} onClick={() => { setOrderGroup(group.id); setOrderStatus(""); }}>{group.label}<span>{customerOrdersInGroup(orders, group.id).length}</span></button>)}
+  </div>;
+  const requestCount = orders.length > 0 && <p className="customer-request-count" role="status">Showing {visibleOrders.length} of {groupedOrders.length} requests in this group · {orders.length} total loaded</p>;
+
   const horseProfileForm = <form id="customer-horse-profile-form" className={`customer-form horse-form${view === "dashboard" ? " customer-dashboard-horse-form" : ""}`} onSubmit={createHorse}>
     <div className="customer-form-title"><h3>New horse profile</h3><p>Name and microchip ID are required.</p></div>
     <div className="customer-field-grid"><Field label="Horse name" name="name" required maxLength={120} /><Field label="Microchip ID" name="microchipId" required maxLength={50} /><Field label="Passport number" name="passportNumber" maxLength={100} /><Field label="Breed" name="breed" maxLength={100} /><label className="customer-field"><span>Sex</span><select name="sex" defaultValue=""><option value="">Select if known</option><option value="MARE">Mare</option><option value="STALLION">Stallion</option><option value="GELDING">Gelding</option><option value="OTHER">Other</option></select></label><Field label="Date of birth" name="dateOfBirth" type="date" /></div>
@@ -571,7 +607,7 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
   </form>;
 
   return (
-    <main className={`customer-page ${view === "dashboard" ? "customer-dashboard-page" : styles.page}`}>
+    <main className={`customer-page customer-request-workspace ${view === "dashboard" ? "customer-dashboard-page" : styles.page}`}>
       <header className="customer-topbar">
         <Link className="customer-brand" href="/customer" aria-label="Customer home workspace">
           <BrandMark /><span>Horse Transport System</span>
@@ -607,27 +643,17 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
           <div className="customer-dashboard-grid">
           <section className="customer-section customer-dashboard-panel customer-orders-panel" id="requests" aria-labelledby="orders-heading">
             <div className="customer-section-heading customer-dashboard-panel-heading"><span className="customer-panel-icon" aria-hidden="true"><CustomerIcon name="truck" /></span><div><h2 id="orders-heading">Transport requests</h2><p>Review status and continue with the actions available for each request.</p></div><span className="customer-count">{orders.length} {orders.length === 1 ? "request" : "requests"}</span></div>
+            {requestGroupFilters}
             {orders.length > 0 && <div className="customer-order-toolbar"><label className="customer-order-search"><span className="sr-only">Search transport requests</span><CustomerIcon name="search" /><input type="search" value={orderQuery} onChange={(event) => setOrderQuery(event.target.value)} placeholder="Search order, route, or recipient" autoComplete="off" /></label><label className="customer-order-status-filter"><span className="sr-only">Filter transport requests by status</span><select value={orderStatus} onChange={(event) => setOrderStatus(event.target.value)}><option value="">All statuses</option>{availableStatuses.map((status) => <option value={status} key={status}>{status.replaceAll("_", " ")}</option>)}</select></label></div>}
-            {orders.length === 0 ? <div className="customer-empty customer-dashboard-empty"><Image className="customer-empty-art" src="/images/customer-transport-illustration.svg" width={900} height={300} alt="" unoptimized /><div><h3>Start with a transport request</h3><p>Your saved and submitted requests will appear here.</p></div><button className="customer-primary-button" type="button" onClick={startNewOrder}><CustomerIcon name="plus" />Create request</button></div> : visibleOrders.length === 0 ? <div className="customer-empty customer-filter-empty"><span className="customer-empty-icon"><CustomerIcon name="search" /></span><div><h3>No matching requests</h3><p>Try a different search term or status.</p></div><button className="customer-secondary-button compact" type="button" onClick={() => { setOrderQuery(""); setOrderStatus(""); }}>Clear filters</button></div> : <div className="customer-order-list">
+            {orders.length === 0 ? <div className="customer-empty customer-dashboard-empty"><Image className="customer-empty-art" src="/images/customer-transport-illustration.svg" width={900} height={300} alt="" unoptimized /><div><h3>Start with a transport request</h3><p>Your saved and submitted requests will appear here.</p></div><button className="customer-primary-button" type="button" onClick={startNewOrder}><CustomerIcon name="plus" />Create request</button></div> : visibleOrders.length === 0 ? <div className="customer-empty customer-filter-empty"><span className="customer-empty-icon"><CustomerIcon name="search" /></span><div><h3>No matching requests</h3><p>Try a different search term or status.</p></div><button className="customer-secondary-button compact" type="button" onClick={() => { setOrderQuery(""); setOrderStatus(""); if (!groupedOrders.length) setOrderGroup("all"); }}>Clear filters</button></div> : <div className="customer-order-list">
               {visibleOrders.map((order) => <article className={`customer-order-row customer-dashboard-order${order.status === "REJECTED" ? " customer-order-rejected" : ""}`} key={order.id}>
                 <div className="order-route-icon" aria-hidden="true"><CustomerIcon name="route" /></div>
                 <div className="customer-order-main"><div className="customer-order-title"><h3>{order.orderCode}</h3><span className={`order-status status-${order.status.toLowerCase()}`}>{order.status.replaceAll("_", " ")}</span></div><p>{[order.originAddress || order.originCountry || "Origin pending", order.destinationAddress || order.destinationCountry || "Destination pending"].join("  →  ")}</p><div className="customer-order-meta"><span>{order.horseIds.length} {order.horseIds.length === 1 ? "horse" : "horses"}</span>{order.transportMode && <span>{order.transportMode}</span>}<span><CustomerIcon name="calendar" />{order.requestedDepartureAt ? new Date(order.requestedDepartureAt).toLocaleString() : "Departure not set"}</span></div></div>
-                <div className="customer-order-actions">
-                  {preview && order.id === "preview-balance-order" && <Link className="customer-primary-button compact" href={`/customer/orders/${order.id}/remaining-balance?preview=1`}>Pay remaining balance</Link>}
-                  {!preview && remainingBalances[order.id]?.checkoutEligible && <Link className="customer-primary-button compact" href={`/customer/orders/${order.id}/remaining-balance`}>Pay remaining balance</Link>}
-                  {!preview && remainingBalances[order.id]?.paymentStatus === "PAID" && <Link className="customer-secondary-button compact" href={`/customer/orders/${order.id}/remaining-balance`}>View payment</Link>}
-                  {!preview && ["READY_TO_SHIP", "IN_PROGRESS", "DELIVERED"].includes(order.status) && <Link className="customer-secondary-button compact" href={`/customer/orders/${order.id}/remaining-balance`}>View payment</Link>}
-                  {["READY_TO_SHIP", "IN_PROGRESS", "DELIVERED"].includes(order.status) && (!preview || order.id === "order-2068") && <Link className="customer-secondary-button compact" href={`/customer/orders/${order.id}/tracking${preview ? "?preview=1" : ""}`}>Track journey</Link>}
-                  {preview && order.status === "CANCELLED" && <Link className="customer-secondary-button compact" href="/customer/document-phase-preview?scenario=missing-at-deadline">View cancellation reason</Link>}
-                  {order.status === "DRAFT" && <button className="customer-secondary-button compact" type="button" onClick={() => startEdit(order)}>Edit draft</button>}
-                  {order.status === "QUOTATION_SENT" && <button className="customer-secondary-button compact" type="button" onClick={() => void openQuotation(order)}>View bill</button>}
-                  {["APPROVED", "READY_TO_SHIP", "IN_PROGRESS", "DELIVERED"].includes(order.status) && <button className="customer-secondary-button compact" type="button" onClick={() => setDocumentOrder(order)}>Manage documents</button>}
-                  {["DRAFT", "SUBMITTED", "QUOTATION_SENT"].includes(order.status) && <button className="customer-text-button compact" type="button" onClick={() => { setCancelOrder(order); setCancelError(""); }}>Cancel order</button>}
-                  {order.status !== "DRAFT" && <span className="customer-locked-label">Editing locked</span>}
-                </div>
+                <CustomerOrderActions orderCode={order.orderCode} actions={actionsFor(order)} />
                 {order.status === "REJECTED" && <RejectedOrderNotice reason={order.rejectionReason} />}
               </article>)}
             </div>}
+            {requestCount}
           </section>
 
           <section className="customer-section horse-section customer-dashboard-panel customer-horses-panel" id="horses" aria-labelledby="horses-heading">
@@ -647,29 +673,22 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
               <div><h2 id="customer-request-list-heading">All transport requests</h2><p>Current and previous requests in one dedicated workspace.</p></div>
               <span>{visibleOrders.length} {visibleOrders.length === 1 ? "request" : "requests"}</span>
             </div>
+            {requestGroupFilters}
             {orders.length > 0 && <div className={styles.toolbar}>
               <label className={styles.search}><span className="sr-only">Search transport requests</span><CustomerIcon name="search" /><input type="search" value={orderQuery} onChange={(event) => setOrderQuery(event.target.value)} placeholder="Search order, route, or recipient" autoComplete="off" /></label>
               <label><span className="sr-only">Filter transport requests by status</span><select value={orderStatus} onChange={(event) => setOrderStatus(event.target.value)}><option value="">All statuses</option>{availableStatuses.map((status) => <option value={status} key={status}>{status.replaceAll("_", " ")}</option>)}</select></label>
             </div>}
-            {orders.length === 0 ? <div className={styles.empty}><strong>No transport requests yet</strong><p>Create a request when you are ready to plan a journey.</p><button type="button" onClick={startNewOrder}>Create request</button></div> : visibleOrders.length === 0 ? <div className={styles.empty}><strong>No matching requests</strong><p>Try another search term or clear the status filter.</p><button type="button" onClick={() => { setOrderQuery(""); setOrderStatus(""); }}>Clear filters</button></div> : <div className={styles.orderList}>{visibleOrders.map((order) => <article className={`${styles.orderRow}${order.status === "REJECTED" ? " customer-order-rejected" : ""}`} key={order.id}>
+            {orders.length === 0 ? <div className={styles.empty}><strong>No transport requests yet</strong><p>Create a request when you are ready to plan a journey.</p><button type="button" onClick={startNewOrder}>Create request</button></div> : visibleOrders.length === 0 ? <div className={styles.empty}><strong>No matching requests</strong><p>Try another search term or clear the status filter.</p><button type="button" onClick={() => { setOrderQuery(""); setOrderStatus(""); if (!groupedOrders.length) setOrderGroup("all"); }}>Clear filters</button></div> : <div className={styles.orderList}>{visibleOrders.map((order) => <article className={`customer-order-row ${styles.orderRow}${order.status === "REJECTED" ? " customer-order-rejected" : ""}`} key={order.id}>
               <span className={styles.routeIcon}><CustomerIcon name="route" /></span>
               <div className={styles.orderMain}>
                 <div className={styles.orderTitle}><h3>{order.orderCode}</h3><span className={`order-status status-${order.status.toLowerCase()}`}>{order.status.replaceAll("_", " ")}</span></div>
                 <p>{order.originAddress || order.originCountry || "Origin pending"} <b aria-hidden="true">→</b> {order.destinationAddress || order.destinationCountry || "Destination pending"}</p>
                 <div className={styles.orderMeta}><span>{order.horseIds.length} {order.horseIds.length === 1 ? "horse" : "horses"}</span>{order.transportMode && <span>{order.transportMode}</span>}<span><CustomerIcon name="calendar" />{order.requestedDepartureAt ? new Date(order.requestedDepartureAt).toLocaleString() : "Departure not set"}</span></div>
               </div>
-              <div className={styles.orderActions}>
-                {!preview && remainingBalances[order.id]?.checkoutEligible && <Link className="customer-primary-button compact" href={`/customer/orders/${order.id}/remaining-balance`}>Pay remaining balance</Link>}
-                {!preview && (remainingBalances[order.id]?.paymentStatus === "PAID" || ["READY_TO_SHIP", "IN_PROGRESS", "DELIVERED"].includes(order.status)) && <Link className="customer-secondary-button compact" href={`/customer/orders/${order.id}/remaining-balance`}>View payment</Link>}
-                {["READY_TO_SHIP", "IN_PROGRESS", "DELIVERED"].includes(order.status) && <Link className="customer-secondary-button compact" href={`/customer/orders/${order.id}/tracking`}>Track journey</Link>}
-                {order.status === "DRAFT" && <button className="customer-secondary-button compact" type="button" onClick={() => startEdit(order)}>Edit draft</button>}
-                {order.status === "QUOTATION_SENT" && <button className="customer-secondary-button compact" type="button" onClick={() => void openQuotation(order)}>View bill</button>}
-                {["APPROVED", "READY_TO_SHIP", "IN_PROGRESS", "DELIVERED"].includes(order.status) && <button className="customer-secondary-button compact" type="button" onClick={() => setDocumentOrder(order)}>Manage documents</button>}
-                {["DRAFT", "SUBMITTED", "QUOTATION_SENT"].includes(order.status) && <button className="customer-text-button compact" type="button" onClick={() => { setCancelOrder(order); setCancelError(""); }}>Cancel order</button>}
-                {order.status !== "DRAFT" && <span className="customer-locked-label">Editing locked</span>}
-              </div>
+              <div className={styles.orderActions}><CustomerOrderActions orderCode={order.orderCode} actions={actionsFor(order)} /></div>
               {order.status === "REJECTED" && <RejectedOrderNotice reason={order.rejectionReason} />}
             </article>)}</div>}
+            {requestCount}
           </section>}
 
           {view === "horses" && <section className={styles.surface} aria-labelledby="customer-horse-list-heading">

@@ -18,14 +18,16 @@ test.beforeEach(async ({ page }) => {
     window.sessionStorage.setItem("horse-transport-token", "browser-customer-token");
     window.localStorage.setItem("hideCustomerTermsOnLogin", "true");
   });
-  await page.route("http://localhost:8080/api/v1/**", async (route) => {
+  await page.route("**/api/v1/**", async (route) => {
+    const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Authorization, Accept, Content-Type", "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS" };
+    if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: corsHeaders });
     const pathname = new URL(route.request().url()).pathname;
     const body = pathname === "/api/v1/auth/me"
       ? { id: "customer-1", fullName: "Customer One", email: "customer@example.com", phone: null, role: "CUSTOMER", status: "ACTIVE" }
       : pathname === "/api/v1/horses" ? horses
         : pathname === "/api/v1/orders" ? orders
           : null;
-    await route.fulfill({ status: body === null ? 204 : 200, contentType: "application/json", body: body === null ? "" : JSON.stringify(body) });
+    await route.fulfill({ headers: corsHeaders, status: body === null ? 204 : 200, contentType: "application/json", body: body === null ? "" : JSON.stringify(body) });
   });
 });
 
@@ -62,9 +64,10 @@ test("Customer opens official request and horse pages using current API data", a
   await expect(page.getByRole("heading", { name: "Transport requests", level: 1 })).toBeVisible();
   await expect(page.getByRole("link", { name: "Transport requests" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Horse profiles" })).toHaveCount(0);
-  await expect(page.getByText("ORD-REAL-001")).toBeVisible();
+  await page.getByRole("button", { name: "All 3", exact: true }).click();
+  await expect(page.getByText("ORD-REAL-001", { exact: true })).toBeVisible();
   await page.getByRole("searchbox", { name: "Search transport requests" }).fill("Germany");
-  await expect(page.getByText("ORD-REAL-001")).toBeHidden();
+  await expect(page.getByText("ORD-REAL-001", { exact: true })).toBeHidden();
   await expect(page.getByText("ORD-REAL-002")).toBeVisible();
 
   if (process.env.CAPTURE_CUSTOMER_NAV === "1") {
@@ -73,6 +76,7 @@ test("Customer opens official request and horse pages using current API data", a
     await page.screenshot({ path: path.join(evidenceDirectory, `customer-requests-${testInfo.project.name}.png`), fullPage: true });
   }
 
+  await page.screenshot({ path: testInfo.outputPath("customer-requests.png"), fullPage: true });
   await page.goto("/customer/horses");
   await expect(page).toHaveURL(/\/customer\/horses$/);
   await expect(page.getByRole("link", { name: "Horse profiles" })).toHaveCount(0);
@@ -96,6 +100,7 @@ test("Customer opens official request and horse pages using current API data", a
 test("Customer sees why a transport request was rejected and starts a separate new request", async ({ page }) => {
   await page.goto("/customer");
 
+  await page.getByRole("button", { name: "History 1", exact: true }).click();
   const rejectedOrder = page.locator(".customer-order-row").filter({ hasText: "ORD-REAL-003" });
   await expect(rejectedOrder.getByText("REJECTED", { exact: true })).toBeVisible();
   await expect(rejectedOrder.getByRole("heading", { name: "Transport request rejected" })).toBeVisible();

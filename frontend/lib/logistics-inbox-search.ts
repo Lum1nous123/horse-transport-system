@@ -8,6 +8,27 @@ export type SearchableLogisticsInboxOrder = {
   transportMode: string | null;
 };
 
+export type InboxSort = "received-oldest" | "received-newest" | "departure-earliest";
+export type InboxMode = "ALL" | "ROAD" | "AIR" | "COMBINED";
+
+export function selectLogisticsInboxOrders<T extends SearchableLogisticsInboxOrder & {
+  createdAt?: string | null; requestedDepartureAt?: string | null;
+}>(orders: T[], query: string, mode: InboxMode, sort: InboxSort): T[] {
+  const timestamp = (value: string | null | undefined) => value ? Date.parse(value) : NaN;
+  return filterLogisticsInboxOrders(orders, query)
+    .filter((order) => mode === "ALL" || order.transportMode === mode)
+    .sort((a, b) => {
+      const left = timestamp(sort === "departure-earliest" ? a.requestedDepartureAt : a.createdAt);
+      const right = timestamp(sort === "departure-earliest" ? b.requestedDepartureAt : b.createdAt);
+      if (!Number.isFinite(left) || !Number.isFinite(right)) {
+        if (Number.isFinite(left)) return -1;
+        if (Number.isFinite(right)) return 1;
+        return a.orderCode.localeCompare(b.orderCode);
+      }
+      return (sort === "received-newest" ? right - left : left - right) || a.orderCode.localeCompare(b.orderCode);
+    });
+}
+
 export function filterLogisticsInboxOrders<T extends SearchableLogisticsInboxOrder>(
   orders: T[],
   query: string,

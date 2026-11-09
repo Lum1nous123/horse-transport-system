@@ -5,6 +5,11 @@ for (const role of ["customer", "logistics"] as const) {
     await page.goto(`/${role}/orders/order-2068/tracking?preview=1`);
     await expect(page.getByRole("heading", { name: "Journey tracking" })).toBeVisible();
     await expect(page.getByText("ORD-2068").first()).toBeVisible();
+    // Completed/upcoming legs use progressive disclosure; inspect their
+    // vehicle/contact/evidence content after explicitly opening each leg.
+    for (const leg of await page.locator("details.journey-leg").all()) {
+      if (await leg.getAttribute("open") === null) await leg.locator("summary").click();
+    }
     await expect(page.getByRole("region", { name: "Vehicle TRK-101" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Vehicle TRK-102" })).toBeVisible();
     await expect(page.getByText("Not available").first()).toBeVisible();

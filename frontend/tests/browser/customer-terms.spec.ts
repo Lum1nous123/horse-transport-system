@@ -15,28 +15,30 @@ const customerOrder = {
 
 async function mockTermsApi(page: Page, role: "CUSTOMER" | "LOGISTICS_MANAGER") {
   let checkoutRequests = 0;
-  await page.route("http://localhost:8080/api/v1/**", async (route) => {
+  await page.route("**/api/v1/**", async (route) => {
+    const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Authorization, Accept, Content-Type", "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS" };
+    if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: corsHeaders });
     const request = route.request();
     const path = new URL(request.url()).pathname;
 
     if (path === "/api/v1/auth/login") {
-      await route.fulfill({ json: { accessToken: "terms-test-token" } });
+      await route.fulfill({ headers: corsHeaders, json: { accessToken: "terms-test-token" } });
       return;
     }
     if (path === "/api/v1/auth/me") {
-      await route.fulfill({ json: { id: "user-1", fullName: "Test User", email: "test@example.com", phone: null, role, status: "ACTIVE" } });
+      await route.fulfill({ headers: corsHeaders, json: { id: "user-1", fullName: "Test User", email: "test@example.com", phone: null, role, status: "ACTIVE" } });
       return;
     }
     if (path === "/api/v1/horses") {
-      await route.fulfill({ json: [] });
+      await route.fulfill({ headers: corsHeaders, json: [] });
       return;
     }
     if (path === "/api/v1/orders") {
-      await route.fulfill({ json: [customerOrder] });
+      await route.fulfill({ headers: corsHeaders, json: [customerOrder] });
       return;
     }
     if (path === `/api/v1/orders/${customerOrder.id}/quotation`) {
-      await route.fulfill({ json: {
+      await route.fulfill({ headers: corsHeaders, json: {
         id: "quote-1",
         orderId: customerOrder.id,
         totalAmount: 4000,
@@ -50,7 +52,7 @@ async function mockTermsApi(page: Page, role: "CUSTOMER" | "LOGISTICS_MANAGER") 
     }
     if (path === `/api/v1/orders/${customerOrder.id}/deposit/checkout`) {
       checkoutRequests += 1;
-      await route.fulfill({ json: { checkoutUrl: `${new URL(page.url()).origin}/payment/cancelled` } });
+      await route.fulfill({ headers: corsHeaders, json: { checkoutUrl: `${new URL(page.url()).origin}/payment/cancelled` } });
       return;
     }
     if (path === `/api/v1/orders/${customerOrder.id}/deposit`) {
@@ -83,7 +85,8 @@ test("Customer login preference stays separate from mandatory Deposit acceptance
   await signIn(page);
   await expect(termsDialog).toBeVisible();
 
-  await page.getByRole("checkbox", { name: "Don't show again" }).check();
+  await page.getByRole("checkbox", { name: "Don't show again" }).focus();
+  await page.keyboard.press("Space");
   await page.getByRole("button", { name: "Got it" }).click();
   await page.getByRole("button", { name: "Sign out" }).click();
   await signIn(page);
@@ -103,7 +106,8 @@ test("Customer login preference stays separate from mandatory Deposit acceptance
   await expect(continueButton).toBeDisabled();
   await page.getByRole("checkbox", {
     name: "I have read and agree to the Transport Terms & Important Notices.",
-  }).check();
+  }).focus();
+  await page.keyboard.press("Space");
   await continueButton.click();
 
   await expect(page).toHaveURL(/\/payment\/cancelled$/);

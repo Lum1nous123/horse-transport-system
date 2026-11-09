@@ -40,6 +40,7 @@ function jsonResponse(body: unknown, status = 200) {
 
 describe("Customer dedicated workspaces", () => {
   beforeEach(() => {
+    window.localStorage.setItem("hideCustomerTermsOnLogin", "true");
     mocks.getAccessToken.mockReturnValue("customer-token");
     mocks.getCurrentUser.mockResolvedValue({ role: "CUSTOMER", status: "ACTIVE" });
     mocks.apiFetch.mockImplementation((path: string, init?: RequestInit) => {
@@ -55,7 +56,8 @@ describe("Customer dedicated workspaces", () => {
     const user = userEvent.setup();
     render(<CustomerWorkspace view="requests" />);
 
-    expect(await screen.findByText("ORD-001")).toBeVisible();
+    await user.click(await screen.findByRole("button", { name: "All 3" }));
+    expect(screen.getByText("ORD-001")).toBeVisible();
     expect(screen.queryByRole("link", { name: "Transport requests" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Horse profiles" })).not.toBeInTheDocument();
     expect(mocks.apiFetch).toHaveBeenCalledWith("/api/v1/orders", expect.anything());
@@ -104,7 +106,7 @@ describe("Customer dedicated workspaces", () => {
     const user = userEvent.setup();
     render(<CustomerWorkspace />);
 
-    await screen.findByText("ORD-001");
+    await user.click(await screen.findByRole("button", { name: "All 3" }));
     expect(screen.getByRole("link", { name: "Customer home workspace" })).toHaveTextContent("Horse Transport System");
     expect(screen.queryByRole("link", { name: "Transport requests" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Horse profiles" })).not.toBeInTheDocument();
@@ -133,6 +135,7 @@ describe("Customer dedicated workspaces", () => {
     const user = userEvent.setup();
     render(<CustomerWorkspace />);
 
+    await userEvent.setup().click(await screen.findByRole("button", { name: "History 1" }));
     const rejectedCode = await screen.findByText("ORD-003");
     const rejectedOrder = rejectedCode.closest("article");
     expect(rejectedOrder).not.toBeNull();
@@ -152,6 +155,7 @@ describe("Customer dedicated workspaces", () => {
 
   it("shows the same rejection guidance on the dedicated requests page", async () => {
     render(<CustomerWorkspace view="requests" />);
+    await userEvent.setup().click(await screen.findByRole("button", { name: "History 1" }));
 
     const rejectedCode = await screen.findByText("ORD-003");
     const rejectedOrder = rejectedCode.closest("article");

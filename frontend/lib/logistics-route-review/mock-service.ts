@@ -194,6 +194,7 @@ export const mockLogisticsRouteReviewService: LogisticsRouteReviewService = {
       throw new RouteReviewError("The Return transaction failed. No changes were saved.", "TRANSACTION_FAILED");
     }
     store.set(orderId, { ...review, routePlanStatus: "RETURNED", returnReason: reason.trim(), reviewedAt: new Date().toISOString() });
+    return cloneReview(getStoredReview(orderId));
   },
 
   async confirmPlan(orderId) {
@@ -214,5 +215,6 @@ export const mockLogisticsRouteReviewService: LogisticsRouteReviewService = {
       locked.legs[0].roadVehicles[0].escort = null;
     }
     store.set(orderId, locked);
+    return cloneReview(locked);
   },
 };
