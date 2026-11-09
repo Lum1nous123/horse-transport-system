@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -27,6 +28,7 @@ import com.horsetransport.order.OrderHorseDocumentStatus;
 import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderHorse;
+import com.horsetransport.order.TransportOrderRepository;
 import com.horsetransport.order.TransportSpecialistAssignmentGuard;
 import com.horsetransport.security.CurrentUserProvider;
 import com.horsetransport.user.UserRole;
@@ -34,6 +36,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -56,6 +59,7 @@ class DocumentVersionServiceTest {
 
 	@Mock private HorseDocumentRepository documentRepository;
 	@Mock private HorseDocumentVersionRepository versionRepository;
+	@Mock private TransportOrderRepository orderRepository;
 	@Mock private StatusAuditLogRepository auditRepository;
 	@Mock private CurrentUserProvider currentUserProvider;
 	@Mock private TransportSpecialistAssignmentGuard assignmentGuard;
@@ -68,13 +72,14 @@ class DocumentVersionServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new DocumentVersionService(documentRepository, versionRepository, auditRepository,
+		service = new DocumentVersionService(documentRepository, versionRepository, orderRepository, auditRepository,
 				currentUserProvider, assignmentGuard, storage,
 				Clock.fixed(Instant.parse("2026-10-04T12:00:00Z"), ZoneOffset.UTC));
 		when(currentUserProvider.getCurrentUserId()).thenReturn(CUSTOMER_ID);
 		when(currentUserProvider.getCurrentUserRole()).thenReturn(UserRole.CUSTOMER);
 		when(documentRepository.findOwnedByIdForUpdate(DOCUMENT_ID, CUSTOMER_ID))
 				.thenReturn(Optional.of(document));
+		when(documentRepository.findOwnedById(DOCUMENT_ID, CUSTOMER_ID)).thenReturn(Optional.of(document));
 		when(document.getId()).thenReturn(DOCUMENT_ID);
 		when(document.getDocumentType()).thenReturn(DocumentType.HORSE_PASSPORT_OR_IDENTIFICATION);
 		when(document.getTransportOrderHorseId()).thenReturn(ORDER_HORSE_ID);
@@ -84,6 +89,7 @@ class DocumentVersionServiceTest {
 		when(orderHorse.getDocumentStatus()).thenReturn(OrderHorseDocumentStatus.INCOMPLETE);
 		when(order.getId()).thenReturn(ORDER_ID);
 		when(order.getStatus()).thenReturn(OrderStatus.APPROVED);
+		when(orderRepository.findOwnedByIdForUpdate(ORDER_ID, CUSTOMER_ID)).thenReturn(Optional.of(order));
 		when(storage.upload(any(), any(), any(), any(Boolean.class))).thenReturn(URL);
 		when(versionRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
 	}
@@ -100,12 +106,17 @@ class DocumentVersionServiceTest {
 		assertThat(response.isCurrent()).isTrue();
 		assertThat(response.expiryDate()).isEqualTo(LocalDate.of(2027, 1, 1));
 		assertThat(response.displayName()).isEqualTo("horse-passport.pdf");
+		InOrder lockOrder = inOrder(documentRepository, orderRepository);
+		lockOrder.verify(documentRepository).findOwnedById(DOCUMENT_ID, CUSTOMER_ID);
+		lockOrder.verify(orderRepository).findOwnedByIdForUpdate(ORDER_ID, CUSTOMER_ID);
+		lockOrder.verify(documentRepository).findOwnedByIdForUpdate(DOCUMENT_ID, CUSTOMER_ID);
 		verify(storage).upload(any(), eq("application/pdf"), eq(PUBLIC_ID), eq(false));
 		verify(documentRepository, never()).save(any());
 	}
 
 	@Test
 	void rejectsNonOwnerBeforeStorageUpload() {
+		when(documentRepository.findOwnedById(DOCUMENT_ID, CUSTOMER_ID)).thenReturn(Optional.empty());
 		when(documentRepository.findOwnedByIdForUpdate(DOCUMENT_ID, CUSTOMER_ID)).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.create(DOCUMENT_ID, pdf(), null))
@@ -514,6 +525,41 @@ class DocumentVersionServiceTest {
 		when(versionRepository.findMaximumVersionNo(DOCUMENT_ID)).thenReturn(0);
 
 		assertThat(service.create(DOCUMENT_ID, pdf(), null).status()).isEqualTo(DocumentVersionStatus.DRAFT);
+	}
+
+	@Test
+	void customerCanCreateReplacementAfterOriginalDeadlineWithinCorrectionWindow() {
+		when(order.getDocumentCompletionDeadlineAt()).thenReturn(LocalDateTime.of(2026, 10, 4, 11, 0));
+		when(document.getCorrectionDeadlineAt()).thenReturn(LocalDateTime.of(2026, 10, 5, 12, 0));
+		when(versionRepository.findByHorseDocument_IdAndCurrentTrue(DOCUMENT_ID)).thenReturn(Optional.empty());
+		when(versionRepository.findMaximumVersionNo(DOCUMENT_ID)).thenReturn(1);
+
+		DocumentVersionResponse response = service.create(DOCUMENT_ID, pdf(), null);
+
+		assertThat(response.versionNo()).isEqualTo(2);
+		assertThat(response.status()).isEqualTo(DocumentVersionStatus.DRAFT);
+	}
+
+	@Test
+	void customerCanSubmitReplacementBeforeCorrectionDeadlineAfterOriginalDeadline() {
+		when(order.getDocumentCompletionDeadlineAt()).thenReturn(LocalDateTime.of(2026, 10, 4, 11, 0));
+		when(document.getCorrectionDeadlineAt()).thenReturn(LocalDateTime.of(2026, 10, 4, 12, 0, 1));
+		HorseDocumentVersion replacement = draft(2);
+		when(versionRepository.findCurrentByOrderHorseId(ORDER_HORSE_ID)).thenReturn(List.of(replacement));
+
+		DocumentVersionResponse response = service.submit(DOCUMENT_ID, replacement.getId());
+
+		assertThat(response.status()).isEqualTo(DocumentVersionStatus.PENDING_REVIEW);
+	}
+
+	@Test
+	void customerCannotMutateDocumentAtCorrectionDeadline() {
+		when(order.getDocumentCompletionDeadlineAt()).thenReturn(LocalDateTime.of(2026, 10, 4, 11, 0));
+		when(document.getCorrectionDeadlineAt()).thenReturn(LocalDateTime.of(2026, 10, 4, 12, 0));
+
+		assertThatThrownBy(() -> service.create(DOCUMENT_ID, pdf(), null))
+				.isInstanceOf(DocumentVersionConflictException.class)
+				.hasMessageContaining("correction deadline has passed");
 	}
 
 	private HorseDocumentVersion draft(int versionNo) {

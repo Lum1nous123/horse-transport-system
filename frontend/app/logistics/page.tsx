@@ -52,8 +52,7 @@ type Quotation = {
   sentAt: string | null;
   lineItems: { id: string; sequenceNo: number; description: string; amount: number }[];
 };
-type DraftItem = { description: string; amount: string };
-type QuoteDraft = { depositAmount: string; notes: string; lineItems: DraftItem[] };
+type QuoteDraft = { totalAmount: string; notes: string };
 type ApiErrorBody = { code?: string; message?: string };
 type LogisticsIconName = "inbox" | "location" | "mode" | "calendar" | "horses" | "contact" | "note" | "quote";
 
@@ -78,7 +77,7 @@ class LogisticsApiError extends Error {
   }
 }
 
-const emptyQuoteDraft: QuoteDraft = { depositAmount: "", notes: "", lineItems: [] };
+const emptyQuoteDraft: QuoteDraft = { totalAmount: "", notes: "" };
 const demoOrderId = "preview-order-lm-1";
 const previewOrders: InboxOrder[] = [
   {
@@ -150,11 +149,8 @@ async function logisticsFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 function quoteDraftFrom(quotation: Quotation): QuoteDraft {
   return {
-    depositAmount: quotation.depositAmount == null ? "" : String(quotation.depositAmount),
+    totalAmount: quotation.totalAmount == null ? "" : String(quotation.totalAmount),
     notes: quotation.notes ?? "",
-    lineItems: [...quotation.lineItems]
-      .sort((a, b) => a.sequenceNo - b.sequenceNo)
-      .map((item) => ({ description: item.description, amount: String(item.amount) })),
   };
 }
 
@@ -202,10 +198,11 @@ export default function LogisticsPage() {
   const [sendWarning, setSendWarning] = useState(false);
   const [feedback, setFeedback] = useState("");
 
-  const computedTotal = useMemo(() => quoteDraft.lineItems.reduce((sum, item) => {
-    const amount = Number(item.amount);
-    return Number.isFinite(amount) ? sum + amount : sum;
-  }, 0), [quoteDraft.lineItems]);
+  const computedTotal = Number(quoteDraft.totalAmount);
+  const computedDeposit = Number.isFinite(computedTotal) && computedTotal > 0
+    ? Math.round(computedTotal * 10) / 100
+    : null;
+  const computedRemaining = computedDeposit == null ? null : computedTotal - computedDeposit;
 
   const visibleOrders = useMemo(
     () => selectLogisticsInboxOrders(orders, searchQuery, modeFilter, inboxSort),
@@ -346,33 +343,15 @@ export default function LogisticsPage() {
   }
 
   function validateQuoteDraft(requireSendable: boolean) {
-    const items = quoteDraft.lineItems.map((item) => ({
-      sequenceNo: 0,
-      description: item.description.trim(),
-      amount: Number(item.amount),
-    }));
-    if (items.some((item) => !item.description || !Number.isFinite(item.amount) || item.amount <= 0)) {
-      setQuoteError("Each cost item needs a description and an amount greater than zero.");
-      return null;
-    }
-    if (requireSendable && items.length === 0) {
-      setQuoteError("Add at least one cost item before sending the quotation.");
-      return null;
-    }
-    const total = items.reduce((sum, item) => sum + item.amount, 0);
-    const deposit = quoteDraft.depositAmount.trim() ? Number(quoteDraft.depositAmount) : null;
-    if (requireSendable && (deposit == null || !Number.isFinite(deposit) || deposit <= 0 || deposit >= total)) {
-      setQuoteError("Deposit must be greater than zero and less than the quotation total.");
-      return null;
-    }
-    if (deposit != null && (!Number.isFinite(deposit) || deposit <= 0 || deposit >= total)) {
-      setQuoteError("Deposit must be greater than zero and less than the quotation total.");
+    const totalAmount = quoteDraft.totalAmount.trim() ? Number(quoteDraft.totalAmount) : null;
+    if ((requireSendable || totalAmount != null)
+      && (totalAmount == null || !Number.isFinite(totalAmount) || totalAmount <= 0)) {
+      setQuoteError("Total amount must be greater than zero.");
       return null;
     }
     return {
-      depositAmount: deposit,
+      totalAmount,
       notes: quoteDraft.notes.trim() || null,
-      lineItems: items.map((item, index) => ({ ...item, sequenceNo: index + 1 })),
     };
   }
 
@@ -383,11 +362,11 @@ export default function LogisticsPage() {
     if (preview) {
       const next: Quotation = {
         ...quotation,
-        depositAmount: body.depositAmount,
-        totalAmount: body.lineItems.reduce((sum, item) => sum + item.amount, 0) || null,
-        remainingAmount: body.depositAmount == null ? null : body.lineItems.reduce((sum, item) => sum + item.amount, 0) - body.depositAmount,
+        totalAmount: body.totalAmount,
+        depositAmount: body.totalAmount == null ? null : Math.round(body.totalAmount * 10) / 100,
+        remainingAmount: body.totalAmount == null ? null : body.totalAmount - Math.round(body.totalAmount * 10) / 100,
         notes: body.notes,
-        lineItems: body.lineItems.map((item, index) => ({ id: `preview-item-${index}`, ...item })),
+        lineItems: [],
       };
       setQuotation(next);
       setQuoteDraft(quoteDraftFrom(next));
@@ -401,13 +380,11 @@ export default function LogisticsPage() {
       // Never replace the user's edits or send a quotation whose response lost fields.
       const sameAmount = (actual: number | null, expected: number | null) =>
         expected === null ? actual === null : typeof actual === "number" && Number.isFinite(actual) && Math.abs(actual - expected) < 0.000001;
-      const expectedTotal = body.lineItems.length ? body.lineItems.reduce((sum, item) => sum + item.amount, 0) : null;
-      const expectedRemaining = body.depositAmount === null || expectedTotal === null ? null : expectedTotal - body.depositAmount;
+      const expectedTotal = body.totalAmount;
+      const expectedDeposit = expectedTotal == null ? null : Math.round(expectedTotal * 10) / 100;
+      const expectedRemaining = expectedTotal == null || expectedDeposit == null ? null : expectedTotal - expectedDeposit;
       if (!saved || saved.id !== quotation.id || saved.orderId !== orderDetail.id || saved.status !== "DRAFT"
-        || !Array.isArray(saved.lineItems) || saved.lineItems.length !== body.lineItems.length
-        || body.lineItems.some((item) => !saved.lineItems.some((returned) =>
-          returned.sequenceNo === item.sequenceNo && returned.description === item.description && sameAmount(returned.amount, item.amount)))
-        || !sameAmount(saved.depositAmount, body.depositAmount) || !sameAmount(saved.totalAmount, expectedTotal)
+        || !sameAmount(saved.depositAmount, expectedDeposit) || !sameAmount(saved.totalAmount, expectedTotal)
         || !sameAmount(saved.remainingAmount, expectedRemaining) || saved.notes !== body.notes) {
         setQuoteError("The service returned a quotation that does not match your draft. Saving could not be verified. Your edits are kept; review before retrying. The quotation was not sent.");
         return null;
@@ -526,11 +503,10 @@ export default function LogisticsPage() {
               </div>
               <section className="logistics-quotation-section" aria-labelledby="quotation-editor-heading"><div className="logistics-quotation-heading"><div><h3 id="quotation-editor-heading"><LogisticsIcon name="quote" />Quotation</h3><p>{quoteBusy ? "Reading the saved quotation…" : quoteError && !quotation ? "Quotation state is unavailable. Retry the read before preparing a quotation." : quotation?.status === "SENT" ? "Sent quotations are locked." : quotation?.status === "DRAFT" ? "Complete the draft and send it to the customer." : "No quotation has been prepared for this order."}</p></div><span className={`quotation-state ${quotation?.status.toLowerCase() ?? "not-started"}`}>{quoteError && !quotation ? "Unavailable" : quotation?.status === "SENT" ? "Sent" : quotation?.status === "DRAFT" ? "Draft" : quoteBusy ? "Checking…" : "Not started"}</span></div>
                 {quoteError && <div className="customer-form-error" role="alert">{quoteError}{!preview && !quotation && <button className="customer-text-button" type="button" disabled={quoteBusy || quoteBusyAction} onClick={() => void retryQuotationRead()}>Retry quotation read</button>}</div>}
-                {quoteBusy ? <p className="field-hint" role="status">Loading quotation…</p> : !quotation ? <div className="logistics-no-quote"><p>{quoteError ? "The saved quotation could not be verified." : <>Use “Prepare quotation” above to start adding cost items and a deposit requirement.</>}</p></div> : quotation.status === "SENT" ? <QuotationBreakdown quotation={quotation} /> : !quoteEditing ? <div className="lm-quote-preview"><dl><div><dt>Saved total</dt><dd>{formatMoney(quotation.totalAmount)}</dd></div><div><dt>Deposit</dt><dd>{formatMoney(quotation.depositAmount)}</dd></div><div><dt>Remaining balance</dt><dd>{formatMoney(quotation.remainingAmount)}</dd></div></dl><button className="customer-primary-button compact" type="button" onClick={() => setQuoteEditing(true)}>Edit quotation</button></div> : <div id="quotation-editor">
+                {quoteBusy ? <p className="field-hint" role="status">Loading quotation…</p> : !quotation ? <div className="logistics-no-quote"><p>{quoteError ? "The saved quotation could not be verified." : <>Use “Prepare quotation” above to enter the total amount. Deposit (10%) and remaining balance are calculated automatically.</>}</p></div> : quotation.status === "SENT" ? <QuotationBreakdown quotation={quotation} /> : !quoteEditing ? <div className="lm-quote-preview"><dl><div><dt>Saved total</dt><dd>{formatMoney(quotation.totalAmount)}</dd></div><div><dt>Deposit</dt><dd>{formatMoney(quotation.depositAmount)}</dd></div><div><dt>Remaining balance</dt><dd>{formatMoney(quotation.remainingAmount)}</dd></div></dl><button className="customer-primary-button compact" type="button" onClick={() => setQuoteEditing(true)}>Edit quotation</button></div> : <div id="quotation-editor">
                   <div className="lm-editor-heading"><span>Quotation draft</span><button className="customer-text-button" type="button" disabled={quoteBusyAction} onClick={() => setQuoteEditing(false)}>Hide editor</button></div>
-                  <div className="logistics-line-items"><div className="logistics-line-heading"><span>Cost item</span><span>Amount (USD)</span><span className="sr-only">Actions</span></div>{quoteDraft.lineItems.map((item, index) => <div className="logistics-line-editor" key={`${quotation.id}-${index}`}><label className="sr-only" htmlFor={`line-description-${index}`}>Cost item {index + 1} description</label><input id={`line-description-${index}`} value={item.description} maxLength={255} placeholder="Transport service" onChange={(event) => setQuoteDraft((current) => ({ ...current, lineItems: current.lineItems.map((line, lineIndex) => lineIndex === index ? { ...line, description: event.target.value } : line) }))} /><label className="sr-only" htmlFor={`line-amount-${index}`}>Cost item {index + 1} amount in USD</label><input id={`line-amount-${index}`} type="number" min="0.01" step="0.01" value={item.amount} placeholder="0.00" onChange={(event) => setQuoteDraft((current) => ({ ...current, lineItems: current.lineItems.map((line, lineIndex) => lineIndex === index ? { ...line, amount: event.target.value } : line) }))} /><button className="customer-text-button remove-line-button" type="button" onClick={() => setQuoteDraft((current) => ({ ...current, lineItems: current.lineItems.filter((_, lineIndex) => lineIndex !== index) }))} aria-label={`Remove cost item ${index + 1}`}>Remove</button></div>)}<button className="customer-secondary-button compact add-line-button" type="button" onClick={() => setQuoteDraft((current) => ({ ...current, lineItems: [...current.lineItems, { description: "", amount: "" }] }))}>Add cost item <span aria-hidden="true">＋</span></button></div>
-                  <div className="logistics-total-row"><span>Total</span><strong>{formatMoney(computedTotal || null)}</strong></div>
-                  <div className="customer-field-grid logistics-quote-fields"><label className="customer-field"><span>Deposit amount (USD)</span><input type="number" min="0.01" step="0.01" value={quoteDraft.depositAmount} placeholder="Enter deposit" onChange={(event) => setQuoteDraft((current) => ({ ...current, depositAmount: event.target.value }))} /></label><label className="customer-field"><span>Remaining balance</span><input value={quoteDraft.depositAmount && Number(quoteDraft.depositAmount) > 0 ? formatMoney(computedTotal - Number(quoteDraft.depositAmount)) : "—"} readOnly /></label></div>
+                  <div className="customer-field-grid logistics-quote-fields"><label className="customer-field"><span>Total amount (USD)</span><input type="number" min="0.01" step="0.01" value={quoteDraft.totalAmount} placeholder="Enter total amount" onChange={(event) => setQuoteDraft((current) => ({ ...current, totalAmount: event.target.value }))} /></label><label className="customer-field"><span>Deposit (10%)</span><input value={formatMoney(computedDeposit)} readOnly /></label><label className="customer-field"><span>Remaining Balance (90%)</span><input value={formatMoney(computedRemaining)} readOnly /></label></div>
+
                   <label className="customer-field"><span>Notes <em>Optional</em></span><textarea rows={3} maxLength={2000} value={quoteDraft.notes} onChange={(event) => setQuoteDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
                   <div className="logistics-editor-footer"><p>Review the amounts before sending. A sent quotation cannot be changed.</p><div><button className="customer-secondary-button" type="button" disabled={quoteBusyAction} onClick={() => void saveQuotation()}>{quoteBusyAction ? "Saving…" : "Save draft"}</button><button className="customer-primary-button" type="button" disabled={quoteBusyAction} onClick={requestSendQuotation}>Send quotation</button></div></div>
                 </div>}
@@ -542,7 +518,7 @@ export default function LogisticsPage() {
 
       {rejectOrder && <div className="customer-dialog-backdrop warning-backdrop"><form className="customer-warning logistics-reject-dialog" role="alertdialog" aria-modal="true" aria-labelledby="reject-title" aria-describedby="reject-copy" onSubmit={(event) => void confirmReject(event)}><div className="warning-symbol" aria-hidden="true">!</div><h2 id="reject-title">Reject {rejectOrder.orderCode}?</h2><p id="reject-copy">This ends the order before quotation. Rejected orders cannot be reopened.</p><label className="customer-field"><span>Reason for rejection <b aria-hidden="true">*</b></span><textarea rows={4} required value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)} /></label>{rejectError && <p className="customer-form-error" role="alert">{rejectError}</p>}<div className="customer-form-actions"><button type="button" className="customer-secondary-button" disabled={rejectBusy} onClick={() => setRejectOrder(null)}>Keep order</button><button type="submit" className="customer-primary-button danger-button" disabled={rejectBusy}>{rejectBusy ? "Rejecting…" : "Reject order"}</button></div></form></div>}
 
-      {sendWarning && orderDetail && <div className="customer-dialog-backdrop warning-backdrop"><section className="customer-warning" role="alertdialog" aria-modal="true" aria-labelledby="send-quotation-title" aria-describedby="send-quotation-copy"><div className="warning-symbol" aria-hidden="true">!</div><h2 id="send-quotation-title">Send quotation for {orderDetail.orderCode}?</h2><p id="send-quotation-copy">After sending, the quotation is locked and this order moves to QUOTATION_SENT. Review the item amounts and deposit before continuing.</p><div className="customer-form-actions"><button type="button" className="customer-secondary-button" disabled={quoteBusyAction} onClick={() => setSendWarning(false)}>Go back and review</button><button type="button" className="customer-primary-button" disabled={quoteBusyAction} onClick={() => void confirmSendQuotation()}>{quoteBusyAction ? "Sending…" : "Send and lock quotation"}</button></div></section></div>}
+      {sendWarning && orderDetail && <div className="customer-dialog-backdrop warning-backdrop"><section className="customer-warning" role="alertdialog" aria-modal="true" aria-labelledby="send-quotation-title" aria-describedby="send-quotation-copy"><div className="warning-symbol" aria-hidden="true">!</div><h2 id="send-quotation-title">Send quotation for {orderDetail.orderCode}?</h2><p id="send-quotation-copy">After sending, the quotation is locked and this order moves to QUOTATION_SENT. Review the Total, automatic 10% Deposit, and 90% Remaining Balance before continuing.</p><div className="customer-form-actions"><button type="button" className="customer-secondary-button" disabled={quoteBusyAction} onClick={() => setSendWarning(false)}>Go back and review</button><button type="button" className="customer-primary-button" disabled={quoteBusyAction} onClick={() => void confirmSendQuotation()}>{quoteBusyAction ? "Sending…" : "Send and lock quotation"}</button></div></section></div>}
     </main>
   );
 }

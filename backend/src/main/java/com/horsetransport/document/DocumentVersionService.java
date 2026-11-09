@@ -15,6 +15,7 @@ import com.horsetransport.order.OrderHorseDocumentStatus;
 import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderHorse;
+import com.horsetransport.order.TransportOrderRepository;
 import com.horsetransport.order.TransportSpecialistAssignmentGuard;
 import com.horsetransport.security.CurrentUserProvider;
 import com.horsetransport.user.UserRole;
@@ -36,6 +37,7 @@ public class DocumentVersionService {
 
 	private final HorseDocumentRepository documentRepository;
 	private final HorseDocumentVersionRepository versionRepository;
+	private final TransportOrderRepository orderRepository;
 	private final StatusAuditLogRepository auditRepository;
 	private final CurrentUserProvider currentUserProvider;
 	private final TransportSpecialistAssignmentGuard assignmentGuard;
@@ -43,11 +45,13 @@ public class DocumentVersionService {
 	private final Clock clock;
 
 	public DocumentVersionService(HorseDocumentRepository documentRepository,
-			HorseDocumentVersionRepository versionRepository, StatusAuditLogRepository auditRepository,
+			HorseDocumentVersionRepository versionRepository, TransportOrderRepository orderRepository,
+			StatusAuditLogRepository auditRepository,
 			CurrentUserProvider currentUserProvider, TransportSpecialistAssignmentGuard assignmentGuard,
 			DocumentStorage storage, Clock clock) {
 		this.documentRepository = documentRepository;
 		this.versionRepository = versionRepository;
+		this.orderRepository = orderRepository;
 		this.auditRepository = auditRepository;
 		this.currentUserProvider = currentUserProvider;
 		this.assignmentGuard = assignmentGuard;
@@ -80,8 +84,9 @@ public class DocumentVersionService {
 				previous.makeHistorical();
 				versionRepository.saveAndFlush(previous);
 			}
+			LocalDateTime uploadedAt = LocalDateTime.now(clock);
 			HorseDocumentVersion created = new HorseDocumentVersion(document, versionNo, fileUrl, expiryDate,
-					actorUserId);
+					actorUserId, uploadedAt);
 			created = versionRepository.saveAndFlush(created);
 			updateHorseStatus(document.getTransportOrderHorse(), OrderHorseDocumentStatus.INCOMPLETE,
 					actorUserId);
@@ -117,7 +122,7 @@ public class DocumentVersionService {
 
 		try {
 			ensureUrlFitsSchema(fileUrl);
-			version.replaceDraft(fileUrl, expiryDate, actorUserId);
+			version.replaceDraft(fileUrl, expiryDate, actorUserId, LocalDateTime.now(clock));
 			version = versionRepository.saveAndFlush(version);
 			updateHorseStatus(document.getTransportOrderHorse(), OrderHorseDocumentStatus.INCOMPLETE,
 					actorUserId);
@@ -158,7 +163,7 @@ public class DocumentVersionService {
 		ensureActiveDocumentPhase(document);
 		HorseDocumentVersion version = findVersion(documentId, versionId);
 		OrderHorseDocumentStatus previousHorseStatus = document.getTransportOrderHorse().getDocumentStatus();
-		version.submit();
+		version.submit(LocalDateTime.now(clock));
 		try {
 			version = versionRepository.saveAndFlush(version);
 			auditRepository.saveAndFlush(StatusAuditLog.userTransition(AuditEntityType.HORSE_DOCUMENT_VERSION,
@@ -199,6 +204,11 @@ public class DocumentVersionService {
 	}
 
 	private HorseDocument findOwnedForUpdate(UUID documentId, UUID actorUserId) {
+		HorseDocument visibleDocument = documentRepository.findOwnedById(documentId, actorUserId)
+				.orElseThrow(HorseDocumentNotFoundException::new);
+		UUID orderId = visibleDocument.getTransportOrderHorse().getTransportOrder().getId();
+		orderRepository.findOwnedByIdForUpdate(orderId, actorUserId)
+				.orElseThrow(HorseDocumentNotFoundException::new);
 		return documentRepository.findOwnedByIdForUpdate(documentId, actorUserId)
 				.orElseThrow(HorseDocumentNotFoundException::new);
 	}
@@ -214,10 +224,14 @@ public class DocumentVersionService {
 		if (order.getStatus() != OrderStatus.APPROVED || order.getDocumentsLockedAt() != null) {
 			throw new DocumentVersionConflictException("Order is not in an active document phase");
 		}
-		LocalDateTime deadline = order.getDocumentCompletionDeadlineAt();
-		if (currentUserProvider.getCurrentUserRole() == UserRole.CUSTOMER && deadline != null
-				&& !LocalDateTime.now(clock).isBefore(deadline)) {
-			throw new DocumentVersionConflictException("Document submission deadline has passed");
+		LocalDateTime correctionDeadline = document.getCorrectionDeadlineAt();
+		LocalDateTime submissionDeadline = correctionDeadline != null
+				? correctionDeadline : order.getDocumentCompletionDeadlineAt();
+		if (currentUserProvider.getCurrentUserRole() == UserRole.CUSTOMER && submissionDeadline != null
+				&& !LocalDateTime.now(clock).isBefore(submissionDeadline)) {
+			throw new DocumentVersionConflictException(correctionDeadline != null
+					? "Document correction deadline has passed"
+					: "Document submission deadline has passed");
 		}
 	}
 

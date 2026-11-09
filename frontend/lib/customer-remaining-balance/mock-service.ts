@@ -39,8 +39,8 @@ function createResult(
     },
     quotation: {
       totalAmount: 4800,
-      depositPaid: 1200,
-      remainingAmount: 3600,
+      depositPaid: 480,
+      remainingAmount: 4320,
       currency: "USD",
     },
     payment: {
@@ -73,7 +73,7 @@ function createResult(
       {
         id: "deposit-paid",
         label: "Deposit received",
-        description: "$1,200.00 USD was confirmed by the payment service.",
+        description: "$480.00 USD was confirmed by the payment service.",
         occurredAt: "2026-09-24T14:44:00+07:00",
       },
       {

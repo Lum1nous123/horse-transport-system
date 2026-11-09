@@ -95,6 +95,44 @@ class NotificationServiceTest {
 	}
 
 	@Test
+	void documentDeadlineCancellationIsIdempotentAndExplainsNonRefundableDeposit() {
+		String key = NotificationEventCatalog.orderCancelledForDocumentDeadline(ORDER_ID);
+		when(notificationRepository.existsByRecipientUserIdAndSourceEventKey(CUSTOMER_ID, key))
+				.thenReturn(false, true);
+		when(notificationRepository.saveAndFlush(any(Notification.class)))
+				.thenAnswer(invocation -> invocation.getArgument(0));
+
+		service.createOrderCancelledForDocumentDeadline(CUSTOMER_ID, ORDER_ID);
+		service.createOrderCancelledForDocumentDeadline(CUSTOMER_ID, ORDER_ID);
+
+		ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+		verify(notificationRepository).saveAndFlush(captor.capture());
+		assertThat(captor.getValue().getNotificationType()).isEqualTo(NotificationType.ORDER_CANCELLED);
+		assertThat(captor.getValue().getSourceEventKey()).isEqualTo(key);
+		assertThat(captor.getValue().getMessage()).contains("non-refundable");
+	}
+
+	@Test
+	void correctionDeadlineCancellationIsIdempotentAndUsesDedicatedMessage() {
+		String key = NotificationEventCatalog.orderCancelledForCorrectionDeadline(ORDER_ID);
+		when(notificationRepository.existsByRecipientUserIdAndSourceEventKey(CUSTOMER_ID, key))
+				.thenReturn(false, true);
+		when(notificationRepository.saveAndFlush(any(Notification.class)))
+				.thenAnswer(invocation -> invocation.getArgument(0));
+
+		service.createOrderCancelledForCorrectionDeadline(CUSTOMER_ID, ORDER_ID);
+		service.createOrderCancelledForCorrectionDeadline(CUSTOMER_ID, ORDER_ID);
+
+		ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+		verify(notificationRepository).saveAndFlush(captor.capture());
+		assertThat(captor.getValue().getNotificationType()).isEqualTo(NotificationType.ORDER_CANCELLED);
+		assertThat(captor.getValue().getSourceEventKey()).isEqualTo(key);
+		assertThat(captor.getValue().getMessage())
+				.isEqualTo("Correction deadline missed. Your Order has been cancelled. "
+						+ "The paid Deposit is non-refundable.");
+	}
+
+	@Test
 	void existingRefundKeyAndMessagesRemainUnchanged() {
 		UUID refundId = UUID.randomUUID();
 		String key = "refund-" + refundId + "-success";

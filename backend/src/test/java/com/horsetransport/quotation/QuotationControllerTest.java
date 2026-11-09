@@ -51,12 +51,10 @@ class QuotationControllerTest {
 	}
 
 	@Test
-	void rejectsInvalidLineItemInput() throws Exception {
+	void rejectsInvalidTotalAmountInput() throws Exception {
 		mockMvc.perform(put("/api/v1/orders/{id}/quotation", ORDER_ID)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"lineItems":[{"sequenceNo":0,"description":" ","amount":0}]}
-						"""))
+				.content("{\"totalAmount\":0}"))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
 	}

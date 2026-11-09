@@ -73,7 +73,6 @@ export default function CustomerRemainingBalancePage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [checkoutBusy, setCheckoutBusy] = useState(false);
-  const [checkoutPreviewOpen, setCheckoutPreviewOpen] = useState(false);
   const [error, setError] = useState("");
   const [errorCode, setErrorCode] = useState("");
   const [feedback, setFeedback] = useState("");
@@ -114,15 +113,6 @@ export default function CustomerRemainingBalancePage() {
     return () => window.clearTimeout(timer);
   }, [accessState, loadResult]);
 
-  useEffect(() => {
-    if (!checkoutPreviewOpen) return;
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setCheckoutPreviewOpen(false);
-    }
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [checkoutPreviewOpen]);
-
   async function startCheckout() {
     setCheckoutBusy(true);
     setError("");
@@ -131,7 +121,7 @@ export default function CustomerRemainingBalancePage() {
       const checkout = await service.createCheckout(params.orderId);
       if (!checkout.checkoutUrl) throw new Error("Secure checkout could not be opened. Please try again.");
       if (preview) {
-        setCheckoutPreviewOpen(true);
+        setFeedback("Secure checkout is unavailable in preview mode.");
         setCheckoutBusy(false);
         return;
       }
@@ -141,14 +131,6 @@ export default function CustomerRemainingBalancePage() {
       setErrorCode(caught instanceof CustomerRemainingBalanceError ? caught.code : "REQUEST_FAILED");
       setCheckoutBusy(false);
     }
-  }
-
-  function finishPreviewCheckout(outcome: "success" | "cancelled") {
-    const nextScenario = outcome === "success" ? "pending" : "cancelled";
-    setCheckoutPreviewOpen(false);
-    router.push(
-      `/customer/orders/${params.orderId}/remaining-balance?preview=1&scenario=${nextScenario}&returned=${outcome}`,
-    );
   }
 
   function signOut() {
@@ -190,7 +172,7 @@ export default function CustomerRemainingBalancePage() {
   return (
     <main className="customer-page balance-page">
       <header className="customer-topbar balance-topbar">
-        <Link className="customer-brand" href="/" aria-label="Horse Transport System home">
+        <Link className="customer-brand" href="/customer" aria-label="Customer home workspace">
           <BrandMark />
           <span>Horse Transport System</span>
         </Link>
@@ -339,22 +321,6 @@ export default function CustomerRemainingBalancePage() {
         )}
       </div>
 
-      {checkoutPreviewOpen && result && (
-        <div className="balance-checkout-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCheckoutPreviewOpen(false); }}>
-          <section className="balance-checkout-preview" role="dialog" aria-modal="true" aria-labelledby="checkout-preview-title">
-            <button className="balance-checkout-close" type="button" aria-label="Close secure checkout preview" onClick={() => setCheckoutPreviewOpen(false)}>×</button>
-            <span className="balance-preview-chip">Preview only</span>
-            <h2 id="checkout-preview-title">Simulated secure checkout</h2>
-            <p>The real flow will redirect to the third-party payment page returned by BE-14. This preview never collects card details.</p>
-            <div className="balance-checkout-preview-amount"><span>Remaining balance</span><strong>{formatMoney(result.quotation.remainingAmount, result.quotation.currency)} {result.quotation.currency}</strong></div>
-            <div className="balance-checkout-preview-actions">
-              <button className="customer-primary-button" type="button" onClick={() => finishPreviewCheckout("success")}>Simulate successful return</button>
-              <button className="customer-secondary-button" type="button" onClick={() => finishPreviewCheckout("cancelled")}>Simulate cancelled return</button>
-            </div>
-            <small>Neither option proves payment. The Order page reads the mock persisted state after return.</small>
-          </section>
-        </div>
-      )}
     </main>
   );
 }

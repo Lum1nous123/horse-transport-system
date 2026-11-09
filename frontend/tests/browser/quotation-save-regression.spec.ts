@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 for (const emptyResponse of [false, true]) {
-  test(`quotation saves 255/23 without losing edits (empty response: ${emptyResponse})`, async ({ page }) => {
+  test(`quotation saves 255/25.50 without losing edits (empty response: ${emptyResponse})`, async ({ page }) => {
     await page.addInitScript(() => sessionStorage.setItem("horse-transport-token", "browser-test-token"));
     const order = { id: "order-20", orderCode: "ORD-000020", status: "SUBMITTED", originAddress: "Origin",
       destinationAddress: "Destination", transportMode: "ROAD", horseCount: 1, horseIds: ["horse-1"] };
@@ -15,11 +15,10 @@ for (const emptyResponse of [false, true]) {
       if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers });
       if (request.method() === "PUT") {
         puts++;
-        expect(request.postDataJSON()).toEqual({ depositAmount: 23, notes: "weweqwe",
-          lineItems: [{ sequenceNo: 1, description: "testt", amount: 255 }] });
+        expect(request.postDataJSON()).toEqual({ totalAmount: 255, notes: "weweqwe" });
         expect(request.headers()["content-type"]).toBe("application/json");
         saved = emptyResponse ? { ...saved, notes: "weweqwe" } : {
-          ...saved, ...request.postDataJSON(), totalAmount: 255, remainingAmount: 232 };
+          ...saved, ...request.postDataJSON(), totalAmount: 255, depositAmount: 25.5, remainingAmount: 229.5 };
       }
       const body = path.endsWith("/auth/me") ? { id: "lm", role: "LOGISTICS_MANAGER", status: "ACTIVE" }
         : path.endsWith("/inbox") ? [order] : path.endsWith("/quotation") ? saved : order;
@@ -28,24 +27,21 @@ for (const emptyResponse of [false, true]) {
     await page.goto("/logistics");
     await page.getByRole("button", { name: /ORD-000020/ }).click();
     await page.getByRole("button", { name: "Edit quotation" }).click();
-    await page.getByRole("button", { name: /Add cost item/ }).click();
-    await page.getByRole("textbox", { name: "Cost item 1 description" }).fill("testt");
-    await page.getByRole("spinbutton", { name: "Cost item 1 amount in USD" }).fill("255");
-    await page.getByRole("spinbutton", { name: "Deposit amount (USD)" }).fill("23");
+    await page.getByRole("spinbutton", { name: "Total amount (USD)" }).fill("255");
     await page.getByRole("textbox", { name: /Notes/ }).fill("weweqwe");
     await page.getByRole("button", { name: "Save draft", exact: true }).click();
     if (emptyResponse) {
       await expect(page.getByRole("alert").filter({ hasText: "Saving could not be verified" })).toBeVisible();
-      await expect(page.getByRole("spinbutton", { name: "Deposit amount (USD)" })).toHaveValue("23");
-      await expect(page.getByRole("textbox", { name: "Cost item 1 description" })).toHaveValue("testt");
+      await expect(page.getByRole("textbox", { name: "Deposit (10%)" })).toHaveValue("$25.50");
+      await expect(page.getByRole("spinbutton", { name: "Total amount (USD)" })).toHaveValue("255");
       await expect(page.getByText("Quotation draft saved.", { exact: true })).toHaveCount(0);
     } else {
       await expect(page.getByText("Quotation draft saved.", { exact: true })).toBeVisible();
       await page.reload();
       await page.getByRole("button", { name: /ORD-000020/ }).click();
       await page.getByRole("button", { name: "Edit quotation" }).click();
-      await expect(page.getByRole("spinbutton", { name: "Deposit amount (USD)" })).toHaveValue("23");
-      await expect(page.getByRole("textbox", { name: "Cost item 1 description" })).toHaveValue("testt");
+      await expect(page.getByRole("textbox", { name: "Deposit (10%)" })).toHaveValue("$25.50");
+      await expect(page.getByRole("spinbutton", { name: "Total amount (USD)" })).toHaveValue("255");
     }
     expect(puts).toBe(1);
   });

@@ -1,9 +1,7 @@
 package com.horsetransport.quotation;
 
 import java.math.BigDecimal;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 import com.horsetransport.audit.AuditEntityType;
@@ -126,46 +124,14 @@ public class QuotationService {
 		if (request == null) {
 			throw new QuotationValidationException("Quotation request is required");
 		}
-		List<QuotationLineItemRequest> items;
-		try {
-			items = request.safeLineItems();
-		}
-		catch (NullPointerException exception) {
-			throw new QuotationValidationException("Line items must not contain null values");
-		}
-
-		Set<Integer> sequenceNumbers = new HashSet<>();
-		BigDecimal total = BigDecimal.ZERO;
-		for (QuotationLineItemRequest item : items) {
-			if (item == null) {
-				throw new QuotationValidationException("Line items must not contain null values");
-			}
-			if (item.sequenceNo() == null || item.sequenceNo() <= 0) {
-				throw new QuotationValidationException("sequenceNo must be greater than zero");
-			}
-			if (!sequenceNumbers.add(item.sequenceNo())) {
-				throw new QuotationValidationException("sequenceNo must be unique within the quotation");
-			}
-			if (item.description() == null || item.description().isBlank() || item.description().length() > 255) {
-				throw new QuotationValidationException("description must not be blank and must not exceed 255 characters");
-			}
-			if (item.amount() == null || item.amount().compareTo(BigDecimal.ZERO) <= 0) {
-				throw new QuotationValidationException("amount must be greater than zero");
-			}
-			total = total.add(item.amount());
-		}
-
-		BigDecimal deposit = request.depositAmount();
-		if (deposit != null && (deposit.compareTo(BigDecimal.ZERO) <= 0 || items.isEmpty()
-				|| deposit.compareTo(total) >= 0)) {
-			throw new QuotationValidationException("depositAmount must be greater than zero and less than totalAmount");
+		if (request.totalAmount() != null && request.totalAmount().compareTo(BigDecimal.ZERO) <= 0) {
+			throw new QuotationValidationException("totalAmount must be greater than zero");
 		}
 	}
 
 	private void validateForSend(Quotation quotation) {
-		if (quotation.getLineItems().isEmpty() || quotation.getTotalAmount() == null
-				|| quotation.getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) {
-			throw new QuotationValidationException("At least one valid line item is required before sending");
+		if (quotation.getTotalAmount() == null || quotation.getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) {
+			throw new QuotationValidationException("totalAmount must be greater than zero before sending");
 		}
 		if (quotation.getDepositAmount() == null
 				|| quotation.getDepositAmount().compareTo(BigDecimal.ZERO) <= 0
@@ -173,7 +139,12 @@ public class QuotationService {
 			throw new QuotationValidationException(
 					"depositAmount must be greater than zero and less than totalAmount before sending");
 		}
-		BigDecimal expectedRemaining = quotation.getTotalAmount().subtract(quotation.getDepositAmount());
+		BigDecimal expectedDeposit = quotation.getTotalAmount().multiply(new BigDecimal("0.10"))
+				.setScale(2, java.math.RoundingMode.HALF_UP);
+		if (quotation.getDepositAmount().compareTo(expectedDeposit) != 0) {
+			throw new QuotationValidationException("Deposit must equal 10% of totalAmount");
+		}
+		BigDecimal expectedRemaining = quotation.getTotalAmount().subtract(expectedDeposit);
 		if (quotation.getRemainingAmount() == null
 				|| quotation.getRemainingAmount().compareTo(expectedRemaining) != 0) {
 			throw new QuotationValidationException("Quotation amounts are inconsistent");

@@ -60,7 +60,6 @@ class DepositPaymentTransactionServiceTest {
 	@Mock private StatusAuditLogRepository auditLogRepository;
 	@Mock private CurrentUserProvider currentUserProvider;
 	@Mock private DocumentPhaseStarter documentPhaseStarter;
-	@Mock private DepositRefundRepository refundRepository;
 	@Mock private NotificationService notificationService;
 
 	private DepositPaymentTransactionService service;
@@ -69,7 +68,7 @@ class DepositPaymentTransactionServiceTest {
 	void setUp() {
 		service = new DepositPaymentTransactionService(paymentRepository, attemptRepository, eventRepository,
 				orderRepository, quotationRepository, auditLogRepository, currentUserProvider,
-				documentPhaseStarter, refundRepository, notificationService);
+				documentPhaseStarter, notificationService);
 		lenient().when(currentUserProvider.getCurrentUserId()).thenReturn(CUSTOMER_ID);
 	}
 

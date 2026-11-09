@@ -60,7 +60,7 @@ The Functional Requirements filename still contains `Proposed`, but the document
   `RETURNED`.
 - Every Horse receives the same fixed checklist: Horse Passport/Identification, Vaccination Certificate, Veterinary Health Certificate, Ownership Certificate, and Export/Import Permit.
 - Only the Customer uploads/submits document versions. The assigned TS reviews them, approves or rejects with a reason, and explicitly performs Final Confirm after all required current versions are approved.
-- One Document Completion Deadline applies to the Order. Missing or DRAFT documents at the deadline cause cancellation and a full Deposit refund; pending TS review does not. A post-deadline rejection causes immediate cancellation and refund.
+- One Document Completion Deadline applies to the Order. Missing, DRAFT, or unsubmitted mandatory documents at the deadline cause cancellation; pending TS review does not. A post-deadline rejection causes immediate cancellation. Deposit remains `PAID` and is non-refundable in every case.
 - After Remaining Balance payment, the FRC creates an ordered ROAD/AIR Route Plan. The FRC submits it for LM review; LM may Confirm or Return with a reason. Confirmation permanently locks the Route Plan.
 - Each Horse is allocated to exactly one Vehicle in every ROAD RouteLeg. Capacity is validated per Vehicle, and allocations may differ between ROAD legs.
 - Vehicle is existing fleet/reference data; Vehicle management is not MVP
@@ -78,7 +78,7 @@ The Functional Requirements filename still contains `Proposed`, but the document
 - ROAD checkpoint definitions belong to the RouteLeg and are shared; each Vehicle records its own checkpoint arrivals against that plan.
 - The assigned Escort records Vehicle-specific ROAD welfare evidence or AIR-leg welfare evidence, including required final-destination evidence.
 - A final ROAD leg requires separate Proof of Delivery for every Vehicle; a final AIR leg requires one Proof of Delivery for the leg. Recipient login, OTP, signature, or Customer receipt confirmation is not required.
-- Tracking is milestone/checkpoint based. Customer-facing journey, payment, and refund notifications are in-app and system-generated.
+- Tracking is milestone/checkpoint based. Customer-facing journey, payment, delivery, and document-deadline cancellation notifications are in-app and system-generated.
 - FR-020 audit scope is exactly `TRANSPORT_ORDER`, `TRANSPORT_ORDER_HORSE`, `HORSE_DOCUMENT_VERSION`, `ROUTE_LEG`, and `QUOTATION`. Each covered status transition and its audit record must commit atomically.
 
 ## Explicit MVP Non-Scope
@@ -99,7 +99,7 @@ The Functional Requirements filename still contains `Proposed`, but the document
 - Vehicle CRUD, procurement, maintenance calendar, third-party fleet/provider
   booking, external fleet API, or GPS tracking
 - Recipient account, OTP, or electronic signature
-- Partial refunds
+- Deposit refunds and partial refunds
 - Currency conversion
 
 ## Architecture / ERD State
@@ -159,6 +159,26 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### LM workspace integration with latest main (2026-11-09)
+
+- Work remains in `D:\project\horse-transport-system-lm-phase0` on
+  `feature/lm-phase1-ux-improvements`; no other worktree was modified.
+- Previous main integration is saved in `751eab9`; Customer request grouping
+  and quotation response safeguards are checkpointed in `0fb1a6d`.
+- Latest main `714d043` is integrated locally. The teammate's dedicated Customer
+  dashboard/requests/horses architecture, Terms/Deposit acceptance and document
+  workflow changes are retained. Active/Drafts/History/All and compact actions
+  are preserved on the shared Customer workspace.
+- Quotation follows the merged contract from `b837ff8`: PUT sends `totalAmount`
+  and `notes`; Deposit is computed at 10%, with remaining balance derived.
+  Cost-item/manual-deposit editing is removed; response mismatch protection,
+  explicit draft editor and GET retry behavior remain.
+- Verification: 303/303 Frontend unit tests; 19/19 Backend quotation tests;
+  24/24 browser checks across desktop/mobile; ESLint, TypeScript, production
+  build and diff checks pass. Browser APIs use intercepted fixtures/preview;
+  no real Render mutation, shared DB migration or Backend E2E was performed.
+- No push/PR. Backend and dependency files match the incoming main unchanged.
+
 ### LM UX Phase 1 — local implementation (2026-11-07)
 
 - Work remains in `D:\project\horse-transport-system-lm-phase0`; branch
@@ -183,7 +203,8 @@ These follow-ups do not change approved requirements and must not be used to inf
   The configured default Backend is localhost:8080; it was not listening during
   verification. Real Journeys require Backend/auth; no app-level fake fallback added.
 - LM Phase 0/1 changes are committed locally as `a216dc8`. Integration with
-  `origin/main` at `1dbf079` is in progress with no merge commit or push yet.
+  `origin/main` at `1dbf079` was completed in `751eab9`; Customer/quotation edits
+  were checkpointed in `0fb1a6d`. Latest main `714d043` is integrated locally; no push.
 
 ### LM UX Phase 0 — latest-main local implementation (2026-11-06)
 
@@ -209,7 +230,27 @@ These follow-ups do not change approved requirements and must not be used to inf
   Full plan and file manifest: `docs/plans/lm-workspace-ux-audit-and-redesign.md`.
   Phase 0 is included in local commit `a216dc8` together with Phase 1.
 
+### Render staging backend readiness — completed (2026-11-08)
+
+- The Backend is prepared for one shared Render staging service while teammates
+  run Next.js locally: Java 21 multi-stage Docker build, non-root runtime,
+  Render `PORT`/`0.0.0.0` binding, environment-based CORS allowlist, bounded
+  HikariCP settings, and a public database-independent health endpoint.
+- Stripe's existing signed webhook path, transactional provider-event
+  idempotency, payment state transitions, and server-side confirmation remain
+  unchanged. Deployment instructions cover the Stripe Dashboard test-mode
+  endpoint and required events without Stripe CLI.
+- Verification on a clean branch from `origin/main`: 433 non-container Backend
+  tests and Maven packaging pass. Docker/Testcontainers verification is
+  environment-blocked because the Docker daemon is unavailable.
+- No Flyway migration was modified or executed against the shared/demo Supabase
+  database. No Render deployment or external-service configuration has been
+  performed. Deployment and external smoke tests still require explicit human
+  approval and target verification.
+- Runbook: `docs/RENDER_DEPLOYMENT.md`.
+
 ### Fleet & Route Coordinator UI redesign — merged via PR #137 (2026-11-07)
+
 
 - The owner-approved Queue and Order Detail screenshot designs are implemented
   locally with the existing Customer Workspace font, original logo, rounded
@@ -443,7 +484,7 @@ Order. Customer owners and Transport Specialists can read the checklist; any
 Transport Specialist can set the Order-level document deadline once. Checklist
 generation joins the BE-05 approval transaction, and generation/deadline do not
 create artificial status audits. Upload, document versions/review, deadline
-enforcement, refund, and deadline notification remain outside BE-06.
+enforcement and deadline cancellation notification remain outside BE-06.
 
 LM Order Inbox is available at `GET /api/v1/orders/inbox?status=SUBMITTED`, and
 LM can read Order detail through the existing detail endpoint. Customer list
@@ -538,7 +579,7 @@ cannot start in the current environment. Contract evidence is in
 - Transport Specialist Document Inbox support
 - BE-08 Transport Specialist document review lifecycle, merged through PR #57
 - BE-09 Transactional Audit hardening, merged through PR #58
-- BE-10 Logistics Manager Order Staff Assignment, BE-11 assigned TS Final Confirm, BE-12 document deadline evaluation, and BE-13 Deposit refunds/notifications, merged through PR #89
+- BE-10 Logistics Manager Order Staff Assignment, BE-11 assigned TS Final Confirm, and BE-12 document deadline evaluation, merged through PR #89. The former BE-13 Deposit-refund runtime flow is superseded by the confirmed non-refundable Deposit rule; its legacy schema remains for separate cleanup.
 - BE-14 Remaining Balance payment, merged through PR #93
 - BE-15 assigned FRC planning queue, merged through PR #98
 - BE-16 Route Plan and leg lifecycle, merged through PR #103

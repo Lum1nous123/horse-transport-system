@@ -38,7 +38,6 @@ public class DepositPaymentTransactionService {
 	private final StatusAuditLogRepository auditLogRepository;
 	private final CurrentUserProvider currentUserProvider;
 	private final DocumentPhaseStarter documentPhaseStarter;
-	private final DepositRefundRepository refundRepository;
 	private final NotificationService notificationService;
 
 	@Autowired
@@ -46,7 +45,7 @@ public class DepositPaymentTransactionService {
 			PaymentAttemptRepository attemptRepository, PaymentProviderEventRepository eventRepository,
 			TransportOrderRepository orderRepository, QuotationRepository quotationRepository,
 			StatusAuditLogRepository auditLogRepository, CurrentUserProvider currentUserProvider,
-			DocumentPhaseStarter documentPhaseStarter, DepositRefundRepository refundRepository,
+			DocumentPhaseStarter documentPhaseStarter,
 			NotificationService notificationService) {
 		this.paymentRepository = paymentRepository;
 		this.attemptRepository = attemptRepository;
@@ -56,7 +55,6 @@ public class DepositPaymentTransactionService {
 		this.auditLogRepository = auditLogRepository;
 		this.currentUserProvider = currentUserProvider;
 		this.documentPhaseStarter = documentPhaseStarter;
-		this.refundRepository = refundRepository;
 		this.notificationService = notificationService;
 	}
 
@@ -137,8 +135,7 @@ public class DepositPaymentTransactionService {
 				.orElseThrow(DepositPaymentNotFoundException::new);
 		PaymentAttempt latest = attemptRepository.findFirstByPaymentIdOrderByAttemptNoDesc(payment.getId())
 				.orElse(null);
-		DepositRefund refund = refundRepository.findByPaymentId(payment.getId()).orElse(null);
-		return DepositPaymentResponse.from(payment, latest, refund);
+		return DepositPaymentResponse.from(payment, latest, null);
 	}
 
 	@Transactional

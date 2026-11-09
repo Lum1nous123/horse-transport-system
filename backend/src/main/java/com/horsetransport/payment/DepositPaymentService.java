@@ -11,20 +11,18 @@ public class DepositPaymentService {
 	private final DepositPaymentTransactionService transactionService;
 	private final RemainingBalancePaymentTransactionService remainingBalanceTransactionService;
 	private final StripePaymentGateway stripeGateway;
-	private final DepositRefundService refundService;
 
 	@Autowired
 	public DepositPaymentService(DepositPaymentTransactionService transactionService,
 			RemainingBalancePaymentTransactionService remainingBalanceTransactionService,
-			StripePaymentGateway stripeGateway, DepositRefundService refundService) {
+			StripePaymentGateway stripeGateway) {
 		this.transactionService = transactionService;
 		this.remainingBalanceTransactionService = remainingBalanceTransactionService;
 		this.stripeGateway = stripeGateway;
-		this.refundService = refundService;
 	}
 
 	DepositPaymentService(DepositPaymentTransactionService transactionService, StripePaymentGateway stripeGateway) {
-		this(transactionService, null, stripeGateway, null);
+		this(transactionService, null, stripeGateway);
 	}
 
 	public DepositCheckoutResponse createCheckout(UUID orderId) {
@@ -42,9 +40,7 @@ public class DepositPaymentService {
 		StripeWebhookEvent event = stripeGateway.verifyAndParseWebhook(payload, signature);
 		WebhookProcessingResult result;
 		if (isRefundEvent(event.kind())) {
-			result = refundService == null
-					? new WebhookProcessingResult(false, false, false)
-					: refundService.processRefundWebhook(event);
+			result = new WebhookProcessingResult(false, false, false);
 		} else if (PaymentType.REMAINING_BALANCE.name().equals(event.metadata().get("paymentType"))) {
 			result = remainingBalanceTransactionService == null
 					? new WebhookProcessingResult(false, false, false)

@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import com.horsetransport.security.CurrentUserProvider;
@@ -87,6 +88,62 @@ class HorseServiceTest {
 		assertThat(responses).hasSize(1);
 		assertThat(responses.getFirst().id()).isEqualTo(horse.getId());
 		verify(horseRepository).findAllByCustomerId(CUSTOMER_ID);
+	}
+
+	@Test
+	void deletesOwnedHorseWhenItIsNotUsedByAnOrder() {
+		Horse horse = new Horse(CUSTOMER_ID, "Thunder", null, "985141000123456",
+				null, null, null, null);
+		when(currentUserProvider.getCurrentUserId()).thenReturn(CUSTOMER_ID);
+		when(horseRepository.findOwnedByIdForUpdate(horse.getId(), CUSTOMER_ID))
+				.thenReturn(Optional.of(horse));
+		when(horseRepository.existsTransportOrderReference(horse.getId())).thenReturn(false);
+
+		horseService.delete(horse.getId());
+
+		verify(horseRepository).delete(horse);
+		verify(horseRepository).flush();
+	}
+
+	@Test
+	void hidesForeignOrMissingHorseBehindNotFound() {
+		UUID horseId = UUID.randomUUID();
+		when(currentUserProvider.getCurrentUserId()).thenReturn(CUSTOMER_ID);
+		when(horseRepository.findOwnedByIdForUpdate(horseId, CUSTOMER_ID)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> horseService.delete(horseId))
+				.isInstanceOf(HorseNotFoundException.class);
+		verify(horseRepository, never()).existsTransportOrderReference(any());
+		verify(horseRepository, never()).delete(any());
+	}
+
+	@Test
+	void rejectsDeletingHorseReferencedByAnOrder() {
+		Horse horse = new Horse(CUSTOMER_ID, "Thunder", null, "985141000123456",
+				null, null, null, null);
+		when(currentUserProvider.getCurrentUserId()).thenReturn(CUSTOMER_ID);
+		when(horseRepository.findOwnedByIdForUpdate(horse.getId(), CUSTOMER_ID))
+				.thenReturn(Optional.of(horse));
+		when(horseRepository.existsTransportOrderReference(horse.getId())).thenReturn(true);
+
+		assertThatThrownBy(() -> horseService.delete(horse.getId()))
+				.isInstanceOf(HorseInUseException.class);
+		verify(horseRepository, never()).delete(any());
+	}
+
+	@Test
+	void translatesConcurrentReferenceConstraintIntoHorseInUse() {
+		Horse horse = new Horse(CUSTOMER_ID, "Thunder", null, "985141000123456",
+				null, null, null, null);
+		when(currentUserProvider.getCurrentUserId()).thenReturn(CUSTOMER_ID);
+		when(horseRepository.findOwnedByIdForUpdate(horse.getId(), CUSTOMER_ID))
+				.thenReturn(Optional.of(horse));
+		when(horseRepository.existsTransportOrderReference(horse.getId())).thenReturn(false);
+		org.mockito.Mockito.doThrow(new DataIntegrityViolationException("horse is referenced"))
+				.when(horseRepository).flush();
+
+		assertThatThrownBy(() -> horseService.delete(horse.getId()))
+				.isInstanceOf(HorseInUseException.class);
 	}
 
 	private CreateHorseRequest request(String microchipId) {

@@ -21,8 +21,7 @@ import com.horsetransport.order.OrderStatus;
 import com.horsetransport.order.TransportOrder;
 import com.horsetransport.order.TransportOrderHorse;
 import com.horsetransport.order.TransportOrderRepository;
-import com.horsetransport.payment.DepositRefund;
-import com.horsetransport.payment.DepositRefundRepository;
+import com.horsetransport.notification.NotificationService;
 import com.horsetransport.payment.Payment;
 import com.horsetransport.payment.PaymentRepository;
 import com.horsetransport.payment.PaymentStatus;
@@ -42,15 +41,15 @@ class DocumentDeadlineOrderProcessorTest {
 
 	private static final UUID ORDER_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
 	private static final UUID HORSE_ID = UUID.fromString("22222222-2222-2222-2222-222222222222");
-	private static final UUID PAYMENT_ID = UUID.fromString("33333333-3333-3333-3333-333333333333");
+	private static final UUID CUSTOMER_ID = UUID.fromString("33333333-3333-3333-3333-333333333333");
 	private static final LocalDateTime DEADLINE = LocalDateTime.of(2026, 10, 4, 12, 0);
 
 	@Mock private TransportOrderRepository orderRepository;
 	@Mock private HorseDocumentRepository documentRepository;
 	@Mock private HorseDocumentVersionRepository versionRepository;
 	@Mock private PaymentRepository paymentRepository;
-	@Mock private DepositRefundRepository refundRepository;
 	@Mock private StatusAuditLogRepository auditRepository;
+	@Mock private NotificationService notificationService;
 	@Mock private TransportOrder order;
 	@Mock private TransportOrderHorse orderHorse;
 	@Mock private Payment payment;
@@ -62,9 +61,10 @@ class DocumentDeadlineOrderProcessorTest {
 	@BeforeEach
 	void setUp() {
 		processor = new DocumentDeadlineOrderProcessor(orderRepository, documentRepository,
-				versionRepository, paymentRepository, refundRepository, auditRepository);
+				versionRepository, paymentRepository, auditRepository, notificationService);
 		when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
 		when(order.getId()).thenReturn(ORDER_ID);
+		when(order.getCustomerId()).thenReturn(CUSTOMER_ID);
 		when(order.getStatus()).thenReturn(OrderStatus.APPROVED);
 		when(order.getDocumentCompletionDeadlineAt()).thenReturn(DEADLINE);
 		when(order.getDocumentsLockedAt()).thenReturn(null);
@@ -75,11 +75,7 @@ class DocumentDeadlineOrderProcessorTest {
 		when(versionRepository.findCurrentByHorseDocumentIds(anyCollection())).thenAnswer(invocation -> versions);
 		when(paymentRepository.findByTransportOrderIdAndPaymentType(ORDER_ID, PaymentType.DEPOSIT))
 				.thenReturn(Optional.of(payment));
-		when(payment.getId()).thenReturn(PAYMENT_ID);
 		when(payment.getStatus()).thenReturn(PaymentStatus.PAID);
-		when(refundRepository.findByPaymentId(PAYMENT_ID)).thenReturn(Optional.empty());
-		when(refundRepository.saveAndFlush(any(DepositRefund.class)))
-				.thenAnswer(invocation -> invocation.getArgument(0));
 
 		documents = new ArrayList<>();
 		versions = new ArrayList<>();
@@ -98,7 +94,7 @@ class DocumentDeadlineOrderProcessorTest {
 	}
 
 	@Test
-	void cancelsAtDeadlineForDraftAndPersistsAuditAndRefundIntent() {
+	void cancelsAtDeadlineForDraftAndKeepsPaidDepositWithoutRefund() {
 		when(versions.getFirst().getStatus()).thenReturn(DocumentVersionStatus.DRAFT);
 
 		assertThat(processor.cancelForIncompleteDeadline(ORDER_ID, DEADLINE)).isTrue();
@@ -111,11 +107,8 @@ class DocumentDeadlineOrderProcessorTest {
 		assertThat(audit.getValue().getOldStatus()).isEqualTo("APPROVED");
 		assertThat(audit.getValue().getNewStatus()).isEqualTo("CANCELLED");
 		assertThat(audit.getValue().getOccurredAt()).isEqualTo(DEADLINE);
-		ArgumentCaptor<DepositRefund> refund = ArgumentCaptor.forClass(DepositRefund.class);
-		verify(refundRepository).saveAndFlush(refund.capture());
-		assertThat(refund.getValue().getPaymentId()).isEqualTo(PAYMENT_ID);
-		assertThat(refund.getValue().getIdempotencyKey()).isEqualTo("document-deadline-refund-" + PAYMENT_ID);
-		assertThat(refund.getValue().getRequestedAt()).isEqualTo(DEADLINE);
+		assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PAID);
+		verify(notificationService).createOrderCancelledForDocumentDeadline(CUSTOMER_ID, ORDER_ID);
 	}
 
 	@Test
@@ -126,7 +119,7 @@ class DocumentDeadlineOrderProcessorTest {
 
 		verify(orderRepository, never()).saveAndFlush(any());
 		verify(auditRepository, never()).saveAndFlush(any());
-		verify(refundRepository, never()).saveAndFlush(any());
+		verify(notificationService, never()).createOrderCancelledForDocumentDeadline(any(), any());
 	}
 
 	@Test
@@ -136,7 +129,7 @@ class DocumentDeadlineOrderProcessorTest {
 		assertThat(processor.cancelForIncompleteDeadline(ORDER_ID, DEADLINE)).isTrue();
 
 		verify(order).cancelForDocumentDeadline(DEADLINE);
-		verify(refundRepository).saveAndFlush(any(DepositRefund.class));
+		verify(notificationService).createOrderCancelledForDocumentDeadline(CUSTOMER_ID, ORDER_ID);
 	}
 
 	@Test
@@ -153,7 +146,7 @@ class DocumentDeadlineOrderProcessorTest {
 		assertThat(processor.cancelForIncompleteDeadline(ORDER_ID, DEADLINE)).isFalse();
 
 		verify(orderRepository, never()).saveAndFlush(any());
-		verify(refundRepository, never()).saveAndFlush(any());
+		verify(notificationService, never()).createOrderCancelledForDocumentDeadline(any(), any());
 	}
 
 	@Test
@@ -166,23 +159,52 @@ class DocumentDeadlineOrderProcessorTest {
 	}
 
 	@Test
-	void rejectionAfterDeadlineCancelsAndCreatesRefundIntent() {
-		LocalDateTime rejectedAt = DEADLINE.plusSeconds(1);
+	void rejectionAfterOriginalDeadlineKeepsOrderActiveDuringCorrectionWindow() {
+		LocalDateTime correctionDeadline = DEADLINE.plusHours(24);
+		when(versions.getFirst().getStatus()).thenReturn(DocumentVersionStatus.REJECTED);
+		when(documents.getFirst().getCorrectionDeadlineAt()).thenReturn(correctionDeadline);
 
-		assertThat(processor.cancelForPostDeadlineRejection(ORDER_ID, rejectedAt)).isTrue();
+		assertThat(processor.cancelForIncompleteDeadline(ORDER_ID, DEADLINE.plusHours(1))).isFalse();
 
-		verify(order).cancelForDocumentDeadline(rejectedAt);
-		verify(auditRepository).saveAndFlush(any(StatusAuditLog.class));
-		verify(refundRepository).saveAndFlush(any(DepositRefund.class));
+		verify(orderRepository, never()).saveAndFlush(any());
+		verify(notificationService, never()).createOrderCancelledForDocumentDeadline(any(), any());
+		verify(notificationService, never()).createOrderCancelledForCorrectionDeadline(any(), any());
 	}
 
 	@Test
-	void retryDoesNotRepeatCancellationAuditOrRefundIntentAfterOrderIsCancelled() {
+	void missedCorrectionDeadlineCancelsWithoutRefundingPaidDeposit() {
+		LocalDateTime correctionDeadline = DEADLINE.plusHours(24);
+		when(versions.getFirst().getStatus()).thenReturn(DocumentVersionStatus.DRAFT);
+		when(documents.getFirst().getCorrectionDeadlineAt()).thenReturn(correctionDeadline);
+
+		assertThat(processor.cancelForIncompleteDeadline(ORDER_ID, correctionDeadline)).isTrue();
+
+		verify(order).cancelForDocumentDeadline(correctionDeadline);
+		verify(auditRepository).saveAndFlush(any(StatusAuditLog.class));
+		assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PAID);
+		verify(notificationService).createOrderCancelledForCorrectionDeadline(CUSTOMER_ID, ORDER_ID);
+		verify(notificationService, never()).createOrderCancelledForDocumentDeadline(any(), any());
+	}
+
+	@Test
+	void resubmittedPendingVersionDoesNotCancelAtCorrectionDeadline() {
+		LocalDateTime correctionDeadline = DEADLINE.plusHours(24);
+		when(versions.getFirst().getStatus()).thenReturn(DocumentVersionStatus.PENDING_REVIEW);
+		when(documents.getFirst().getCorrectionDeadlineAt()).thenReturn(correctionDeadline);
+
+		assertThat(processor.cancelForIncompleteDeadline(ORDER_ID, correctionDeadline)).isFalse();
+
+		verify(orderRepository, never()).saveAndFlush(any());
+		verify(notificationService, never()).createOrderCancelledForCorrectionDeadline(any(), any());
+	}
+
+	@Test
+	void retryDoesNotRepeatCancellationAuditOrNotificationAfterOrderIsCancelled() {
 		when(versions.getFirst().getStatus()).thenReturn(DocumentVersionStatus.DRAFT);
 		when(order.getStatus()).thenReturn(OrderStatus.APPROVED, OrderStatus.APPROVED, OrderStatus.CANCELLED);
 		assertThat(processor.cancelForIncompleteDeadline(ORDER_ID, DEADLINE)).isTrue();
 		assertThat(processor.cancelForIncompleteDeadline(ORDER_ID, DEADLINE)).isFalse();
 		verify(auditRepository, times(1)).saveAndFlush(any(StatusAuditLog.class));
-		verify(refundRepository, times(1)).saveAndFlush(any(DepositRefund.class));
+		verify(notificationService, times(1)).createOrderCancelledForDocumentDeadline(CUSTOMER_ID, ORDER_ID);
 	}
 }

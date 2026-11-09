@@ -90,7 +90,7 @@ describe("LM quotation read recovery", () => {
     await user.click(await screen.findByRole("button", { name: /ORD-1/ }));
     await user.click(await screen.findByRole("button", { name: "Edit quotation" }));
     await user.click(screen.getByRole("button", { name: "Send quotation" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Add at least one cost item");
+    expect(screen.getByRole("alert")).toHaveTextContent("Total amount must be greater than zero");
     expect(vi.mocked(apiFetch).mock.calls.every(([, init]) => !init?.method)).toBe(true);
   });
 
@@ -100,7 +100,7 @@ describe("LM quotation read recovery", () => {
     vi.mocked(apiFetch).mockImplementation(async (path, init) => {
       if (init?.method === "PUT") {
         const body = JSON.parse(String(init.body));
-        return Response.json({ ...draft, ...body, lineItems: body.lineItems.map((item: object) => ({ id: "item-1", ...item })), totalAmount: 100, remainingAmount: 75 });
+        return Response.json({ ...draft, ...body, lineItems: [], totalAmount: 100, depositAmount: 10, remainingAmount: 90 });
       }
       return readHandler(path, init);
     });
@@ -108,14 +108,11 @@ describe("LM quotation read recovery", () => {
     render(<Page />);
     await user.click(await screen.findByRole("button", { name: /ORD-1/ }));
     await user.click(await screen.findByRole("button", { name: "Edit quotation" }));
-    await user.click(screen.getByRole("button", { name: /Add cost item/ }));
-    await user.type(screen.getByRole("textbox", { name: "Cost item 1 description" }), "Transport");
-    await user.type(screen.getByRole("spinbutton", { name: "Cost item 1 amount in USD" }), "100");
-    await user.type(screen.getByRole("spinbutton", { name: "Deposit amount (USD)" }), "25");
+    await user.type(screen.getByRole("spinbutton", { name: "Total amount (USD)" }), "100");
     await user.click(screen.getByRole("button", { name: "Hide editor" }));
     expect(screen.queryByRole("button", { name: "Save draft" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Edit quotation" }));
-    expect(screen.getByRole("textbox", { name: "Cost item 1 description" })).toHaveValue("Transport");
+    expect(screen.getByRole("spinbutton", { name: "Total amount (USD)" })).toHaveValue(100);
     await user.click(screen.getByRole("button", { name: "Save draft" }));
     expect(await screen.findByText("Quotation draft saved.")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Save draft" })).not.toBeInTheDocument();
@@ -127,10 +124,7 @@ describe("LM quotation read recovery", () => {
     render(<Page />);
     await user.click(await screen.findByRole("button", { name: /ORD-1/ }));
     await user.click(await screen.findByRole("button", { name: "Edit quotation" }));
-    await user.click(screen.getByRole("button", { name: /Add cost item/ }));
-    await user.type(screen.getByRole("textbox", { name: "Cost item 1 description" }), "testt");
-    await user.type(screen.getByRole("spinbutton", { name: "Cost item 1 amount in USD" }), "255");
-    await user.type(screen.getByRole("spinbutton", { name: "Deposit amount (USD)" }), "23");
+    await user.type(screen.getByRole("spinbutton", { name: "Total amount (USD)" }), "255");
     await user.type(screen.getByRole("textbox", { name: /Notes/ }), "weweqwe");
     return user;
   }
@@ -146,15 +140,14 @@ describe("LM quotation read recovery", () => {
     await user.click(screen.getByRole("button", { name: action }));
     if (action === "Send quotation") await user.click(screen.getByRole("button", { name: "Send and lock quotation" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Saving could not be verified");
-    expect(screen.getByRole("textbox", { name: "Cost item 1 description" })).toHaveValue("testt");
-    expect(screen.getByRole("spinbutton", { name: "Cost item 1 amount in USD" })).toHaveValue(255);
-    expect(screen.getByRole("spinbutton", { name: "Deposit amount (USD)" })).toHaveValue(23);
+    expect(screen.getByRole("spinbutton", { name: "Total amount (USD)" })).toHaveValue(255);
+    expect(screen.getByRole("textbox", { name: "Deposit (10%)" })).toHaveValue("$25.50");
     expect(screen.getByRole("textbox", { name: /Notes/ })).toHaveValue("weweqwe");
     expect(screen.queryByText("Quotation draft saved.")).not.toBeInTheDocument();
     const writes = vi.mocked(apiFetch).mock.calls.filter(([, init]) => init?.method);
     expect(writes).toHaveLength(1);
     expect(JSON.parse(String(writes[0][1]?.body))).toEqual({
-      depositAmount: 23, notes: "weweqwe", lineItems: [{ sequenceNo: 1, description: "testt", amount: 255 }],
+      totalAmount: 255, notes: "weweqwe",
     });
     expect(new Headers(writes[0][1]?.headers).get("Content-Type")).toBe("application/json");
   });
@@ -166,8 +159,8 @@ describe("LM quotation read recovery", () => {
     vi.mocked(apiFetch).mockImplementation(async (path, init) => {
       if (init?.method === "PUT") {
         const body = JSON.parse(String(init.body));
-        stored = { ...draft, ...body, totalAmount: 255, remainingAmount: 232,
-          lineItems: body.lineItems.map((item: object) => ({ id: "item-1", ...item })) };
+        stored = { ...draft, ...body, totalAmount: 255, depositAmount: 25.5, remainingAmount: 229.5,
+          lineItems: [] };
         return Response.json(stored);
       }
       if (String(path).endsWith("/send")) return Response.json({ ...stored, status: "SENT" });
@@ -177,16 +170,15 @@ describe("LM quotation read recovery", () => {
     await user.click(screen.getByRole("button", { name: "Save draft" }));
     expect(await screen.findByText("Quotation draft saved.")).toBeVisible();
     expect(screen.getByText("$255.00")).toBeVisible();
-    expect(screen.getByText("$23.00")).toBeVisible();
-    expect(screen.getByText("$232.00")).toBeVisible();
+    expect(screen.getByText("$25.50")).toBeVisible();
+    expect(screen.getByText("$229.50")).toBeVisible();
     // Unmount/remount forces a new service read rather than reusing component state.
     const { cleanup } = await import("@testing-library/react");
     cleanup();
     render(<Page />);
     await user.click(await screen.findByRole("button", { name: /ORD-1/ }));
     await user.click(await screen.findByRole("button", { name: "Edit quotation" }));
-    expect(screen.getByRole("textbox", { name: "Cost item 1 description" })).toHaveValue("testt");
-    expect(screen.getByRole("spinbutton", { name: "Deposit amount (USD)" })).toHaveValue(23);
+    expect(screen.getByRole("textbox", { name: "Deposit (10%)" })).toHaveValue("$25.50");
     await user.click(screen.getByRole("button", { name: "Send quotation" }));
     await user.click(screen.getByRole("button", { name: "Send and lock quotation" }));
     expect(await screen.findByText(/Quotation sent for ORD-1/)).toBeVisible();

@@ -57,6 +57,23 @@ public class HorseService {
 				.toList();
 	}
 
+	@Transactional
+	public void delete(UUID horseId) {
+		UUID customerId = currentUserProvider.getCurrentUserId();
+		Horse horse = horseRepository.findOwnedByIdForUpdate(horseId, customerId)
+				.orElseThrow(HorseNotFoundException::new);
+		if (horseRepository.existsTransportOrderReference(horseId)) {
+			throw new HorseInUseException();
+		}
+
+		try {
+			horseRepository.delete(horse);
+			horseRepository.flush();
+		} catch (DataIntegrityViolationException exception) {
+			throw new HorseInUseException();
+		}
+	}
+
 	private boolean isMicrochipUniqueViolation(DataIntegrityViolationException exception) {
 		Throwable cause = exception;
 		while (cause != null) {

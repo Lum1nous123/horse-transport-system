@@ -18,13 +18,14 @@ public record DocumentVersionResponse(
 		LocalDateTime uploadedAt,
 		LocalDateTime submittedAt,
 		LocalDateTime reviewedAt,
-		String rejectionReason) {
+		String rejectionReason,
+		LocalDateTime correctionDeadlineAt) {
 
 	static DocumentVersionResponse from(HorseDocumentVersion version) {
 		return new DocumentVersionResponse(version.getId(), version.getHorseDocumentId(), version.getVersionNo(),
 				version.getStatus(), version.isCurrent(), version.getFileUrl(), displayName(version), version.getExpiryDate(),
 				version.getUploadedAt(), version.getSubmittedAt(), version.getReviewedAt(),
-				version.getRejectionReason());
+				version.getRejectionReason(), version.getCorrectionDeadlineAt());
 	}
 
 	private static String displayName(HorseDocumentVersion version) {

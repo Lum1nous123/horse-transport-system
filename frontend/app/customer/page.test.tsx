@@ -1,92 +1,149 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import Page from "./page";
-import { apiFetch } from "@/lib/api";
+import { CUSTOMER_TERMS_LOGIN_HIDDEN_KEY } from "@/lib/customer-terms";
+import CustomerPage from "./page";
 
-const auth = vi.hoisted(() => ({ role: "CUSTOMER", router: { replace: vi.fn() } }));
-vi.mock("next/navigation", () => ({ useRouter: () => auth.router }));
+const mocks = vi.hoisted(() => ({
+  apiFetch: vi.fn(),
+  clearAccessToken: vi.fn(),
+  getAccessToken: vi.fn(),
+  getCurrentUser: vi.fn(),
+  replace: vi.fn(),
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: mocks.replace }),
+}));
+
 vi.mock("@/lib/auth", () => ({
-  getAccessToken: () => "test-token", clearAccessToken: vi.fn(),
-  getCurrentUser: async () => ({ role: auth.role }),
-}));
-vi.mock("@/lib/api", () => ({ apiFetch: vi.fn() }));
-
-const statuses = ["DRAFT", "SUBMITTED", "QUOTATION_SENT", "APPROVED", "READY_TO_SHIP", "IN_PROGRESS", "DELIVERED", "REJECTED", "CANCELLED"];
-const orders = statuses.map((status) => ({
-  id: status, orderCode: "ORD-" + status, status, horseIds: [], originAddress: "Paris",
-  destinationAddress: status === "IN_PROGRESS" ? "Brussels" : "Amsterdam", transportMode: "ROAD",
+  clearAccessToken: mocks.clearAccessToken,
+  getAccessToken: mocks.getAccessToken,
+  getCurrentUser: mocks.getCurrentUser,
 }));
 
-describe("Customer request groups and contextual actions", () => {
+vi.mock("@/lib/api", () => ({ apiFetch: mocks.apiFetch }));
+
+const order = {
+  id: "order-1",
+  orderCode: "ORD-1",
+  originCountry: "France",
+  destinationCountry: "Belgium",
+  requestedDepartureAt: "2026-11-10T09:00:00",
+  transportMode: "ROAD",
+  recipientName: "Taylor Morgan",
+  recipientPhone: "+32 2 555 0101",
+  horseIds: [],
+  status: "QUOTATION_SENT",
+};
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+describe("Customer Terms integration", () => {
   beforeEach(() => {
-    vi.resetAllMocks();
-    auth.role = "CUSTOMER";
-    window.history.replaceState(null, "", "/customer");
-    vi.mocked(apiFetch).mockImplementation(async (path) => {
-      if (path === "/api/v1/orders") return Response.json(orders);
-      if (path === "/api/v1/horses") return Response.json([]);
-      if (String(path).endsWith("/remaining-balance")) return Response.json({ paymentStatus: "PAID", checkoutEligible: false });
-      throw new Error("Unexpected request " + path);
+    window.localStorage.clear();
+    mocks.getAccessToken.mockReturnValue("customer-token");
+    mocks.getCurrentUser.mockResolvedValue({ role: "CUSTOMER", status: "ACTIVE" });
+    mocks.apiFetch.mockImplementation((path: string) => {
+      if (path === "/api/v1/horses") return Promise.resolve(jsonResponse([]));
+      if (path === "/api/v1/orders") return Promise.resolve(jsonResponse([order]));
+      if (path === "/api/v1/orders/order-1/quotation") {
+        return Promise.resolve(jsonResponse({
+          id: "quote-1",
+          orderId: "order-1",
+          totalAmount: 4000,
+          depositAmount: 1000,
+          remainingAmount: 3000,
+          currency: "USD",
+          status: "SENT",
+          lineItems: [],
+        }));
+      }
+      if (path === "/api/v1/orders/order-1/deposit") {
+        return Promise.resolve(jsonResponse({ code: "DEPOSIT_PAYMENT_NOT_FOUND" }, 404));
+      }
+      if (path === "/api/v1/orders/order-1/deposit/checkout") {
+        return Promise.resolve(jsonResponse({ checkoutUrl: "" }));
+      }
+      return Promise.resolve(new Response(null, { status: 204 }));
     });
   });
 
-  it("defaults to active, exposes real group counts and resets exact status when switching groups", async () => {
+  it("shows the notice after Customer access is verified and saves the opt-out", async () => {
     const user = userEvent.setup();
-    render(<Page />);
-    expect(await screen.findByRole("button", { name: "Active 5" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.queryByText("ORD-DELIVERED")).not.toBeInTheDocument();
-    expect(screen.getByText("ORD-SUBMITTED")).toBeVisible();
-    await user.selectOptions(screen.getByRole("combobox", { name: "Filter transport requests by status" }), "IN_PROGRESS");
-    expect(screen.queryByText("ORD-SUBMITTED")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "History 3" }));
-    expect(screen.getByText("ORD-DELIVERED")).toBeVisible();
-    expect(screen.getByText("ORD-REJECTED")).toBeVisible();
-    expect(screen.getByText("ORD-CANCELLED")).toBeVisible();
-    expect(screen.getByRole("combobox", { name: "Filter transport requests by status" })).toHaveValue("");
-    await user.click(screen.getByRole("button", { name: "Drafts 1" }));
-    expect(screen.getByRole("button", { name: "Edit draft" })).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "All 9" }));
-    expect(document.querySelectorAll(".customer-order-row")).toHaveLength(9);
-    expect(screen.queryByText("Editing locked")).not.toBeInTheDocument();
+    render(<CustomerPage />);
+
+    expect(await screen.findByRole("dialog", { name: "Transport Terms & Important Notices" })).toBeVisible();
+    await user.click(screen.getByRole("checkbox", { name: "Don't show again" }));
+    await user.click(screen.getByRole("button", { name: "Got it" }));
+
+    expect(window.localStorage.getItem(CUSTOMER_TERMS_LOGIN_HIDDEN_KEY)).toBe("true");
+    expect(screen.queryByRole("dialog", { name: "Transport Terms & Important Notices" })).not.toBeInTheDocument();
   });
 
-  it("combines group and search, keeps counts independent, and clears filters within the group", async () => {
-    const user = userEvent.setup();
-    render(<Page />);
-    await screen.findByRole("button", { name: "Active 5" });
-    await user.type(screen.getByRole("searchbox"), "Brussels");
-    expect(document.querySelectorAll(".customer-order-row")).toHaveLength(1);
-    expect(screen.getByText("Showing 1 of 5 requests in this group · 9 total loaded")).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "History 3" }));
-    expect(screen.getByText("No matching requests")).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Clear filters" }));
-    expect(document.querySelectorAll(".customer-order-row")).toHaveLength(3);
-    expect(screen.getByRole("button", { name: "History 3" })).toHaveAttribute("aria-pressed", "true");
+  it("does not show the automatic notice when the preference is already stored", async () => {
+    window.localStorage.setItem(CUSTOMER_TERMS_LOGIN_HIDDEN_KEY, "true");
+    render(<CustomerPage />);
+
+    await screen.findByText("ORD-1");
+
+    expect(screen.queryByRole("dialog", { name: "Transport Terms & Important Notices" })).not.toBeInTheDocument();
   });
 
-  it("prioritizes tracking, discloses secondary actions and preserves payment URLs without duplicates", async () => {
+  it("shows the notice again on a later Customer entry when no preference was saved", async () => {
     const user = userEvent.setup();
-    render(<Page />);
-    const row = (await screen.findByText("ORD-IN_PROGRESS")).closest("article")!;
-    expect(within(row).getByRole("link", { name: "Track journey" })).toHaveAttribute("href", "/customer/orders/IN_PROGRESS/tracking");
-    expect(within(row).getByText("More actions", { exact: false })).toBeVisible();
-    expect(row.querySelector("details")).not.toHaveAttribute("open");
-    await user.click(within(row).getByText("More actions", { exact: false }));
-    expect(within(row).getByRole("link", { name: "View payment" })).toHaveAttribute("href", "/customer/orders/IN_PROGRESS/remaining-balance");
-    expect(within(row).getByRole("button", { name: "Manage documents" })).toBeVisible();
-    await user.keyboard("{Escape}");
-    expect(row.querySelector("details")).not.toHaveAttribute("open");
-    const approved = screen.getByText("ORD-APPROVED").closest("article")!;
-    await user.click(within(approved).getByText("More actions", { exact: false }));
-    expect(within(approved).getAllByRole("link", { name: "View payment" })).toHaveLength(1);
-    expect(vi.mocked(apiFetch).mock.calls.every(([, init]) => !init?.method)).toBe(true);
+    const firstEntry = render(<CustomerPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Got it" }));
+    expect(window.localStorage.getItem(CUSTOMER_TERMS_LOGIN_HIDDEN_KEY)).toBeNull();
+    firstEntry.unmount();
+
+    render(<CustomerPage />);
+    expect(await screen.findByRole("dialog", { name: "Transport Terms & Important Notices" })).toBeVisible();
   });
 
-  it("retains role authorization", async () => {
-    auth.role = "LOGISTICS_MANAGER";
-    render(<Page />);
-    await vi.waitFor(() => expect(auth.router.replace).toHaveBeenCalledWith("/logistics"));
-    expect(apiFetch).not.toHaveBeenCalled();
+  it("redirects a non-Customer without showing the Customer notice", async () => {
+    mocks.getCurrentUser.mockResolvedValue({ role: "LOGISTICS_MANAGER", status: "ACTIVE" });
+    render(<CustomerPage />);
+
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/logistics"));
+    expect(screen.queryByRole("dialog", { name: "Transport Terms & Important Notices" })).not.toBeInTheDocument();
   });
+
+  it("intercepts every Pay Deposit attempt and starts checkout only after fresh agreement", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem(CUSTOMER_TERMS_LOGIN_HIDDEN_KEY, "true");
+    render(<CustomerPage />);
+
+    await user.click(await screen.findByRole("button", { name: "View bill" }));
+    const payDeposit = await screen.findByRole("button", { name: "Pay deposit" });
+    await user.click(payDeposit);
+
+    const continueButton = screen.getByRole("button", { name: "Agree & Continue to Payment" });
+    expect(continueButton).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(mocks.apiFetch).not.toHaveBeenCalledWith(
+      "/api/v1/orders/order-1/deposit/checkout",
+      expect.anything(),
+    );
+
+    await user.click(payDeposit);
+    const reopenedContinue = screen.getByRole("button", { name: "Agree & Continue to Payment" });
+    expect(reopenedContinue).toBeDisabled();
+    await user.click(screen.getByRole("checkbox", {
+      name: "I have read and agree to the Transport Terms & Important Notices.",
+    }));
+    await user.click(reopenedContinue);
+
+    await waitFor(() => expect(mocks.apiFetch).toHaveBeenCalledWith(
+      "/api/v1/orders/order-1/deposit/checkout",
+      expect.objectContaining({ method: "POST" }),
+    ));
+  });
+
 });
