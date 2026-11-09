@@ -102,6 +102,25 @@ class TransportOrderServiceTest {
 	}
 
 	@Test
+	void editsRejectedOrderWithoutChangingIdentity() {
+		TransportOrder order = validOrder();
+		order.submit();
+		order.reject("Update the recipient details");
+		UUID originalId = order.getId();
+		String originalCode = order.getOrderCode();
+		when(orderRepository.findByIdAndCustomerId(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+		when(horseRepository.findAllByIdInAndCustomerId(any(), any())).thenReturn(List.of(mock(Horse.class)));
+		when(orderRepository.save(order)).thenReturn(order);
+
+		OrderResponse response = service.update(order.getId(), request(List.of(HORSE_ID)));
+
+		assertThat(response.id()).isEqualTo(originalId);
+		assertThat(response.orderCode()).isEqualTo(originalCode);
+		assertThat(response.status()).isEqualTo(OrderStatus.REJECTED);
+		assertThat(response.rejectionReason()).isEqualTo("Update the recipient details");
+	}
+
+	@Test
 	void editingDraftRetainsExistingHorseWithoutDuplicatingIt() {
 		TransportOrder order = validOrder();
 		when(orderRepository.findByIdAndCustomerId(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
@@ -156,6 +175,60 @@ class TransportOrderServiceTest {
 		assertThat(audit.getActorUserId()).isEqualTo(CUSTOMER_ID);
 		assertThat(audit.getReason()).isNull();
 		assertThat(audit.getOccurredAt()).isNotNull();
+	}
+
+	@Test
+	void resubmitsRejectedOrderAndClearsRejectionReason() {
+		TransportOrder order = validOrder();
+		order.submit();
+		order.reject("Update the recipient details");
+		when(orderRepository.findOwnedByIdForUpdate(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+		when(auditLogRepository.saveAndFlush(any(StatusAuditLog.class)))
+				.thenAnswer(invocation -> invocation.getArgument(0));
+
+		OrderResponse response = service.submit(order.getId());
+
+		assertThat(response.id()).isEqualTo(order.getId());
+		assertThat(response.status()).isEqualTo(OrderStatus.SUBMITTED);
+		assertThat(response.rejectionReason()).isNull();
+		ArgumentCaptor<StatusAuditLog> captor = ArgumentCaptor.forClass(StatusAuditLog.class);
+		verify(auditLogRepository).saveAndFlush(captor.capture());
+		assertThat(captor.getValue().getOldStatus()).isEqualTo("REJECTED");
+		assertThat(captor.getValue().getNewStatus()).isEqualTo("SUBMITTED");
+	}
+
+	@Test
+	void resubmitAuditFailureRestoresRejectedStateAndReason() {
+		TransportOrder order = validOrder();
+		order.submit();
+		order.reject("Update the recipient details");
+		when(orderRepository.findOwnedByIdForUpdate(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+		when(auditLogRepository.saveAndFlush(any(StatusAuditLog.class)))
+				.thenThrow(new DataIntegrityViolationException("audit insert failed"));
+
+		assertThatThrownBy(() -> service.submit(order.getId()))
+				.isInstanceOf(DataIntegrityViolationException.class);
+		assertThat(order.getStatus()).isEqualTo(OrderStatus.REJECTED);
+		assertThat(order.getRejectionReason()).isEqualTo("Update the recipient details");
+	}
+
+	@Test
+	void logisticsManagerCanRejectAgainAfterCustomerResubmits() {
+		TransportOrder order = validOrder();
+		order.submit();
+		order.reject("First correction");
+		when(orderRepository.findOwnedByIdForUpdate(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+		when(auditLogRepository.saveAndFlush(any(StatusAuditLog.class)))
+				.thenAnswer(invocation -> invocation.getArgument(0));
+
+		service.submit(order.getId());
+		when(currentUserProvider.getCurrentUserId()).thenReturn(LM_ID);
+		when(orderRepository.findByIdForUpdate(order.getId())).thenReturn(Optional.of(order));
+
+		OrderResponse response = service.reject(order.getId(), new RejectOrderRequest("Second correction"));
+
+		assertThat(response.status()).isEqualTo(OrderStatus.REJECTED);
+		assertThat(response.rejectionReason()).isEqualTo("Second correction");
 	}
 
 	@Test
@@ -277,7 +350,7 @@ class TransportOrderServiceTest {
 	}
 
 	@ParameterizedTest
-	@EnumSource(value = OrderStatus.class, names = {"DRAFT", "SUBMITTED", "QUOTATION_SENT"})
+	@EnumSource(value = OrderStatus.class, names = {"DRAFT", "SUBMITTED", "QUOTATION_SENT", "REJECTED"})
 	void customerCancelsAllowedPreApprovalStatuses(OrderStatus oldStatus) {
 		TransportOrder order = order(oldStatus);
 		when(orderRepository.findOwnedByIdForUpdate(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
@@ -355,7 +428,7 @@ class TransportOrderServiceTest {
 
 	@ParameterizedTest
 	@EnumSource(value = OrderStatus.class, names = {"DRAFT", "QUOTATION_SENT", "REJECTED"})
-	void logisticsManagerCannotRejectInvalidOrTerminalStatuses(OrderStatus status) {
+	void logisticsManagerCannotRejectOrdersThatAreNotSubmitted(OrderStatus status) {
 		TransportOrder order = order(status);
 		when(orderRepository.findByIdForUpdate(order.getId())).thenReturn(Optional.of(order));
 

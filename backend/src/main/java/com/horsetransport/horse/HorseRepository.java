@@ -16,6 +16,8 @@ public interface HorseRepository extends JpaRepository<Horse, UUID> {
 
 	boolean existsByMicrochipId(String microchipId);
 
+	boolean existsByMicrochipIdAndIdNot(String microchipId, UUID id);
+
 	List<Horse> findAllByCustomerId(UUID customerId);
 
 	List<Horse> findAllByIdInAndCustomerId(Collection<UUID> ids, UUID customerId);

@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -86,6 +87,20 @@ class HorseControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].id").value(horseId.toString()))
 				.andExpect(jsonPath("$[0].microchipId").value("985141000123456"));
+	}
+
+	@Test
+	void updatesOwnedHorse() throws Exception {
+		UUID horseId = UUID.fromString("22222222-2222-2222-2222-222222222222");
+		when(horseService.update(org.mockito.ArgumentMatchers.eq(horseId), any(UpdateHorseRequest.class)))
+				.thenReturn(response(horseId));
+
+		mockMvc.perform(put("/api/v1/horses/{horseId}", horseId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(validRequest()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(horseId.toString()))
+				.andExpect(jsonPath("$.microchipId").value("985141000123456"));
 	}
 
 	@Test

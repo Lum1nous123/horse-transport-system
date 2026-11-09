@@ -58,6 +58,26 @@ public class HorseService {
 	}
 
 	@Transactional
+	public HorseResponse update(UUID horseId, UpdateHorseRequest request) {
+		UUID customerId = currentUserProvider.getCurrentUserId();
+		Horse horse = horseRepository.findOwnedByIdForUpdate(horseId, customerId)
+				.orElseThrow(HorseNotFoundException::new);
+		if (horseRepository.existsByMicrochipIdAndIdNot(request.microchipId(), horseId)) {
+			throw new DuplicateMicrochipException();
+		}
+
+		horse.update(request);
+		try {
+			return HorseResponse.from(horseRepository.saveAndFlush(horse));
+		} catch (DataIntegrityViolationException exception) {
+			if (isMicrochipUniqueViolation(exception)) {
+				throw new DuplicateMicrochipException();
+			}
+			throw exception;
+		}
+	}
+
+	@Transactional
 	public void delete(UUID horseId) {
 		UUID customerId = currentUserProvider.getCurrentUserId();
 		Horse horse = horseRepository.findOwnedByIdForUpdate(horseId, customerId)

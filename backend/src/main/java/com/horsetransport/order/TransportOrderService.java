@@ -21,7 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class TransportOrderService {
 
 	private static final Set<OrderStatus> CUSTOMER_CANCELLABLE_STATUSES = EnumSet.of(OrderStatus.DRAFT,
-			OrderStatus.SUBMITTED, OrderStatus.QUOTATION_SENT);
+			OrderStatus.SUBMITTED, OrderStatus.QUOTATION_SENT, OrderStatus.REJECTED);
+	private static final Set<OrderStatus> CUSTOMER_EDITABLE_STATUSES = EnumSet.of(OrderStatus.DRAFT,
+			OrderStatus.REJECTED);
 
 	private final TransportOrderRepository orderRepository;
 	private final OrderStaffAssignmentRepository assignmentRepository;
@@ -93,7 +95,7 @@ public class TransportOrderService {
 	public OrderResponse update(UUID orderId, UpdateOrderRequest request) {
 		UUID customerId = currentUserProvider.getCurrentUserId();
 		TransportOrder order = findOwnedOrder(orderId, customerId);
-		if (order.getStatus() != OrderStatus.DRAFT) {
+		if (!CUSTOMER_EDITABLE_STATUSES.contains(order.getStatus())) {
 			throw new OrderNotEditableException();
 		}
 		List<UUID> horseIds = validateOwnedHorses(request.safeHorseIds(), customerId);
@@ -106,20 +108,22 @@ public class TransportOrderService {
 		UUID customerId = currentUserProvider.getCurrentUserId();
 		TransportOrder order = orderRepository.findOwnedByIdForUpdate(orderId, customerId)
 				.orElseThrow(OrderNotFoundException::new);
-		if (order.getStatus() != OrderStatus.DRAFT) {
+		if (!CUSTOMER_EDITABLE_STATUSES.contains(order.getStatus())) {
 			throw new OrderNotEditableException();
 		}
 		validateSubmission(order);
 
+		OrderStatus oldStatus = order.getStatus();
+		String oldRejectionReason = order.getRejectionReason();
 		order.submit();
 		orderRepository.save(order);
 		try {
 			auditLogRepository.saveAndFlush(StatusAuditLog.userTransition(
-					order.getId(), OrderStatus.DRAFT.name(), OrderStatus.SUBMITTED.name(), customerId));
+					order.getId(), oldStatus.name(), OrderStatus.SUBMITTED.name(), customerId));
 		} catch (RuntimeException exception) {
 			// The transaction rollback protects the database; restoring also avoids leaking
 			// a misleading managed/in-memory state after a flush failure.
-			order.restoreDraft();
+			order.restoreTransition(oldStatus, oldRejectionReason, order.getCancellationReason(), order.getCancelledAt());
 			throw exception;
 		}
 		return OrderResponse.from(order);

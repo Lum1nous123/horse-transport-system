@@ -167,6 +167,7 @@ public class TransportOrder {
 
 	void submit() {
 		status = OrderStatus.SUBMITTED;
+		rejectionReason = null;
 	}
 
 	void cancel() {

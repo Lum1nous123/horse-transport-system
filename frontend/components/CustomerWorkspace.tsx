@@ -74,7 +74,7 @@ type RemainingBalanceSummary = {
   paymentStatus: "PENDING" | "PAID" | "REFUNDED";
   checkoutEligible: boolean;
 };
-type CustomerIconName = "orders" | "draft" | "journey" | "progress" | "horse" | "horseHead" | "truck" | "user" | "logout" | "plus" | "search" | "route" | "calendar" | "trash";
+type CustomerIconName = "orders" | "draft" | "journey" | "progress" | "horse" | "horseHead" | "truck" | "user" | "logout" | "plus" | "search" | "route" | "calendar" | "edit" | "trash";
 
 const customerIconPaths: Record<CustomerIconName, string[]> = {
   orders: ["M6 3h9l4 4v14H6z", "M15 3v5h4M9 12h6m-6 4h6"],
@@ -90,6 +90,7 @@ const customerIconPaths: Record<CustomerIconName, string[]> = {
   search: ["M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z", "m20 20-4-4"],
   route: ["M5 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm14 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z", "M5 8v1.5A3.5 3.5 0 0 0 8.5 13h7a3.5 3.5 0 0 1 3.5 3.5V16"],
   calendar: ["M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Z", "M8 2v4m8-4v4M3 9h18"],
+  edit: ["M4 20l4.5-1.1L19.4 8a2.1 2.1 0 0 0 0-3l-.4-.4a2.1 2.1 0 0 0-3 0L5.1 15.5 4 20Z", "m14.5-13.5 3 3"],
   trash: ["M4 7h16", "M9 7V4h6v3", "m7 4-.6 10H8.6L8 11", "M6 7l1 14h10l1-14"],
 };
 
@@ -104,7 +105,7 @@ function RejectedOrderNotice({ reason }: { reason?: string | null }) {
     <div>
       <h4>Transport request rejected</h4>
       <p className="customer-rejection-reason"><strong>Reason:</strong> {reason?.trim() || "No rejection reason was provided."}</p>
-      <p>This request cannot be edited or resubmitted. Please create a new transport request separately if you wish to continue.</p>
+      <p>Update the request using the feedback above, then resubmit the same order for Logistics Manager review.</p>
     </div>
   </section>;
 }
@@ -215,7 +216,7 @@ async function customerFetch(path: string, init?: RequestInit) {
     try {
       const error = await response.json() as { message?: string; code?: string };
       if (error.code === "DUPLICATE_MICROCHIP") message = "That microchip ID is already registered.";
-      else if (error.code === "ORDER_NOT_EDITABLE") message = "Only draft orders can be edited.";
+      else if (error.code === "ORDER_NOT_EDITABLE") message = "Only draft or rejected orders can be edited.";
       else if (error.code === "DEPOSIT_PAYMENT_NOT_FOUND") message = "DEPOSIT_PAYMENT_NOT_FOUND";
       else if (error.message) message = error.message;
     } catch { /* Keep the useful default message. */ }
@@ -233,6 +234,7 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
   const [preview, setPreview] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [horseFormOpen, setHorseFormOpen] = useState(false);
+  const [editingHorse, setEditingHorse] = useState<Horse | null>(null);
   const [orderFormOpen, setOrderFormOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<string | null>(null);
   const [orderFields, setOrderFields] = useState<OrderFields>(emptyOrder);
@@ -351,7 +353,7 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
     return () => window.clearTimeout(timer);
   }, [loadWorkspace]);
 
-  async function createHorse(event: FormEvent<HTMLFormElement>) {
+  async function saveHorse(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setHorseBusy(true); setFormError(""); setFeedback("");
     const form = event.currentTarget;
     const data = new FormData(form);
@@ -365,16 +367,35 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
       notes: String(data.get("notes") ?? "").trim() || null,
     };
     if (preview) {
-      setHorses((current) => [...current, { ...body, id: `preview-horse-${Date.now()}` }]);
-      form.reset(); setHorseFormOpen(false); setFeedback("Preview only — this horse profile was not saved.");
+      const horseId = editingHorse?.id ?? `preview-horse-${Date.now()}`;
+      setHorses((current) => editingHorse
+        ? current.map((horse) => horse.id === horseId ? { ...body, id: horseId } : horse)
+        : [...current, { ...body, id: horseId }]);
+      form.reset(); setHorseFormOpen(false); setEditingHorse(null);
+      setFeedback(`Preview only — this horse profile was not ${editingHorse ? "updated" : "saved"}.`);
       setHorseBusy(false); return;
     }
     try {
-      await customerFetch("/api/v1/horses", { method: "POST", body: JSON.stringify(body) });
-      form.reset(); setHorseFormOpen(false); setFeedback("Horse profile saved.");
+      await customerFetch(editingHorse ? `/api/v1/horses/${editingHorse.id}` : "/api/v1/horses", {
+        method: editingHorse ? "PUT" : "POST", body: JSON.stringify(body),
+      });
+      form.reset(); setHorseFormOpen(false); setEditingHorse(null);
+      setFeedback(editingHorse ? "Horse profile updated." : "Horse profile saved.");
       await loadWorkspace();
     } catch (error) { setFormError(error instanceof Error ? error.message : "We couldn't save the horse."); }
     finally { setHorseBusy(false); }
+  }
+
+  function openNewHorseForm() {
+    setEditingHorse(null); setHorseFormOpen(true); setFormError(""); setFeedback("");
+  }
+
+  function openHorseEditor(horse: Horse) {
+    setEditingHorse(horse); setHorseFormOpen(true); setFormError(""); setFeedback("");
+  }
+
+  function closeHorseForm() {
+    setHorseFormOpen(false); setEditingHorse(null); setFormError("");
   }
 
   async function confirmDeleteHorse() {
@@ -447,13 +468,15 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
       const existing = orders.find((order) => order.id === orderId);
       const previewOrder: Order = {
         ...body, id: orderId, orderCode: existing?.orderCode ?? "ORD-DEMO-NEW",
-        horseIds: orderFields.horseIds, status: submit ? "SUBMITTED" : "DRAFT",
+        horseIds: orderFields.horseIds,
+        rejectionReason: submit ? null : existing?.rejectionReason,
+        status: submit ? "SUBMITTED" : existing?.status === "REJECTED" ? "REJECTED" : "DRAFT",
       };
       setOrders((current) => existing
         ? current.map((order) => order.id === orderId ? previewOrder : order)
         : [previewOrder, ...current]);
       setFeedback(submit
-        ? "Preview only — the sample order is shown as submitted and locked; nothing was sent."
+        ? "Preview only — the sample order is shown as submitted; nothing was sent."
         : "Preview only — draft changes are temporary and were not saved.");
       setOrderFormOpen(false); setSubmitWarning(false); setEditingOrder(null); setOrderBusy(false);
       return;
@@ -468,9 +491,10 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
       }
       if (submit && orderId) {
         await customerFetch(`/api/v1/orders/${orderId}/submit`, { method: "POST" });
-        setFeedback("Order submitted. Editing is now locked.");
+        setFeedback("Order submitted for Logistics Manager review.");
       } else {
-        setFeedback("Draft saved. You can return to edit it before submitting.");
+        const rejectedOrder = orders.find((order) => order.id === orderId)?.status === "REJECTED";
+        setFeedback(rejectedOrder ? "Changes saved. Resubmit this order when it is ready." : "Draft saved. You can return to edit it before submitting.");
       }
       setOrderFormOpen(false); setSubmitWarning(false); setEditingOrder(null);
       await loadWorkspace();
@@ -574,6 +598,7 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
       actions.push({ label: "Pay remaining balance", href: `/customer/orders/${order.id}/remaining-balance${preview ? "?preview=1" : ""}` });
     }
     if (order.status === "DRAFT") actions.push({ label: "Edit draft", onClick: () => startEdit(order) });
+    if (order.status === "REJECTED") actions.push({ label: "Edit request", onClick: () => startEdit(order) });
     if (order.status === "QUOTATION_SENT") actions.push({ label: "View bill", onClick: () => void openQuotation(order) });
     if (trackable && (!preview || order.id === "order-2068")) {
       actions.push({ label: "Track journey", href: `/customer/orders/${order.id}/tracking${preview ? "?preview=1" : ""}` });
@@ -587,7 +612,7 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
     if (preview && order.status === "CANCELLED") {
       actions.push({ label: "View cancellation & refund", href: `/customer/orders/${order.id}?preview=1`, secondary: true });
     }
-    if (["DRAFT", "SUBMITTED", "QUOTATION_SENT"].includes(order.status)) {
+    if (["DRAFT", "SUBMITTED", "QUOTATION_SENT", "REJECTED"].includes(order.status)) {
       actions.push({ label: "Cancel order", secondary: true, onClick: () => { setCancelOrder(order); setCancelError(""); } });
     }
     return actions;
@@ -597,13 +622,14 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
     {customerOrderGroups.map((group) => <button key={group.id} type="button" aria-pressed={orderGroup === group.id} onClick={() => { setOrderGroup(group.id); setOrderStatus(""); }}>{group.label}<span>{customerOrdersInGroup(orders, group.id).length}</span></button>)}
   </div>;
   const requestCount = orders.length > 0 && <p className="customer-request-count" role="status">Showing {visibleOrders.length} of {groupedOrders.length} requests in this group · {orders.length} total loaded</p>;
+  const editingRejectedOrder = orders.some((order) => order.id === editingOrder && order.status === "REJECTED");
 
-  const horseProfileForm = <form id="customer-horse-profile-form" className={`customer-form horse-form${view === "dashboard" ? " customer-dashboard-horse-form" : ""}`} onSubmit={createHorse}>
-    <div className="customer-form-title"><h3>New horse profile</h3><p>Name and microchip ID are required.</p></div>
-    <div className="customer-field-grid"><Field label="Horse name" name="name" required maxLength={120} /><Field label="Microchip ID" name="microchipId" required maxLength={50} /><Field label="Passport number" name="passportNumber" maxLength={100} /><Field label="Breed" name="breed" maxLength={100} /><label className="customer-field"><span>Sex</span><select name="sex" defaultValue=""><option value="">Select if known</option><option value="MARE">Mare</option><option value="STALLION">Stallion</option><option value="GELDING">Gelding</option><option value="OTHER">Other</option></select></label><Field label="Date of birth" name="dateOfBirth" type="date" /></div>
-    <label className="customer-field"><span>Notes <em>Optional</em></span><textarea name="notes" rows={3} /></label>
+  const horseProfileForm = <form key={editingHorse?.id ?? "new-horse"} id="customer-horse-profile-form" className={`customer-form horse-form${view === "dashboard" ? " customer-dashboard-horse-form" : ""}`} onSubmit={saveHorse}>
+    <div className="customer-form-title"><h3>{editingHorse ? "Edit horse profile" : "New horse profile"}</h3><p>Name and microchip ID are required.</p></div>
+    <div className="customer-field-grid"><Field label="Horse name" name="name" required maxLength={120} defaultValue={editingHorse?.name} /><Field label="Microchip ID" name="microchipId" required maxLength={50} defaultValue={editingHorse?.microchipId} /><Field label="Passport number" name="passportNumber" maxLength={100} defaultValue={editingHorse?.passportNumber ?? ""} /><Field label="Breed" name="breed" maxLength={100} defaultValue={editingHorse?.breed ?? ""} /><label className="customer-field"><span>Sex</span><select name="sex" defaultValue={editingHorse?.sex ?? ""}><option value="">Select if known</option><option value="MARE">Mare</option><option value="STALLION">Stallion</option><option value="GELDING">Gelding</option><option value="OTHER">Other</option></select></label><Field label="Date of birth" name="dateOfBirth" type="date" defaultValue={editingHorse?.dateOfBirth?.slice(0, 10)} /></div>
+    <label className="customer-field"><span>Notes <em>Optional</em></span><textarea name="notes" rows={3} defaultValue={editingHorse?.notes ?? ""} /></label>
     {formError && <p className="customer-form-error" role="alert">{formError}</p>}
-    <div className="customer-form-actions"><button type="button" className="customer-text-button" onClick={() => setHorseFormOpen(false)}>Cancel</button><button type="submit" className="customer-primary-button" disabled={horseBusy}>{horseBusy ? "Saving…" : "Save horse profile"}</button></div>
+    <div className="customer-form-actions"><button type="button" className="customer-text-button" onClick={closeHorseForm}>Cancel</button><button type="submit" className="customer-primary-button" disabled={horseBusy}>{horseBusy ? "Saving…" : editingHorse ? "Save changes" : "Save horse profile"}</button></div>
   </form>;
 
   return (
@@ -626,7 +652,7 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
           <button className="customer-primary-button" type="button" onClick={startNewOrder}><CustomerIcon name="plus" />New transport request</button>
         </section> : <header className={styles.pageIntro}>
           <div><p className={styles.eyebrow}>CUSTOMER WORKSPACE</p><h1>{view === "requests" ? "Transport requests" : "Horse profiles"}</h1><p>{view === "requests" ? "Review every transport request, find an Order quickly, and continue the next available action." : "Keep horse identity and travel information organized before creating a transport request."}</p></div>
-          <button className={view === "requests" ? "customer-primary-button" : "customer-secondary-button"} type="button" onClick={view === "requests" ? startNewOrder : () => { setHorseFormOpen((open) => !open); setFormError(""); }}>{(view === "requests" || !horseFormOpen) && <CustomerIcon name="plus" />}{view === "requests" ? "New transport request" : horseFormOpen ? "Close" : "Add horse"}</button>
+          <button className={view === "requests" ? "customer-primary-button" : "customer-secondary-button"} type="button" onClick={view === "requests" ? startNewOrder : horseFormOpen ? closeHorseForm : openNewHorseForm}>{(view === "requests" || !horseFormOpen) && <CustomerIcon name="plus" />}{view === "requests" ? "New transport request" : horseFormOpen ? "Close" : "Add horse"}</button>
         </header>}
 
         {feedback && <p className="customer-feedback" role="status">{feedback}</p>}
@@ -657,13 +683,13 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
           </section>
 
           <section className="customer-section horse-section customer-dashboard-panel customer-horses-panel" id="horses" aria-labelledby="horses-heading">
-            <div className="customer-section-heading customer-dashboard-panel-heading"><span className="customer-panel-icon" aria-hidden="true"><CustomerIcon name="horseHead" /></span><div><h2 id="horses-heading">Horse profiles</h2><p>Profiles available for transport requests.</p></div><button className="customer-secondary-button compact customer-dashboard-add-horse" type="button" aria-expanded={horseFormOpen} aria-controls="customer-horse-profile-form" onClick={() => { setHorseFormOpen((open) => !open); setFormError(""); }}>{horseFormOpen ? "Close" : <><CustomerIcon name="plus" />Add horse</>}</button></div>
+            <div className="customer-section-heading customer-dashboard-panel-heading"><span className="customer-panel-icon" aria-hidden="true"><CustomerIcon name="horseHead" /></span><div><h2 id="horses-heading">Horse profiles</h2><p>Profiles available for transport requests.</p></div><button className="customer-secondary-button compact customer-dashboard-add-horse" type="button" aria-expanded={horseFormOpen} aria-controls="customer-horse-profile-form" onClick={horseFormOpen ? closeHorseForm : openNewHorseForm}>{horseFormOpen ? "Close" : <><CustomerIcon name="plus" />Add horse</>}</button></div>
             {horseFormOpen && horseProfileForm}
             {horses.length > 0 && <div className="customer-horse-toolbar">
               <label className="customer-horse-search"><span className="sr-only">Search horse profiles</span><CustomerIcon name="search" /><input type="search" value={horseQuery} onChange={(event) => setHorseQuery(event.target.value)} placeholder="Search horses…" autoComplete="off" /></label>
               <label className="customer-horse-sort"><span className="sr-only">Sort dashboard horse profiles</span><select value={horseSort} onChange={(event) => setHorseSort(event.target.value as "name-asc" | "name-desc")}><option value="name-asc">A–Z</option><option value="name-desc">Z–A</option></select></label>
             </div>}
-            {horses.length === 0 ? <div className="horse-empty"><Image className="customer-horse-art" src="/images/customer-horse-illustration.svg" width={360} height={180} alt="" unoptimized /><p>No horse profiles yet.</p><span>Add a profile before preparing a request.</span></div> : visibleHorses.length === 0 ? <div className="horse-empty customer-horse-filter-empty"><p>No matching horses</p><span>Try another horse name.</span><button className="customer-text-button compact" type="button" onClick={() => setHorseQuery("")}>Clear search</button></div> : <ul className="horse-list">{visibleHorses.map((horse) => <li key={horse.id}><span className="horse-avatar" aria-hidden="true">{horse.name.slice(0, 1).toUpperCase()}</span><span className="horse-list-name"><strong>{horse.name}</strong><small>Microchip · {horse.microchipId}</small><span className="customer-horse-facts"><span className={`customer-horse-gender is-${horseGender(horse.sex).tone}`}><b aria-hidden="true">{horseGender(horse.sex).symbol}</b>{horseGender(horse.sex).label}</span><span className="customer-horse-age"><CustomerIcon name="calendar" />{formatHorseAge(horse.dateOfBirth)}</span></span></span><button className="customer-horse-delete-button" type="button" aria-label={`Delete ${horse.name}`} onClick={() => { setHorseToDelete(horse); setHorseDeleteError(""); }}><CustomerIcon name="trash" /><span>Delete</span></button></li>)}</ul>}
+            {horses.length === 0 ? <div className="horse-empty"><Image className="customer-horse-art" src="/images/customer-horse-illustration.svg" width={360} height={180} alt="" unoptimized /><p>No horse profiles yet.</p><span>Add a profile before preparing a request.</span></div> : visibleHorses.length === 0 ? <div className="horse-empty customer-horse-filter-empty"><p>No matching horses</p><span>Try another horse name.</span><button className="customer-text-button compact" type="button" onClick={() => setHorseQuery("")}>Clear search</button></div> : <ul className="horse-list">{visibleHorses.map((horse) => <li key={horse.id}><span className="horse-avatar" aria-hidden="true">{horse.name.slice(0, 1).toUpperCase()}</span><span className="horse-list-name"><strong>{horse.name}</strong><small>Microchip · {horse.microchipId}</small><span className="customer-horse-facts"><span className={`customer-horse-gender is-${horseGender(horse.sex).tone}`}><b aria-hidden="true">{horseGender(horse.sex).symbol}</b>{horseGender(horse.sex).label}</span><span className="customer-horse-age"><CustomerIcon name="calendar" />{formatHorseAge(horse.dateOfBirth)}</span></span></span><span className="customer-horse-row-actions"><button className="customer-horse-edit-button" type="button" aria-label={`Edit ${horse.name}`} onClick={() => openHorseEditor(horse)}><CustomerIcon name="edit" /><span>Edit</span></button><button className="customer-horse-delete-button" type="button" aria-label={`Delete ${horse.name}`} onClick={() => { setHorseToDelete(horse); setHorseDeleteError(""); }}><CustomerIcon name="trash" /><span>Delete</span></button></span></li>)}</ul>}
           </section>
           </div>
           </>}
@@ -702,14 +728,14 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
               <label><span className="sr-only">Filter horse profiles by sex</span><select value={horseSex} onChange={(event) => setHorseSex(event.target.value)}><option value="">All sexes</option>{availableHorseSexes.map((sex) => <option value={sex} key={sex}>{formatHorseSex(sex)}</option>)}</select></label>
               <label><span className="sr-only">Sort horse profiles</span><select value={horseSort} onChange={(event) => setHorseSort(event.target.value as "name-asc" | "name-desc")}><option value="name-asc">Name A–Z</option><option value="name-desc">Name Z–A</option></select></label>
             </div>}
-            {horses.length === 0 ? <div className={styles.empty}><strong>No horse profiles yet</strong><p>Add a profile before preparing a transport request.</p><button type="button" onClick={() => setHorseFormOpen(true)}>Add horse</button></div> : visibleHorses.length === 0 ? <div className={styles.empty}><strong>No matching horse profiles</strong><p>Try another name or clear the sex filter.</p><button type="button" onClick={() => { setHorseQuery(""); setHorseSex(""); }}>Clear filters</button></div> : <>
-              <div className={styles.horseColumns} aria-hidden="true"><span>Horse</span><span>Breed and sex</span><span>Passport</span><span>Date of birth</span></div>
+            {horses.length === 0 ? <div className={styles.empty}><strong>No horse profiles yet</strong><p>Add a profile before preparing a transport request.</p><button type="button" onClick={openNewHorseForm}>Add horse</button></div> : visibleHorses.length === 0 ? <div className={styles.empty}><strong>No matching horse profiles</strong><p>Try another name or clear the sex filter.</p><button type="button" onClick={() => { setHorseQuery(""); setHorseSex(""); }}>Clear filters</button></div> : <>
+              <div className={styles.horseColumns} aria-hidden="true"><span>Horse</span><span>Breed and sex</span><span>Passport</span><span>Date of birth</span><span>Actions</span></div>
               <div className={styles.horseList}>{visibleHorses.map((horse) => <article className={styles.horseRow} key={horse.id}>
                 <div className={styles.horseIdentity}><span className={styles.horseAvatar} aria-hidden="true">{horse.name.slice(0, 1).toUpperCase()}</span><div><h3>{horse.name}</h3><p>Microchip · {horse.microchipId}</p></div></div>
                 <div className={styles.horseFact}><span>Breed and sex</span><strong>{horse.breed || "Not specified"}</strong><p>{formatHorseSex(horse.sex)}</p></div>
                 <div className={styles.horseFact}><span>Passport</span><strong>{horse.passportNumber || "Not provided"}</strong></div>
                 <div className={styles.horseFact}><span>Date of birth</span><strong>{formatHorseDate(horse.dateOfBirth)}</strong></div>
-                <span className={styles.horseGlyph} aria-hidden="true"><CustomerIcon name="horse" /></span>
+                <span className={styles.horseActions}><button type="button" aria-label={`Edit ${horse.name}`} onClick={() => openHorseEditor(horse)}><CustomerIcon name="edit" />Edit</button><button type="button" className={styles.horseDeleteAction} aria-label={`Delete ${horse.name}`} onClick={() => { setHorseToDelete(horse); setHorseDeleteError(""); }}><CustomerIcon name="trash" />Delete</button></span>
               </article>)}</div>
             </>}
           </section>}
@@ -717,19 +743,19 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
 
         {orderFormOpen && <div className="customer-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !orderBusy) setOrderFormOpen(false); }}>
           <section className="customer-dialog" role="dialog" aria-modal="true" aria-labelledby="order-form-title">
-            <div className="customer-dialog-header"><div><p className="customer-eyebrow">{editingOrder ? "DRAFT ORDER" : "NEW REQUEST"}</p><h2 id="order-form-title">{editingOrder ? "Edit transport request" : "Plan a transport"}</h2><p>Save details as a draft. You can edit the request until it is submitted.</p></div><button type="button" className="customer-dialog-close" aria-label="Close form" disabled={orderBusy} onClick={() => setOrderFormOpen(false)}>×</button></div>
+            <div className="customer-dialog-header"><div><p className="customer-eyebrow">{editingRejectedOrder ? "REJECTED ORDER" : editingOrder ? "DRAFT ORDER" : "NEW REQUEST"}</p><h2 id="order-form-title">{editingOrder ? "Edit transport request" : "Plan a transport"}</h2><p>{editingRejectedOrder ? "Update the rejected request and resubmit the same Order for review." : "Save details as a draft. Submitted requests are editable again if the Logistics Manager rejects them."}</p></div><button type="button" className="customer-dialog-close" aria-label="Close form" disabled={orderBusy} onClick={() => setOrderFormOpen(false)}>×</button></div>
             <form id="order-form" className="customer-form order-form" onSubmit={requestSubmit}>
               <fieldset className="customer-fieldset"><legend>Journey details</legend><p className="field-hint">* Required to submit. Enter an address or a country for each location.</p><div className="customer-field-grid"><Field label="Origin address" value={orderFields.originAddress ?? ""} onChange={(value) => updateField("originAddress", value)} maxLength={255} /><Field label="Origin country" value={orderFields.originCountry ?? ""} onChange={(value) => updateField("originCountry", value)} maxLength={100} /><Field label="Destination address" value={orderFields.destinationAddress ?? ""} onChange={(value) => updateField("destinationAddress", value)} maxLength={255} /><Field label="Destination country" value={orderFields.destinationCountry ?? ""} onChange={(value) => updateField("destinationCountry", value)} maxLength={100} /><Field label="Requested departure *" type="datetime-local" value={orderFields.requestedDepartureAt ?? ""} onChange={(value) => updateField("requestedDepartureAt", value)} /><label className="customer-field"><span>Transport mode <b aria-hidden="true">*</b></span><select value={orderFields.transportMode ?? ""} onChange={(event) => updateField("transportMode", (event.target.value || null) as OrderFields["transportMode"])}><option value="">Choose a mode</option><option value="ROAD">Road</option><option value="AIR">Air</option><option value="COMBINED">Combined</option></select></label></div></fieldset>
               <fieldset className="customer-fieldset"><legend>Horses</legend>{horses.length ? <div className="horse-choice-list">{horses.map((horse) => <label className="horse-choice" key={horse.id}><input type="checkbox" checked={orderFields.horseIds.includes(horse.id)} onChange={(event) => updateField("horseIds", event.target.checked ? [...orderFields.horseIds, horse.id] : orderFields.horseIds.filter((id) => id !== horse.id))} /><span><strong>{horse.name}</strong><small>{horse.microchipId}</small></span></label>)}</div> : <p className="field-hint">Add a horse profile before submitting this request.</p>}</fieldset>
               <fieldset className="customer-fieldset"><legend>Recipient / delivery contact</legend><div className="customer-field-grid"><Field label="Recipient name *" value={orderFields.recipientName ?? ""} onChange={(value) => updateField("recipientName", value)} maxLength={150} /><Field label="Phone *" type="tel" value={orderFields.recipientPhone ?? ""} onChange={(value) => updateField("recipientPhone", value)} maxLength={30} /><Field label="Email" type="email" value={orderFields.recipientEmail ?? ""} onChange={(value) => updateField("recipientEmail", value)} maxLength={150} optional /></div></fieldset>
               <label className="customer-field"><span>Special requirements <em>Optional</em></span><textarea rows={3} value={orderFields.specialRequirements ?? ""} onChange={(event) => updateField("specialRequirements", event.target.value)} /></label>
               {formError && <p className="customer-form-error" role="alert">{formError}</p>}
-              <div className="customer-form-actions"><button type="button" className="customer-text-button" disabled={orderBusy} onClick={() => setOrderFormOpen(false)}>Cancel</button><button type="button" className="customer-secondary-button" disabled={orderBusy} onClick={(event) => void saveOrder({ preventDefault() {}, currentTarget: event.currentTarget.form! } as FormEvent<HTMLFormElement>)}>{orderBusy ? "Saving…" : "Save draft"}</button><button type="submit" className="customer-primary-button" disabled={orderBusy}>{orderBusy ? "Submitting…" : "Review & submit"}</button></div>
+              <div className="customer-form-actions"><button type="button" className="customer-text-button" disabled={orderBusy} onClick={() => setOrderFormOpen(false)}>Cancel</button><button type="button" className="customer-secondary-button" disabled={orderBusy} onClick={(event) => void saveOrder({ preventDefault() {}, currentTarget: event.currentTarget.form! } as FormEvent<HTMLFormElement>)}>{orderBusy ? "Saving…" : editingRejectedOrder ? "Save changes" : "Save draft"}</button><button type="submit" className="customer-primary-button" disabled={orderBusy}>{orderBusy ? "Submitting…" : editingRejectedOrder ? "Review & resubmit" : "Review & submit"}</button></div>
             </form>
           </section>
         </div>}
 
-        {submitWarning && <div className="customer-dialog-backdrop warning-backdrop"><section className="customer-warning" role="alertdialog" aria-modal="true" aria-labelledby="submit-warning-title" aria-describedby="submit-warning-copy"><div className="warning-symbol" aria-hidden="true">!</div><h2 id="submit-warning-title">Submit this transport request?</h2><p id="submit-warning-copy">After you submit, the order moves to SUBMITTED and you will no longer be able to edit it. Check the horse, journey, and delivery contact details before continuing.</p>{formError && <p className="customer-form-error" role="alert">{formError}</p>}<div className="customer-form-actions"><button type="button" className="customer-secondary-button" disabled={orderBusy} onClick={() => setSubmitWarning(false)}>Go back and review</button><button type="button" className="customer-primary-button" disabled={orderBusy} onClick={confirmSubmit}>{orderBusy ? "Submitting…" : "Submit and lock order"}</button></div></section></div>}
+        {submitWarning && <div className="customer-dialog-backdrop warning-backdrop"><section className="customer-warning" role="alertdialog" aria-modal="true" aria-labelledby="submit-warning-title" aria-describedby="submit-warning-copy"><div className="warning-symbol" aria-hidden="true">!</div><h2 id="submit-warning-title">{editingRejectedOrder ? "Resubmit this transport request?" : "Submit this transport request?"}</h2><p id="submit-warning-copy">The order will move to SUBMITTED for Logistics Manager review. It stays locked unless the Logistics Manager rejects it again.</p>{formError && <p className="customer-form-error" role="alert">{formError}</p>}<div className="customer-form-actions"><button type="button" className="customer-secondary-button" disabled={orderBusy} onClick={() => setSubmitWarning(false)}>Go back and review</button><button type="button" className="customer-primary-button" disabled={orderBusy} onClick={confirmSubmit}>{orderBusy ? "Submitting…" : editingRejectedOrder ? "Resubmit order" : "Submit order"}</button></div></section></div>}
 
         {cancelOrder && <div className="customer-dialog-backdrop warning-backdrop"><section className="customer-warning" role="alertdialog" aria-modal="true" aria-labelledby="cancel-warning-title" aria-describedby="cancel-warning-copy"><div className="warning-symbol" aria-hidden="true">!</div><h2 id="cancel-warning-title">Cancel {cancelOrder.orderCode}?</h2><p id="cancel-warning-copy">This will cancel the order. A cancelled order cannot be reopened.</p>{cancelError && <p className="customer-form-error" role="alert">{cancelError}</p>}<div className="customer-form-actions"><button type="button" className="customer-secondary-button" disabled={cancelBusy} onClick={() => setCancelOrder(null)}>Keep order</button><button type="button" className="customer-primary-button danger-button" disabled={cancelBusy} onClick={() => void confirmCancel()}>{cancelBusy ? "Cancelling…" : "Cancel order"}</button></div></section></div>}
 
@@ -805,8 +831,8 @@ function horseGender(sex?: string | null) {
   return { label: sex ? formatHorseSex(sex) : "Not specified", symbol: "", tone: "neutral" };
 }
 
-function Field({ label, name, type = "text", required = false, optional = false, maxLength, value, onChange }: {
-  label: string; name?: string; type?: string; required?: boolean; optional?: boolean; maxLength?: number; value?: string; onChange?: (value: string) => void;
+function Field({ label, name, type = "text", required = false, optional = false, maxLength, value, defaultValue, onChange }: {
+  label: string; name?: string; type?: string; required?: boolean; optional?: boolean; maxLength?: number; value?: string; defaultValue?: string; onChange?: (value: string) => void;
 }) {
-  return <label className="customer-field"><span>{label}{optional ? <em>Optional</em> : required ? <b aria-hidden="true"> *</b> : null}</span><input name={name} type={type} required={required} maxLength={maxLength} value={value} onChange={onChange ? (event) => onChange(event.target.value) : undefined} /></label>;
+  return <label className="customer-field"><span>{label}{optional ? <em>Optional</em> : required ? <b aria-hidden="true"> *</b> : null}</span><input name={name} type={type} required={required} maxLength={maxLength} value={value} defaultValue={defaultValue} onChange={onChange ? (event) => onChange(event.target.value) : undefined} /></label>;
 }

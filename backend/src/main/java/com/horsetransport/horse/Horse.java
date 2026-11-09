@@ -65,6 +65,16 @@ public class Horse {
 		this.createdAt = LocalDateTime.now();
 	}
 
+	void update(UpdateHorseRequest request) {
+		name = request.name();
+		passportNumber = request.passportNumber();
+		microchipId = request.microchipId();
+		breed = request.breed();
+		sex = request.sex();
+		dateOfBirth = request.dateOfBirth();
+		notes = request.notes();
+	}
+
 	@PrePersist
 	void prePersist() {
 		if (id == null) {

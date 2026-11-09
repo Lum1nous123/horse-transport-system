@@ -53,6 +53,49 @@ class HorseServiceTest {
 	}
 
 	@Test
+	void updatesOwnedHorseInPlace() {
+		Horse horse = new Horse(CUSTOMER_ID, "Thunder", "P-001", "985141000123456",
+				"Thoroughbred", "MALE", LocalDate.of(2021, 4, 15), "Old notes");
+		UpdateHorseRequest request = updateRequest("985141000654321");
+		when(currentUserProvider.getCurrentUserId()).thenReturn(CUSTOMER_ID);
+		when(horseRepository.findOwnedByIdForUpdate(horse.getId(), CUSTOMER_ID)).thenReturn(Optional.of(horse));
+		when(horseRepository.existsByMicrochipIdAndIdNot(request.microchipId(), horse.getId())).thenReturn(false);
+		when(horseRepository.saveAndFlush(horse)).thenReturn(horse);
+
+		HorseResponse response = horseService.update(horse.getId(), request);
+
+		assertThat(response.id()).isEqualTo(horse.getId());
+		assertThat(response.name()).isEqualTo("Thunder Updated");
+		assertThat(response.microchipId()).isEqualTo("985141000654321");
+		assertThat(response.notes()).isEqualTo("Updated notes");
+	}
+
+	@Test
+	void hidesForeignHorseUpdateBehindNotFound() {
+		UUID horseId = UUID.randomUUID();
+		when(currentUserProvider.getCurrentUserId()).thenReturn(CUSTOMER_ID);
+		when(horseRepository.findOwnedByIdForUpdate(horseId, CUSTOMER_ID)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> horseService.update(horseId, updateRequest("985141000654321")))
+				.isInstanceOf(HorseNotFoundException.class);
+		verify(horseRepository, never()).saveAndFlush(any());
+	}
+
+	@Test
+	void rejectsDuplicateMicrochipWhenUpdatingHorse() {
+		Horse horse = new Horse(CUSTOMER_ID, "Thunder", null, "985141000123456",
+				null, null, null, null);
+		UpdateHorseRequest request = updateRequest("985141000654321");
+		when(currentUserProvider.getCurrentUserId()).thenReturn(CUSTOMER_ID);
+		when(horseRepository.findOwnedByIdForUpdate(horse.getId(), CUSTOMER_ID)).thenReturn(Optional.of(horse));
+		when(horseRepository.existsByMicrochipIdAndIdNot(request.microchipId(), horse.getId())).thenReturn(true);
+
+		assertThatThrownBy(() -> horseService.update(horse.getId(), request))
+				.isInstanceOf(DuplicateMicrochipException.class);
+		verify(horseRepository, never()).saveAndFlush(any());
+	}
+
+	@Test
 	void rejectsDuplicateMicrochipDuringPreCheck() {
 		CreateHorseRequest request = request("985141000123456");
 		when(currentUserProvider.getCurrentUserId()).thenReturn(CUSTOMER_ID);
@@ -155,6 +198,17 @@ class HorseServiceTest {
 				"MALE",
 				LocalDate.of(2021, 4, 15),
 				"Optional notes");
+	}
+
+	private UpdateHorseRequest updateRequest(String microchipId) {
+		return new UpdateHorseRequest(
+				"Thunder Updated",
+				"P-002",
+				microchipId,
+				"Warmblood",
+				"GELDING",
+				LocalDate.of(2020, 5, 16),
+				"Updated notes");
 	}
 
 }

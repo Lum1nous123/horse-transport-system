@@ -35,14 +35,13 @@ describe("Customer request groups and contextual actions", () => {
   it("defaults to active, exposes real group counts and resets exact status when switching groups", async () => {
     const user = userEvent.setup();
     render(<Page />);
-    expect(await screen.findByRole("button", { name: "Active 5" })).toHaveAttribute("aria-pressed", "true");
+    expect(await screen.findByRole("button", { name: "Active 6" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.queryByText("ORD-DELIVERED")).not.toBeInTheDocument();
     expect(screen.getByText("ORD-SUBMITTED")).toBeVisible();
     await user.selectOptions(screen.getByRole("combobox", { name: "Filter transport requests by status" }), "IN_PROGRESS");
     expect(screen.queryByText("ORD-SUBMITTED")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "History 3" }));
+    await user.click(screen.getByRole("button", { name: "History 2" }));
     expect(screen.getByText("ORD-DELIVERED")).toBeVisible();
-    expect(screen.getByText("ORD-REJECTED")).toBeVisible();
     expect(screen.getByText("ORD-CANCELLED")).toBeVisible();
     expect(screen.getByRole("combobox", { name: "Filter transport requests by status" })).toHaveValue("");
     await user.click(screen.getByRole("button", { name: "Drafts 1" }));
@@ -55,15 +54,15 @@ describe("Customer request groups and contextual actions", () => {
   it("combines group and search, keeps counts independent, and clears filters within the group", async () => {
     const user = userEvent.setup();
     render(<Page />);
-    await screen.findByRole("button", { name: "Active 5" });
+    await screen.findByRole("button", { name: "Active 6" });
     await user.type(screen.getByRole("searchbox"), "Brussels");
     expect(document.querySelectorAll(".customer-order-row")).toHaveLength(1);
-    expect(screen.getByText("Showing 1 of 5 requests in this group · 9 total loaded")).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "History 3" }));
+    expect(screen.getByText("Showing 1 of 6 requests in this group · 9 total loaded")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "History 2" }));
     expect(screen.getByText("No matching requests")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Clear filters" }));
-    expect(document.querySelectorAll(".customer-order-row")).toHaveLength(3);
-    expect(screen.getByRole("button", { name: "History 3" })).toHaveAttribute("aria-pressed", "true");
+    expect(document.querySelectorAll(".customer-order-row")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "History 2" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("prioritizes tracking, discloses secondary actions and preserves payment URLs without duplicates", async () => {

@@ -45,6 +45,7 @@ describe("Customer dedicated workspaces", () => {
     mocks.getCurrentUser.mockResolvedValue({ role: "CUSTOMER", status: "ACTIVE" });
     mocks.apiFetch.mockImplementation((path: string, init?: RequestInit) => {
       if (path === "/api/v1/horses" && init?.method === "POST") return Promise.resolve(new Response(null, { status: 204 }));
+      if (path.startsWith("/api/v1/horses/") && init?.method === "PUT") return Promise.resolve(jsonResponse(horses[0]));
       if (path.startsWith("/api/v1/horses/") && init?.method === "DELETE") return Promise.resolve(new Response(null, { status: 204 }));
       if (path === "/api/v1/horses") return Promise.resolve(jsonResponse(horses));
       if (path === "/api/v1/orders") return Promise.resolve(jsonResponse(orders));
@@ -102,6 +103,24 @@ describe("Customer dedicated workspaces", () => {
     ));
   });
 
+  it("edits an owned horse profile through the same record endpoint", async () => {
+    const user = userEvent.setup();
+    render(<CustomerWorkspace view="horses" />);
+
+    const list = await screen.findByRole("region", { name: "Saved horse profiles" });
+    await user.click(within(list).getByRole("button", { name: "Edit Willow" }));
+    const form = screen.getByRole("heading", { name: "Edit horse profile" }).closest("form")!;
+    expect(within(form).getByRole("textbox", { name: "Horse name" })).toHaveValue("Willow");
+    await user.clear(within(form).getByRole("textbox", { name: "Horse name" }));
+    await user.type(within(form).getByRole("textbox", { name: "Horse name" }), "Willow Updated");
+    await user.click(within(form).getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(mocks.apiFetch).toHaveBeenCalledWith(
+      "/api/v1/horses/horse-1",
+      expect.objectContaining({ method: "PUT", body: expect.stringContaining("Willow Updated") }),
+    ));
+  });
+
   it("keeps the dashboard header minimal and provides a searchable horse summary", async () => {
     const user = userEvent.setup();
     render(<CustomerWorkspace />);
@@ -131,11 +150,11 @@ describe("Customer dedicated workspaces", () => {
     await waitFor(() => expect(within(panel).queryByText("Apollo")).not.toBeInTheDocument());
   });
 
-  it("shows a full-width rejection alert without placing a new-request CTA inside the rejected order", async () => {
+  it("lets the Customer edit and resubmit the same rejected order", async () => {
     const user = userEvent.setup();
     render(<CustomerWorkspace />);
 
-    await userEvent.setup().click(await screen.findByRole("button", { name: "History 1" }));
+    await screen.findByRole("button", { name: "Active 2" });
     const rejectedCode = await screen.findByText("ORD-003");
     const rejectedOrder = rejectedCode.closest("article");
     expect(rejectedOrder).not.toBeNull();
@@ -144,18 +163,31 @@ describe("Customer dedicated workspaces", () => {
     expect(rejected.getByText("REJECTED")).toBeVisible();
     expect(rejected.getByRole("heading", { name: "Transport request rejected" })).toBeVisible();
     expect(rejected.getByRole("region", { name: "Transport request rejection details" })).toHaveTextContent("Reason: The delivery contact details are incomplete.");
-    expect(rejected.getByText(/cannot be edited or resubmitted/)).toBeVisible();
-    expect(rejected.queryByRole("button", { name: "Edit draft" })).not.toBeInTheDocument();
+    expect(rejected.getByText(/resubmit the same order/)).toBeVisible();
+    expect(rejected.getByRole("button", { name: "Edit request" })).toBeVisible();
+    await user.click(rejected.getByText("More actions", { exact: false }));
+    expect(rejected.getByRole("button", { name: "Cancel order" })).toBeVisible();
     expect(rejected.queryByRole("button", { name: "New transport request" })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "New transport request" }));
-    expect(screen.getByRole("dialog", { name: "Plan a transport" })).toBeVisible();
-    expect(screen.getByText("Save details as a draft. You can edit the request until it is submitted.")).toBeVisible();
+    await user.click(rejected.getByRole("button", { name: "Edit request" }));
+    const editDialog = screen.getByRole("dialog", { name: "Edit transport request" });
+    expect(within(editDialog).getByText(/resubmit the same Order/)).toBeVisible();
+    await user.click(within(editDialog).getByRole("button", { name: "Review & resubmit" }));
+    const warning = screen.getByRole("alertdialog", { name: "Resubmit this transport request?" });
+    await user.click(within(warning).getByRole("button", { name: "Resubmit order" }));
+    await waitFor(() => expect(mocks.apiFetch).toHaveBeenCalledWith(
+      "/api/v1/orders/order-3",
+      expect.objectContaining({ method: "PUT" }),
+    ));
+    await waitFor(() => expect(mocks.apiFetch).toHaveBeenCalledWith(
+      "/api/v1/orders/order-3/submit",
+      expect.objectContaining({ method: "POST" }),
+    ));
   });
 
   it("shows the same rejection guidance on the dedicated requests page", async () => {
     render(<CustomerWorkspace view="requests" />);
-    await userEvent.setup().click(await screen.findByRole("button", { name: "History 1" }));
+    await screen.findByRole("button", { name: "Active 2" });
 
     const rejectedCode = await screen.findByText("ORD-003");
     const rejectedOrder = rejectedCode.closest("article");
@@ -163,6 +195,7 @@ describe("Customer dedicated workspaces", () => {
     const rejected = within(rejectedOrder as HTMLElement);
 
     expect(rejected.getByRole("region", { name: "Transport request rejection details" })).toHaveTextContent("Reason: The delivery contact details are incomplete.");
+    expect(rejected.getByRole("button", { name: "Edit request" })).toBeVisible();
     expect(rejected.queryByRole("button", { name: "New transport request" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "New transport request" })).toBeVisible();
   });

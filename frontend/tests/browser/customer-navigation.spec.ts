@@ -105,7 +105,10 @@ test("Customer sees why a transport request was rejected and starts a separate n
   await expect(rejectedOrder.getByText("REJECTED", { exact: true })).toBeVisible();
   await expect(rejectedOrder.getByRole("heading", { name: "Transport request rejected" })).toBeVisible();
   await expect(rejectedOrder.getByRole("region", { name: "Transport request rejection details" })).toContainText("Reason: The delivery contact details are incomplete.");
-  await expect(rejectedOrder.getByText(/cannot be edited or resubmitted/)).toBeVisible();
+  await expect(rejectedOrder.getByText(/resubmit the same order/)).toBeVisible();
+  await expect(rejectedOrder.getByRole("button", { name: "Edit request" })).toBeVisible();
+  await rejectedOrder.getByText("More actions", { exact: false }).click();
+  await expect(rejectedOrder.getByRole("button", { name: "Cancel order" })).toBeVisible();
   await expect(rejectedOrder.getByRole("button", { name: "Edit draft" })).toHaveCount(0);
   await expect(rejectedOrder.getByRole("button", { name: "New transport request" })).toHaveCount(0);
 

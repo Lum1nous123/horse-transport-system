@@ -4,6 +4,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
@@ -86,6 +87,30 @@ class HorseAuthorizationTest {
 		mockMvc.perform(delete("/api/v1/horses/{horseId}", UUID.randomUUID())
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + jwtService.createToken(customer)))
 				.andExpect(status().isNoContent());
+	}
+
+	@Test
+	void allowsCustomerToUpdateOwnHorse() throws Exception {
+		UserAccount customer = user(UserRole.CUSTOMER);
+		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(customer));
+
+		mockMvc.perform(put("/api/v1/horses/{horseId}", UUID.randomUUID())
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + jwtService.createToken(customer))
+				.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+				.content("{\"name\":\"Thunder\",\"microchipId\":\"MC-001\"}"))
+				.andExpect(status().isOk());
+	}
+
+	@Test
+	void rejectsNonCustomerFromUpdatingHorses() throws Exception {
+		UserAccount manager = user(UserRole.LOGISTICS_MANAGER);
+		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(manager));
+
+		mockMvc.perform(put("/api/v1/horses/{horseId}", UUID.randomUUID())
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + jwtService.createToken(manager))
+				.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+				.content("{\"name\":\"Thunder\",\"microchipId\":\"MC-001\"}"))
+				.andExpect(status().isForbidden());
 	}
 
 	@Test

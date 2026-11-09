@@ -10,9 +10,9 @@ export type CustomerOrderFilterRecord = {
 };
 
 export const customerOrderGroups = [
-  { id: "active", label: "Active", statuses: ["SUBMITTED", "QUOTATION_SENT", "APPROVED", "READY_TO_SHIP", "IN_PROGRESS"] },
+  { id: "active", label: "Active", statuses: ["SUBMITTED", "REJECTED", "QUOTATION_SENT", "APPROVED", "READY_TO_SHIP", "IN_PROGRESS"] },
   { id: "drafts", label: "Drafts", statuses: ["DRAFT"] },
-  { id: "history", label: "History", statuses: ["DELIVERED", "REJECTED", "CANCELLED"] },
+  { id: "history", label: "History", statuses: ["DELIVERED", "CANCELLED"] },
   { id: "all", label: "All", statuses: [] },
 ] as const;
 export type CustomerOrderGroup = typeof customerOrderGroups[number]["id"];

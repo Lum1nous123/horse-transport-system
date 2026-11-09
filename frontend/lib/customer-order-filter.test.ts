@@ -23,8 +23,8 @@ const orders: CustomerOrderFilterRecord[] = [
 describe("filterCustomerOrders", () => {
   it("uses display groups without changing backend statuses or dropping unknown statuses from All", () => {
     const rows = ["DRAFT", "SUBMITTED", "QUOTATION_SENT", "APPROVED", "READY_TO_SHIP", "IN_PROGRESS", "DELIVERED", "REJECTED", "CANCELLED", "FUTURE"].map((status) => ({ ...orders[0], status }));
-    expect(customerOrdersInGroup(rows, "active").map((row) => row.status)).toEqual(["SUBMITTED", "QUOTATION_SENT", "APPROVED", "READY_TO_SHIP", "IN_PROGRESS"]);
-    expect(customerOrdersInGroup(rows, "history").map((row) => row.status)).toEqual(["DELIVERED", "REJECTED", "CANCELLED"]);
+    expect(customerOrdersInGroup(rows, "active").map((row) => row.status)).toEqual(["SUBMITTED", "QUOTATION_SENT", "APPROVED", "READY_TO_SHIP", "IN_PROGRESS", "REJECTED"]);
+    expect(customerOrdersInGroup(rows, "history").map((row) => row.status)).toEqual(["DELIVERED", "CANCELLED"]);
     expect(customerOrdersInGroup(rows, "drafts").map((row) => row.status)).toEqual(["DRAFT"]);
     expect(customerOrdersInGroup(rows, "all")).toBe(rows);
   });
