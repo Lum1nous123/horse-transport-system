@@ -89,13 +89,17 @@ Render supplies `PORT`; do not hard-code it in the dashboard. The application re
 
 ## Supabase JDBC, IPv4, SSL, and HikariCP
 
-The existing JDBC template is preserved:
+The JDBC template keeps TLS mandatory and explicitly disables PostgreSQL GSSAPI
+encryption negotiation for Supabase Supavisor compatibility:
 
 ```text
-jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require
+jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require&gssEncMode=disable
 ```
 
-This keeps TLS mandatory and supplies the password separately, so no password URL-encoding is needed in the JDBC URL.
+`gssEncMode=disable` disables only GSSAPI/Kerberos negotiation; it does not
+disable TLS. `sslmode=require` still refuses an unencrypted database
+connection. The password remains a separate datasource property, so no
+password URL-encoding is needed in the JDBC URL.
 
 Render is listed by Supabase as an IPv4-only platform. Unless the Supabase project has the IPv4 add-on, use the **Shared Pooler / Session mode** values from Supabase Dashboard > **Connect**:
 
@@ -120,6 +124,14 @@ fits within the Supabase connection allowance, with capacity left for Flyway, th
 Flyway remains enabled and Hibernate remains in `validate` mode. Therefore, a real Render startup will validate the schema and apply pending migrations to the configured target. Before the first deployment, verify that all `DB_*` values point to the intended staging database and explicitly approve that startup. Do not use the current shared/demo database for an unapproved deployment rehearsal.
 
 If Supabase Network Restrictions are enabled, add the outbound CIDR ranges shown under the Render service's **Connect > Outbound** panel. Do not guess individual IP addresses.
+
+If startup reports `SSL peer shut down incorrectly`, first verify the exact
+Session pooler host and username from Supabase **Connect**, then inspect
+Supabase **Pooler Logs**. Supabase documents GSS negotiation failures for
+Supavisor and requires clients to set `gssencmode=disable`; this application
+does so while retaining `sslmode=require`. If Pooler Logs instead report a
+routing, credential, connection-limit, or network-restriction error, resolve
+that server-side cause rather than weakening TLS.
 
 ## Stripe Sandbox webhook setup
 
