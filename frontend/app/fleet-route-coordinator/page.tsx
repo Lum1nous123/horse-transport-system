@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import FleetRouteCoordinatorWorkspaceFrame from "@/components/FleetRouteCoordinatorWorkspaceFrame";
+import { FleetPlanningIllustration, FleetSummaryIllustration } from "@/components/FleetRouteArtwork";
+import TransportSpecialistIcon from "@/components/TransportSpecialistIcon";
 import {
   getFleetRouteCoordinatorService,
   type AssignedCoordinatorOrderSummary,
@@ -82,11 +84,13 @@ export default function FleetRouteCoordinatorPage() {
   return (
     <FleetRouteCoordinatorWorkspaceFrame preview={preview} previewCoordinatorId={previewCoordinatorId} previewCoordinatorName={previewCoordinatorName}>
       <header className="frc-page-heading">
-        <div>
+        <div className="frc-hero-copy">
           <span className="frc-page-context">Fleet operations</span>
           <h1>Route planning queue</h1>
           <p>Review the Orders assigned to you and move each transport into route planning.</p>
+          <span className="frc-hero-accent" aria-hidden="true" />
         </div>
+        <FleetPlanningIllustration />
         <button className="customer-secondary-button frc-refresh-button" type="button" disabled={loading} onClick={() => void loadQueue()}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6v5h-5M4 18v-5h5M6.1 9a7 7 0 0 1 11.7-2.6L20 9M4 15l2.2 2.6A7 7 0 0 0 17.9 15" /></svg>
           {loading ? "Refreshing..." : "Refresh queue"}
@@ -105,14 +109,14 @@ export default function FleetRouteCoordinatorPage() {
       ) : !error && (
         <>
           <dl className="frc-queue-summary" aria-label="Actionable planning Order summary">
-            <div><span className="frc-summary-icon is-new" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 7v5l3 2M21 12a9 9 0 1 1-9-9 9 9 0 0 1 9 9Z" /></svg></span><span><dt>Not started</dt><small>Ready for a first plan</small></span><dd>{counts.notStarted}</dd></div>
-            <div><span className="frc-summary-icon is-draft" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Zm10-12 3 3" /></svg></span><span><dt>Draft plans</dt><small>Work already in progress</small></span><dd>{counts.draft}</dd></div>
-            <div className="is-returned"><span className="frc-summary-icon is-returned" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 7H5V3M5 7a8 8 0 1 1-1 8" /></svg></span><span><dt>Returned by LM</dt><small>Changes need attention</small></span><dd>{counts.returned}</dd></div>
+            <div><span className="frc-summary-icon is-new"><FleetSummaryIllustration kind="new" /></span><span><dt>Not started</dt><small>Ready for a first plan</small></span><dd>{counts.notStarted}</dd></div>
+            <div><span className="frc-summary-icon is-draft"><FleetSummaryIllustration kind="draft" /></span><span><dt>Draft plans</dt><small>Work already in progress</small></span><dd>{counts.draft}</dd></div>
+            <div className="is-returned"><span className="frc-summary-icon is-returned"><FleetSummaryIllustration kind="returned" /></span><span><dt>Returned by LM</dt><small>Changes need attention</small></span><dd>{counts.returned}</dd></div>
           </dl>
 
           <section className="frc-queue-panel" aria-labelledby="frc-queue-title">
             <div className="frc-queue-panel-heading">
-              <div><h2 id="frc-queue-title">Assigned Orders</h2><p>Actionable work only — locked plans stay out of this queue.</p></div>
+              <div className="frc-panel-title"><TransportSpecialistIcon name="truck" /><div><h2 id="frc-queue-title">Assigned Orders</h2><p>Actionable work only — locked plans stay out of this queue.</p></div></div>
               <span><b>{orders.length}</b> {orders.length === 1 ? "Order" : "Orders"}</span>
             </div>
             <div className="frc-table-wrap">

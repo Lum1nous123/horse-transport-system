@@ -182,7 +182,8 @@ These follow-ups do not change approved requirements and must not be used to inf
 - Dev server runs from this worktree at http://localhost:3000 for PO visual review.
   The configured default Backend is localhost:8080; it was not listening during
   verification. Real Journeys require Backend/auth; no app-level fake fallback added.
-- Changes remain uncommitted and unpushed. Stop for PO visual feedback.
+- LM Phase 0/1 changes are committed locally as `a216dc8`. Integration with
+  `origin/main` at `1dbf079` is in progress with no merge commit or push yet.
 
 ### LM UX Phase 0 — latest-main local implementation (2026-11-06)
 
@@ -206,8 +207,25 @@ These follow-ups do not change approved requirements and must not be used to inf
 - Overview/charts/navigation redesign are deferred to separate Phase 1 approval.
   Pending Actions chart was removed from the plan as duplicate KPI presentation.
   Full plan and file manifest: `docs/plans/lm-workspace-ux-audit-and-redesign.md`.
-  Work is uncommitted; no push/PR was performed.
+  Phase 0 is included in local commit `a216dc8` together with Phase 1.
 
+### Fleet & Route Coordinator UI redesign — merged via PR #137 (2026-11-07)
+
+- The owner-approved Queue and Order Detail screenshot designs are implemented
+  locally with the existing Customer Workspace font, original logo, rounded
+  header, blue palette, illustrated summary cards, and original decorative SVG
+  hero artwork. Styles are scoped to `.frc-workspace-page`.
+- Existing authentication, preview gating, service adapters, queue filtering,
+  navigation, leg forms, ROAD setup, validation, revisions, and submission
+  conditions are preserved. The existing `Revise` action and queue Refresh
+  remain; no Fleet operations destination was added because none exists.
+- Production build/TypeScript, ESLint, all 235 Frontend tests, and browser
+  preview checks pass. Browser checks include successful/blocked submission,
+  leg CRUD/reordering, ROAD setup, read-only/returned/error/access states, and
+  1024/768/390px layouts. Customer header styles remain unchanged after loading
+  the FRC stylesheet. This UI-only task did not replay real Backend workflows.
+- Evidence and file inventory: `docs/reports/FRC_UI_REDESIGN_LOCAL_VERIFICATION.md`.
+  The FRC redesign was merged into `main` via PR #137 at `1dbf079`.
 
 ### Sprint 3 final E2E and manual validation (2026-11-01)
 
