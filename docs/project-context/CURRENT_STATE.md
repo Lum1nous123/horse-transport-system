@@ -159,6 +159,37 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### Customer dashboard visual refresh — local implementation (2026-11-10)
+
+- Customer dashboard presentation is updated locally to the Human-directed
+  white / burnt-orange design: wide transparent chestnut horse hero with a
+  right-edge fade, orange header and lower-page field behind white summary /
+  content panels, unified monochrome outline icons, consistent action-button
+  dimensions, and equal-height request / horse panels sized to the desktop
+  viewport with independently scrollable lists. The dashboard clips stray
+  order-list overflow so it does not create a blank tail below the orange field.
+- The Horse documents modal now shares the dashboard's warm palette: a pale
+  orange fading header illustration, cream / white surfaces, and matching
+  orange controls. Existing customer data, navigation, API calls, and actions
+  remain unchanged. No commit or external publication has been made.
+- The public landing page now uses the same cream, burnt-orange, and dark
+  chestnut palette across its header, hero accents, overview tabs, section
+  backgrounds, actions, and footer.
+- The login page now uses the supplied meadow-horse photo as a full-bleed,
+  warm-darkened background with the existing two-column copy/form layout and
+  a translucent, blurred chestnut-glass sign-in panel with light text and
+  inputs. The same presentation now covers the register page. The supplied
+  meadow image is retained at
+  `frontend/public/images/login-horse-meadow.jpg`; its sharpened, upscaled
+  login version is `frontend/public/images/login-horse-meadow.png`. Both auth
+  routes keep a fixed viewport shell; the longer register form scrolls inside
+  its content panel rather than shifting the whole page.
+- The supplied FPT emblem SVG now replaces the previous logo reference in the
+  shared site header, Customer brand mark, authentication shell, and footer.
+- Browser preview confirmed the dashboard layout, document modal, landing page
+  colors and new logo, and login/register photo and glass-panel compositions.
+  Automated tests were not run for this visual change.
+
 ### Driver/Escort assigned-work dashboard improvements (2026-11-09)
 
 - PO visually approved the implementation and authorized commit, push and merge
