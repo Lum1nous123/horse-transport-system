@@ -397,6 +397,21 @@ export default function LogisticsPage() {
       const saved = await logisticsFetch<Quotation>(`/api/v1/orders/${orderDetail.id}/quotation`, {
         method: "PUT", body: JSON.stringify(body),
       });
+      // A successful HTTP status is not proof that the submitted draft was saved.
+      // Never replace the user's edits or send a quotation whose response lost fields.
+      const sameAmount = (actual: number | null, expected: number | null) =>
+        expected === null ? actual === null : typeof actual === "number" && Number.isFinite(actual) && Math.abs(actual - expected) < 0.000001;
+      const expectedTotal = body.lineItems.length ? body.lineItems.reduce((sum, item) => sum + item.amount, 0) : null;
+      const expectedRemaining = body.depositAmount === null || expectedTotal === null ? null : expectedTotal - body.depositAmount;
+      if (!saved || saved.id !== quotation.id || saved.orderId !== orderDetail.id || saved.status !== "DRAFT"
+        || !Array.isArray(saved.lineItems) || saved.lineItems.length !== body.lineItems.length
+        || body.lineItems.some((item) => !saved.lineItems.some((returned) =>
+          returned.sequenceNo === item.sequenceNo && returned.description === item.description && sameAmount(returned.amount, item.amount)))
+        || !sameAmount(saved.depositAmount, body.depositAmount) || !sameAmount(saved.totalAmount, expectedTotal)
+        || !sameAmount(saved.remainingAmount, expectedRemaining) || saved.notes !== body.notes) {
+        setQuoteError("The service returned a quotation that does not match your draft. Saving could not be verified. Your edits are kept; review before retrying. The quotation was not sent.");
+        return null;
+      }
       setQuotation(saved);
       setQuoteDraft(quoteDraftFrom(saved));
       return saved;
@@ -407,7 +422,7 @@ export default function LogisticsPage() {
   }
 
   async function saveQuotation() {
-    setQuoteBusyAction(true); setQuoteError("");
+    setQuoteBusyAction(true); setQuoteError(""); setFeedback("");
     const saved = await persistQuotation();
     if (saved) { setFeedback("Quotation draft saved."); setQuoteEditing(false); }
     setQuoteBusyAction(false);
@@ -422,7 +437,7 @@ export default function LogisticsPage() {
   async function confirmSendQuotation() {
     if (!orderDetail || !quotation) return;
     setSendWarning(false);
-    setQuoteBusyAction(true); setQuoteError("");
+    setQuoteBusyAction(true); setQuoteError(""); setFeedback("");
     const saved = await persistQuotation(true);
     if (!saved) { setQuoteBusyAction(false); return; }
     if (preview) {
