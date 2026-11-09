@@ -9,6 +9,7 @@ import { apiFetch } from "@/lib/api";
 import { selectLogisticsInboxOrders, type InboxMode, type InboxSort } from "@/lib/logistics-inbox-search";
 import BrandMark from "@/components/BrandMark";
 import { LogisticsNavigation, LogisticsOrdersTabs } from "@/components/LogisticsWorkspaceUI";
+import "./submitted-orders.css";
 
 type OrderStatus = "SUBMITTED" | "QUOTATION_SENT" | "REJECTED" | "CANCELLED";
 type InboxOrder = {
@@ -463,7 +464,7 @@ export default function LogisticsPage() {
   }
 
   return (
-    <main className="customer-page logistics-page logistics-manager-page">
+    <main className="customer-page logistics-page logistics-manager-page lm-submitted-page">
       <header className="customer-topbar">
         <Link className="customer-brand" href="/" aria-label="Horse Transport System home">
           <BrandMark /><span>Horse Transport System</span>

@@ -1,0 +1,94 @@
+.lm-route-review-detail-page { overflow-x: clip; background: radial-gradient(ellipse at 75% 100%, #dceaff, transparent 38%), #f4f8fc; }
+.lm-route-review-detail-page .assignment-breadcrumb { margin: 0 0 10px; color: #60758e; font-size: .75rem; }
+.lm-route-review-detail-page .assignment-breadcrumb a { color: #1558c9; }
+.lm-route-review-detail-page .route-review-detail-heading {
+  position: relative;
+  align-items: center;
+  min-height: 120px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  border: 1px solid #d3e3f5;
+  border-radius: 15px;
+  padding: 20px clamp(18px, 3vw, 28px);
+  background: linear-gradient(105deg, #f9fcff, #eaf3ff);
+  isolation: isolate;
+}
+.lm-route-review-detail-page .route-review-detail-heading::before { position: absolute; z-index: -1; inset: 0; background: url('/images/customer-horse-illustration.svg') right 10% bottom -57px / 250px auto no-repeat; opacity: .4; content: ''; }
+.lm-route-review-detail-page .route-review-heading-copy { display: flex; align-items: center; min-width: 0; gap: 14px; }
+.lm-route-review-detail-page .route-review-heading-copy > div { min-width: 0; }
+.lm-route-review-detail-page .route-review-heading-mark { display: grid; width: 46px; height: 46px; flex: 0 0 auto; place-items: center; margin: 0; border-radius: 11px; background: #dceaff; color: #1558c9; }
+.lm-route-review-detail-page .route-review-heading-mark .route-review-icon { width: 25px; height: 25px; }
+.lm-route-review-detail-page .route-review-order-code { display: block; margin-bottom: 3px; color: #1558c9; font-size: .75rem; font-weight: 800; }
+.lm-route-review-detail-page .route-review-detail-heading h1 { color: #082b5b; font-size: clamp(1.5rem, 2.7vw, 2.15rem); font-weight: 800; overflow-wrap: anywhere; }
+.lm-route-review-detail-page .route-review-detail-heading h1 b { color: #1558c9; }
+.lm-route-review-detail-page .route-review-detail-heading p { color: #526b85; font-size: .83rem; }
+.lm-route-review-detail-page .route-review-detail-heading > div:last-child { position: relative; }
+.lm-route-review-detail-page .route-review-detail-heading .customer-secondary-button { min-height: 40px; border-color: #c8daee; border-radius: 8px; background: #fff; color: #123e80; box-shadow: 0 4px 12px #173d6815; font-size: .79rem; }
+.lm-route-review-detail-page .route-review-detail-heading .customer-secondary-button:hover { background: #f8fbff; }
+.lm-route-review-detail-page .field-hint[role="status"] { margin: 0 0 9px; color: #71869c; font-size: .72rem; }
+.lm-route-review-detail-page .route-review-summary { grid-template-columns: .9fr 1.35fr .85fr .65fr 1.35fr .95fr; margin-bottom: 10px; border-color: #d0e0f2; border-radius: 13px; box-shadow: 0 6px 20px #173d680d; }
+.lm-route-review-detail-page .route-review-summary > div { position: relative; min-height: 73px; border-right-color: #dbe8f6; padding: 14px 10px 12px 53px; }
+.lm-route-review-detail-page .route-review-summary .route-review-icon { position: absolute; top: 50%; left: 11px; width: 32px; height: 32px; border-radius: 9px; padding: 6px; background: #e6f1ff; color: #1558c9; transform: translateY(-50%); }
+.lm-route-review-detail-page .route-review-summary span { margin-bottom: 3px; color: #60758e; font-size: .68rem; letter-spacing: 0; text-transform: none; }
+.lm-route-review-detail-page .route-review-summary strong { color: #082b5b; font-size: .78rem; font-weight: 750; }
+.lm-route-review-detail-page .route-review-summary .route-review-status { color: #86520a; font-size: .68rem; }
+.lm-route-review-detail-page .route-review-summary .route-review-status.is-approved { color: #167146; }
+.lm-route-review-detail-page .route-review-summary .route-review-status.is-returned { color: #4d6170; }
+.lm-route-review-detail-page .route-review-summary strong.is-invalid { color: #a52d24; }
+.lm-route-review-detail-page .route-review-audit,.lm-route-review-detail-page .route-review-validation-list,.lm-route-review-detail-page .route-review-staffing-rule { border: 1px solid #d0e0f2; border-radius: 13px; background: #fff; box-shadow: 0 6px 20px #173d680d; }
+.lm-route-review-detail-page .route-review-audit { overflow: hidden; }
+.lm-route-review-detail-page .route-review-audit-heading { min-height: 65px; padding: 13px 17px; }
+.lm-route-review-detail-page .route-review-audit-heading h2 { display: flex; align-items: center; gap: 9px; color: #082b5b; font-size: 1.08rem; font-weight: 800; }
+.lm-route-review-detail-page .route-review-audit-heading h2 .route-review-icon { width: 27px; height: 27px; border-radius: 7px; padding: 4px; background: #e6f1ff; color: #1558c9; }
+.lm-route-review-detail-page .route-review-audit-heading p { margin-left: 36px; color: #60758e; font-size: .72rem; }
+.lm-route-review-detail-page .route-review-readonly { border-color: #c3d8f1; border-radius: 9px; background: #f4f9ff; color: #1558c9; }
+.lm-route-review-detail-page .route-review-audit-wrap { padding: 0 10px 10px; }
+.lm-route-review-detail-page .route-review-audit-table { min-width: 1000px; }
+.lm-route-review-detail-page .route-review-audit-table th { border-bottom: 0; background: #eaf3ff; color: #395b83; font-size: .7rem; font-weight: 750; letter-spacing: 0; text-transform: none; }
+.lm-route-review-detail-page .route-review-audit-table th:first-child { border-radius: 8px 0 0 8px; }
+.lm-route-review-detail-page .route-review-audit-table th:last-child { border-radius: 0 8px 8px 0; }
+.lm-route-review-detail-page .route-review-audit-table td { border-bottom-color: #e2ebf5; color: #385372; font-size: .73rem; }
+.lm-route-review-detail-page .route-review-audit-table tbody tr:last-child td { border-bottom: 0; }
+.lm-route-review-detail-page .route-review-audit-table td strong { color: #082b5b; font-weight: 750; }
+.lm-route-review-detail-page .route-review-leg-type { border-radius: 99px; background: #e4efff; color: #1558c9; }
+.lm-route-review-detail-page .route-review-details-button { color: #1558c9; text-decoration: none; }
+.lm-route-review-detail-page .route-review-details-button:hover { text-decoration: underline; }
+.lm-route-review-detail-page .route-review-validation-list,.lm-route-review-detail-page .route-review-staffing-rule { margin-top: 8px; padding: 13px 18px; }
+.lm-route-review-detail-page .route-review-validation-list h3,.lm-route-review-detail-page .route-review-staffing-rule h3 { display: flex; align-items: center; gap: 9px; margin-bottom: 4px; color: #082b5b; font-size: .91rem; font-weight: 800; }
+.lm-route-review-detail-page .route-review-validation-list h3 .route-review-icon,.lm-route-review-detail-page .route-review-staffing-rule h3 .route-review-icon { width: 27px; height: 27px; border-radius: 8px; padding: 5px; background: #e6f1ff; color: #1558c9; }
+.lm-route-review-detail-page .route-review-validation-list > p { margin: 0 0 0 36px; color: #526b85; font-size: .76rem; }
+.lm-route-review-detail-page .route-review-validation-list ul { margin: 9px 0 0 36px; }
+.lm-route-review-detail-page .route-review-staffing-rule > div { flex-wrap: wrap; gap: 7px; margin-left: 36px; }
+.lm-route-review-detail-page .route-review-staffing-rule > div > span { gap: 7px; border-color: #c8dcf7; border-radius: 99px; padding: 5px 10px; background: #f3f8ff; }
+.lm-route-review-detail-page .route-review-staffing-rule b,.lm-route-review-detail-page .route-review-staffing-rule strong { color: #123e80; font-size: .68rem; }
+.lm-route-review-detail-page .route-review-staffing-rule p { margin: 6px 0 0 36px; color: #60758e; font-size: .72rem; }
+.lm-route-review-detail-page .route-review-decision-panel { margin-top: 9px; border: 1px solid #ecc6c2; border-radius: 12px; background: #fff9f8; }
+.lm-route-review-detail-page .route-review-decision-panel.is-confirm { border-color: #c8def6; background: #f3f8ff; }
+.lm-route-review-detail-page .route-review-actions { gap: 10px; margin-top: 12px; border: 0; padding: 10px 0 22px; background: transparent; }
+.lm-route-review-detail-page .route-review-actions .route-review-return-button,.lm-route-review-detail-page .route-review-actions .customer-primary-button { min-height: 42px; border-radius: 8px; padding-inline: 19px; font-size: .8rem; }
+.lm-route-review-detail-page .route-review-actions .route-review-return-button { border-color: #d84d45; color: #b12f29; }
+.lm-route-review-detail-page .route-review-actions .customer-primary-button { background: #1558c9; box-shadow: 0 5px 12px #1558c928; }
+.lm-route-review-detail-page :is(.route-review-details-button,.route-review-actions button,.route-review-decision-panel button,.route-review-decision-panel textarea,.route-review-detail-heading a,.route-review-detail-heading button):focus-visible { outline: 3px solid #79acef; outline-offset: 2px; }
+@media (max-width: 1100px) {
+  .lm-route-review-detail-page .route-review-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .lm-route-review-detail-page .route-review-summary > div { border-bottom: 1px solid #dbe8f6; }
+  .lm-route-review-detail-page .route-review-summary > div:nth-child(3n) { border-right: 0; }
+  .lm-route-review-detail-page .route-review-summary > div:nth-last-child(-n+3) { border-bottom: 0; }
+}
+@media (max-width: 720px) {
+  .lm-route-review-detail-page .route-review-detail-heading::before { opacity: .13; }
+  .lm-route-review-detail-page .route-review-detail-heading > div:last-child { flex-wrap: wrap; }
+  .lm-route-review-detail-page .route-review-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lm-route-review-detail-page .route-review-summary > div { border-bottom: 1px solid #dbe8f6; }
+  .lm-route-review-detail-page .route-review-summary > div:nth-child(3n) { border-right: 1px solid #dbe8f6; }
+  .lm-route-review-detail-page .route-review-summary > div:nth-child(2n) { border-right: 0; }
+  .lm-route-review-detail-page .route-review-summary > div:nth-last-child(-n+2) { border-bottom: 0; }
+  .lm-route-review-detail-page .route-review-staffing-rule > div { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 430px) {
+  .lm-route-review-detail-page .route-review-summary { grid-template-columns: minmax(0, 1fr); }
+  .lm-route-review-detail-page .route-review-summary > div { border-right: 0; border-bottom: 1px solid #dbe8f6; }
+  .lm-route-review-detail-page .route-review-summary > div:last-child { border-bottom: 0; }
+  .lm-route-review-detail-page .route-review-audit-heading { align-items: flex-start; }
+  .lm-route-review-detail-page .route-review-validation-list ul,.lm-route-review-detail-page .route-review-validation-list > p,.lm-route-review-detail-page .route-review-staffing-rule > div,.lm-route-review-detail-page .route-review-staffing-rule p { margin-left: 0; }
+}

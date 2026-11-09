@@ -13,6 +13,23 @@ import {
   type ExecutionStaff,
 } from "@/lib/logistics-route-review/service";
 import { useLogisticsAccess } from "@/lib/staff-assignment/use-logistics-access";
+import "./route-review-detail.css";
+
+type ReviewIconName = "plan" | "route" | "status" | "departure" | "transport" | "horses" | "frc" | "validation";
+const reviewIconPaths: Record<ReviewIconName, string[]> = {
+  plan: ["M6 3h9l4 4v14H6z", "M15 3v5h4M9 12h7m-7 4h7"],
+  route: ["M5 18c7 0 7-12 14-12", "M5 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm14-12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"],
+  status: ["M6 4h12v17H6z", "m9 12 2 2 4-5"],
+  departure: ["M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Z", "M8 2v4m8-4v4M3 9h18"],
+  transport: ["M3 7h11v10H3z", "M14 10h4l3 3v4h-7z", "M7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm11 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"],
+  horses: ["M6 20v-7l3-5 4-2 3-3 2 5 3 3-2 4-3-1-2 6H6Z", "M16 10h.01"],
+  frc: ["M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7-1a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z", "M3 20a5.5 5.5 0 0 1 11 0m0-6a5 5 0 0 1 7 4.6V20"],
+  validation: ["M12 2 20 5v7c0 5-3.5 8-8 10-4.5-2-8-5-8-10V5z", "m9 12 2 2 4-5"],
+};
+
+function ReviewIcon({ name }: { name: ReviewIconName }) {
+  return <svg className="route-review-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{reviewIconPaths[name].map((path) => <path d={path} key={path} />)}</svg>;
+}
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
@@ -136,7 +153,7 @@ function ReviewDetail() {
   const decisionsDisabled = refreshing || Boolean(submitting) || recoveryRequired;
 
   return (
-    <AssignmentWorkspaceFrame preview={preview} activeSection="reviews">
+    <AssignmentWorkspaceFrame preview={preview} activeSection="reviews" pageClassName="lm-route-review-detail-page">
       <nav className="assignment-breadcrumb" aria-label="Breadcrumb"><Link href={queueHref}>Route Reviews</Link><span aria-hidden="true">/</span><span aria-current="page">{review?.orderCode ?? "Review"}</span></nav>
 
       {loading ? <div className="route-review-detail-skeleton" role="status" aria-label="Loading Route Plan"><span /><span /><span /></div> : !review ? (
@@ -144,7 +161,7 @@ function ReviewDetail() {
       ) : (
         <>
           <header className="route-review-detail-heading">
-            <div><span>{review.orderCode}</span><h1>{review.origin} <b aria-hidden="true">→</b> {review.destination}</h1><p>Review the saved Route Plan. Planning data is read-only.</p></div>
+            <div className="route-review-heading-copy"><span className="route-review-heading-mark"><ReviewIcon name="plan" /></span><div><span className="route-review-order-code">{review.orderCode}</span><h1>{review.origin} <b aria-hidden="true">→</b> {review.destination}</h1><p>Review the saved Route Plan. Planning data is read-only.</p></div></div>
             <div><Link className="customer-secondary-button" href={queueHref}>Back to reviews</Link><button className="customer-secondary-button" type="button" disabled={refreshing || Boolean(submitting) || (!preview && resultSource === "mutation")} onClick={() => void loadReview(true)}>{refreshing ? "Refreshing..." : "Refresh"}</button></div>
           </header>
 
@@ -154,36 +171,36 @@ function ReviewDetail() {
           {error && <div className="customer-alert" role="alert"><span>{error}</span><button type="button" disabled={refreshing || Boolean(submitting)} onClick={() => void loadReview(true)}>Retry read</button></div>}
 
           <section className="route-review-summary" aria-label="Route Plan summary">
-            <div><span>Status</span><strong className={`route-review-status is-${review.routePlanStatus.toLowerCase()}`}>{review.routePlanStatus === "PENDING_LM_REVIEW" ? "Pending review" : review.routePlanStatus === "APPROVED" ? "Locked" : "Returned"}</strong></div>
-            <div><span>Departure</span><strong>{formatDateTime(review.requestedDepartureAt)}</strong></div>
-            <div><span>Transport</span><strong>{review.transportMode}</strong></div>
-            <div><span>Horses</span><strong>{review.horseCount}</strong></div>
-            <div><span>FRC</span><strong>{review.assignedFleetRouteCoordinatorName}</strong></div>
-            <div><span>Validation</span><strong className={hasValidationResults ? hasValidationFailures ? "is-invalid" : "is-valid" : undefined}>{hasValidationResults ? hasValidationFailures ? "Failed" : "Passed" : "Not supplied"}</strong></div>
+            <div><ReviewIcon name="status" /><span>Status</span><strong className={`route-review-status is-${review.routePlanStatus.toLowerCase()}`}>{review.routePlanStatus === "PENDING_LM_REVIEW" ? "Pending review" : review.routePlanStatus === "APPROVED" ? "Locked" : "Returned"}</strong></div>
+            <div><ReviewIcon name="departure" /><span>Departure</span><strong>{formatDateTime(review.requestedDepartureAt)}</strong></div>
+            <div><ReviewIcon name="transport" /><span>Transport</span><strong>{review.transportMode}</strong></div>
+            <div><ReviewIcon name="horses" /><span>Horses</span><strong>{review.horseCount}</strong></div>
+            <div><ReviewIcon name="frc" /><span>FRC</span><strong>{review.assignedFleetRouteCoordinatorName}</strong></div>
+            <div><ReviewIcon name="validation" /><span>Validation</span><strong className={hasValidationResults ? hasValidationFailures ? "is-invalid" : "is-valid" : undefined}>{hasValidationResults ? hasValidationFailures ? "Failed" : "Passed" : "Not supplied"}</strong></div>
           </section>
 
           {review.routePlanStatus === "RETURNED" && <section className="route-review-returned"><strong>Returned to FRC</strong><p>{review.returnReason}</p></section>}
           {review.routePlanStatus === "APPROVED" && <section className={`route-review-ready ${hasCompleteLockedStaffing(review) ? "is-complete" : "is-incomplete"}`}><div><strong>{hasCompleteLockedStaffing(review) ? "READY_TO_SHIP" : "Staffing incomplete"}</strong><p>{hasCompleteLockedStaffing(review) ? `Locked ${review.lockedAt ? formatDateTime(review.lockedAt) : ""}. Every required assignment is shown below.` : "The saved result is missing one or more required execution assignments."}</p></div></section>}
 
           <section className="route-review-audit" aria-labelledby="route-review-audit-title">
-            <div className="route-review-audit-heading"><div><h2 id="route-review-audit-title">Ordered Route Plan</h2><p>{review.revision != null && <>Revision {review.revision} · </>}Submitted {formatDateTime(review.submittedAt)}</p></div><span className="route-review-readonly">Read-only</span></div>
+            <div className="route-review-audit-heading"><div><h2 id="route-review-audit-title"><ReviewIcon name="route" />Ordered Route Plan</h2><p>{review.revision != null && <>Revision {review.revision} · </>}Submitted {formatDateTime(review.submittedAt)}</p></div><span className="route-review-readonly">Read-only</span></div>
             <div className="route-review-audit-wrap">
               <table className="route-review-audit-table">
-                <thead><tr><th>#</th><th>Type</th><th>Route</th><th>Schedule</th><th>Planning details</th><th>Staffing</th><th><span className="sr-only">Details</span></th></tr></thead>
+                <thead><tr><th scope="col">#</th><th scope="col">Type</th><th scope="col">Route</th><th scope="col">Schedule</th><th scope="col">Planning details</th><th scope="col">Staffing</th><th scope="col"><span className="sr-only">Details</span></th></tr></thead>
                 <tbody>{review.legs.map((leg) => <LegRows key={leg.id} leg={leg} expanded={expandedLegId === leg.id} locked={review.routePlanStatus === "APPROVED"} onToggle={() => setExpandedLegId((current) => current === leg.id ? null : leg.id)} />)}</tbody>
               </table>
             </div>
-
-            <div className="route-review-validation-list"><h3>Validation result</h3>{!hasValidationResults && <p>Detailed validation results were not supplied. The server validates the Route Plan when you confirm.</p>}<ul>{review.validations.map((item) => <li key={item.code} className={item.status === "PASSED" ? "is-passed" : "is-failed"}><span aria-hidden="true">{item.status === "PASSED" ? "✓" : "!"}</span><div><strong>{item.label}</strong><p>{item.message}</p></div></li>)}</ul></div>
-
-            {pending && <div className="route-review-staffing-rule"><h3>Automatic staffing after confirmation</h3><div><span><b>ROAD Vehicle</b><strong>1 Driver + 1 Escort</strong></span><span><b>AIR leg</b><strong>1 Escort · No Driver</strong></span></div><p>Staff are selected by the system. Confirming permanently locks this Route Plan.</p></div>}
-
-            {pending && returnOpen && <section className="route-review-decision-panel" aria-labelledby="return-plan-title"><div><h3 id="return-plan-title">Return Route Plan</h3><p>Explain what the assigned FRC must correct before resubmitting.</p></div><label><span>Return reason</span><textarea rows={3} value={returnReason} onChange={(event) => setReturnReason(event.target.value)} disabled={decisionsDisabled} /></label><div><button className="customer-secondary-button" type="button" onClick={() => setReturnOpen(false)} disabled={decisionsDisabled}>Cancel</button><button className="route-review-return-button" type="button" onClick={() => void mutateReview("return")} disabled={decisionsDisabled}>{submitting === "return" ? "Returning..." : "Return to FRC"}</button></div></section>}
-
-            {pending && confirmOpen && <section className="route-review-decision-panel is-confirm" aria-labelledby="confirm-plan-title"><div><h3 id="confirm-plan-title">Confirm and permanently lock?</h3><p>The system will assign execution staff automatically. This Route Plan cannot be reopened.</p></div><div><button className="customer-secondary-button" type="button" onClick={() => setConfirmOpen(false)} disabled={decisionsDisabled}>Cancel</button><button className="customer-primary-button" type="button" onClick={() => void mutateReview("confirm")} disabled={decisionsDisabled || hasValidationFailures}>{submitting === "confirm" ? "Confirming..." : "Confirm & lock"}</button></div></section>}
-
-            {pending && <footer className="route-review-actions"><button className="route-review-return-button" type="button" onClick={() => { setReturnOpen(true); setConfirmOpen(false); }} disabled={decisionsDisabled}>Return plan</button><button className="customer-primary-button" type="button" onClick={() => { setConfirmOpen(true); setReturnOpen(false); }} disabled={decisionsDisabled || hasValidationFailures}>Confirm &amp; lock</button></footer>}
           </section>
+
+          <section className="route-review-validation-list"><h3><ReviewIcon name="validation" />Validation result</h3>{!hasValidationResults && <p>Detailed validation results were not supplied. The server validates the Route Plan when you confirm.</p>}<ul>{review.validations.map((item) => <li key={item.code} className={item.status === "PASSED" ? "is-passed" : "is-failed"}><span aria-hidden="true">{item.status === "PASSED" ? "✓" : "!"}</span><div><strong>{item.label}</strong><p>{item.message}</p></div></li>)}</ul></section>
+
+          {pending && <section className="route-review-staffing-rule"><h3><ReviewIcon name="frc" />Automatic staffing after confirmation</h3><div><span><b>ROAD Vehicle</b><strong>1 Driver + 1 Escort</strong></span><span><b>AIR leg</b><strong>1 Escort · No Driver</strong></span></div><p>Staff are selected by the system. Confirming permanently locks this Route Plan.</p></section>}
+
+          {pending && returnOpen && <section className="route-review-decision-panel" aria-labelledby="return-plan-title"><div><h3 id="return-plan-title">Return Route Plan</h3><p>Explain what the assigned FRC must correct before resubmitting.</p></div><label><span>Return reason</span><textarea rows={3} value={returnReason} onChange={(event) => setReturnReason(event.target.value)} disabled={decisionsDisabled} /></label><div><button className="customer-secondary-button" type="button" onClick={() => setReturnOpen(false)} disabled={decisionsDisabled}>Cancel</button><button className="route-review-return-button" type="button" onClick={() => void mutateReview("return")} disabled={decisionsDisabled}>{submitting === "return" ? "Returning..." : "Return to FRC"}</button></div></section>}
+
+          {pending && confirmOpen && <section className="route-review-decision-panel is-confirm" aria-labelledby="confirm-plan-title"><div><h3 id="confirm-plan-title">Confirm and permanently lock?</h3><p>The system will assign execution staff automatically. This Route Plan cannot be reopened.</p></div><div><button className="customer-secondary-button" type="button" onClick={() => setConfirmOpen(false)} disabled={decisionsDisabled}>Cancel</button><button className="customer-primary-button" type="button" onClick={() => void mutateReview("confirm")} disabled={decisionsDisabled || hasValidationFailures}>{submitting === "confirm" ? "Confirming..." : "Confirm & lock"}</button></div></section>}
+
+          {pending && <footer className="route-review-actions"><button className="route-review-return-button" type="button" onClick={() => { setReturnOpen(true); setConfirmOpen(false); }} disabled={decisionsDisabled}>Return plan</button><button className="customer-primary-button" type="button" onClick={() => { setConfirmOpen(true); setReturnOpen(false); }} disabled={decisionsDisabled || hasValidationFailures}>Confirm &amp; lock</button></footer>}
         </>
       )}
     </AssignmentWorkspaceFrame>

@@ -11,6 +11,20 @@ import {
   type StaffRole,
 } from "@/lib/staff-assignment/service";
 import { useLogisticsAccess } from "@/lib/staff-assignment/use-logistics-access";
+import "./assignment-detail.css";
+
+type SummaryIconName = "order" | "route" | "departure" | "horses" | "mode";
+const summaryIconPaths: Record<SummaryIconName, string[]> = {
+  order: ["M6 3h9l4 4v14H6z", "M15 3v5h4M9 12h7m-7 4h7"],
+  route: ["M12 21s6-5.4 6-11a6 6 0 1 0-12 0c0 5.6 6 11 6 11Z", "M12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"],
+  departure: ["M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Z", "M8 2v4m8-4v4M3 9h18"],
+  horses: ["M6 20v-7l3-5 4-2 3-3 2 5 3 3-2 4-3-1-2 6H6Z", "M16 10h.01"],
+  mode: ["M3 7h11v10H3z", "M14 10h4l3 3v4h-7z", "M7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm11 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"],
+};
+
+function SummaryIcon({ name }: { name: SummaryIconName }) {
+  return <span className="assignment-summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{summaryIconPaths[name].map((path) => <path d={path} key={path} />)}</svg></span>;
+}
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en", {
@@ -119,7 +133,7 @@ function AssignmentDetail() {
   const previewSuffix = preview ? "?preview=1" : "";
 
   return (
-    <AssignmentWorkspaceFrame preview={preview}>
+    <AssignmentWorkspaceFrame preview={preview} pageClassName="lm-assignment-detail-page">
       <nav className="assignment-breadcrumb" aria-label="Breadcrumb">
         <Link href={`/logistics${previewSuffix}`}>Logistics</Link>
         <span aria-hidden="true">/</span>
@@ -152,22 +166,22 @@ function AssignmentDetail() {
       ) : (
         <>
           <div className="assignment-detail-heading">
-            <div>
+            <div className="assignment-heading-copy">
               <span className={`assignment-status${order.assignedPair ? " is-assigned" : ""}`}>
                 {order.assignedPair ? "Assigned" : "Needs assignment"}
               </span>
-              <h1>Staff Assignment</h1>
-              <p>{order.assignedPair ? "The saved staff pair is read-only." : "Choose one specialist for each role."}</p>
+              <div className="assignment-heading-title"><span className="assignment-heading-icon" aria-hidden="true">♞</span><div><h1>Staff Assignment</h1>
+                <p>{order.assignedPair ? "The saved staff pair is read-only." : "Choose one specialist for each role."}</p></div></div>
             </div>
             <Link className="assignment-back-link" href={`/logistics/assignments${previewSuffix}`}>← Back to assignment queue</Link>
           </div>
 
           <section className="assignment-order-summary" aria-labelledby="assignment-order-heading">
-            <div><span>Order</span><strong id="assignment-order-heading">{order.orderCode}</strong></div>
-            <div><span>Route</span><strong>{order.origin} <b aria-hidden="true">→</b> {order.destination}</strong></div>
-            <div><span>Departure</span><strong>{formatDate(order.requestedDepartureAt)}</strong></div>
-            <div><span>Horses</span><strong>{order.horseCount}</strong></div>
-            <div><span>Mode</span><strong>{order.transportMode}</strong></div>
+            <div><SummaryIcon name="order" /><span>Order</span><strong id="assignment-order-heading">{order.orderCode}</strong></div>
+            <div><SummaryIcon name="route" /><span>Route</span><strong>{order.origin} <b aria-hidden="true">→</b> {order.destination}</strong></div>
+            <div><SummaryIcon name="departure" /><span>Departure</span><strong>{formatDate(order.requestedDepartureAt)}</strong></div>
+            <div><SummaryIcon name="horses" /><span>Horses</span><strong>{order.horseCount}</strong></div>
+            <div><SummaryIcon name="mode" /><span>Mode</span><strong>{order.transportMode}</strong></div>
           </section>
 
           {order.assignedPair ? (
@@ -246,7 +260,7 @@ function CandidateGroup({
   const groupName = role === "TRANSPORT_SPECIALIST" ? "transport-specialist" : "fleet-route-coordinator";
   return (
     <fieldset className="assignment-candidate-group" disabled={disabled}>
-      <legend>{title}</legend>
+      <legend><span className="assignment-role-icon" aria-hidden="true">{role === "TRANSPORT_SPECIALIST" ? "♞" : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 18c6 0 5-11 13-11" strokeDasharray="2 3"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="6" r="2"/></svg>}</span>{title}</legend>
       <p>{description}</p>
       <div className="assignment-candidate-header" aria-hidden="true">
         <span>Select</span><span>Name</span><span>Email</span><span>Active orders</span>
