@@ -1,4 +1,4 @@
-FROM maven:3.9-eclipse-temurin-21-alpine AS build
+FROM maven:3.9-eclipse-temurin-21 AS build
 
 WORKDIR /workspace
 
@@ -8,9 +8,10 @@ RUN mvn -B -ntp dependency:go-offline
 COPY src ./src
 RUN mvn -B -ntp -DskipTests package
 
-FROM eclipse-temurin:21-jre-alpine AS runtime
+FROM eclipse-temurin:21-jre-jammy AS runtime
 
-RUN addgroup -S spring && adduser -S spring -G spring
+RUN groupadd --system spring \
+    && useradd --system --gid spring --no-create-home --shell /usr/sbin/nologin spring
 
 WORKDIR /app
 COPY --from=build --chown=spring:spring /workspace/target/backend-*.jar /app/app.jar
