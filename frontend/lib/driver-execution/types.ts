@@ -44,6 +44,7 @@ export type DriverExecution = {
   startedAt: string | null;
   destinationArrivedAt: string | null;
   completedAt: string | null;
+  plannedDepartureAt?: string | null;
   // Adapter supplies server-authoritative eligibility, including any rules
   // beyond the conservative UI guards in actions.ts.
   permissions: {

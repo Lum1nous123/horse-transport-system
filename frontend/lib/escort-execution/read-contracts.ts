@@ -380,6 +380,7 @@ function driverBase(source: JsonObject, driverId: string, includeActions: boolea
     id: summary.executionId,
     driverId,
     revision: 0,
+    plannedDepartureAt: summary.plannedDepartureAt,
     order: {
       id: summary.orderId,
       code: summary.orderCode,

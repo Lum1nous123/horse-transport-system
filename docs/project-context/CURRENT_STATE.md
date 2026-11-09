@@ -159,6 +159,33 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### Driver/Escort assigned-work dashboard improvements (2026-11-09)
+
+- PO visually approved the implementation and authorized commit, push and merge
+  on 2026-11-09. Work is on `feature/lm-phase1-ux-improvements` at base
+  `c6e7f76`, exclusively in the existing LM workspace.
+- Driver retains master-detail, with All assigned/Not started/In progress and
+  conditional Completed execution filters, client search and departure sort.
+  Mobile opens detail after selecting a Vehicle and preserves selection on return.
+  Queue labels describe leg readiness without granting Start permission.
+- Escort now uses one responsive ROAD/AIR table with mode/group/search/sort
+  filters. Sources load/retry independently; failed sources do not masquerade
+  as empty results or retain stale actionable rows. Older responses are ignored.
+- Queue presentation reuses the AIR action resolver; inconsistent states stay
+  discoverable in All with Check state. Completed ROAD work with a valid PoD
+  capability stays In progress. Execution completion is not Order delivery or
+  a full-history claim. Existing detail mutations, authorization and services remain.
+- Driver view models retain optional plannedDepartureAt from the existing
+  read DTO. A narrow journey-grid width fix prevents mobile horizontal overflow.
+  No Backend, API wire contract, dependency or database changes.
+- Verification: 327/327 frontend tests, ESLint without warnings, TypeScript,
+  production build, diff checks and 50/50 Chromium desktop/mobile checks pass.
+  Journey preview tests explicitly open collapsed leg details before checking evidence.
+  Browser checks use intercepted APIs/development preview, including Driver
+  Start/checkpoints/destination and Escort PoD image regression; no real Backend E2E.
+- Publication is approved; the repository history and PR record the resulting
+  commit/merge status. Local UI remains available at /driver and /escort.
+
 ### LM workspace integration with latest main (2026-11-09)
 
 - Work remains in `D:\project\horse-transport-system-lm-phase0` on
