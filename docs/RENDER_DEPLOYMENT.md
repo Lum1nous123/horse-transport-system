@@ -73,6 +73,7 @@ STRIPE_CHECKOUT_SUCCESS_URL=http://localhost:3000/payment/success
 STRIPE_CHECKOUT_CANCEL_URL=http://localhost:3000/payment/cancelled
 DB_PORT=5432
 DB_NAME=postgres
+DB_PREPARE_THRESHOLD=0
 DB_MAX_POOL_SIZE=5
 DB_MIN_IDLE=1
 DB_CONNECTION_TIMEOUT_MS=30000
@@ -93,13 +94,15 @@ The JDBC template keeps TLS mandatory and explicitly disables PostgreSQL GSSAPI
 encryption negotiation for Supabase Supavisor compatibility:
 
 ```text
-jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require&gssEncMode=disable
+jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require&gssEncMode=disable&prepareThreshold=${DB_PREPARE_THRESHOLD}
 ```
 
 `gssEncMode=disable` disables only GSSAPI/Kerberos negotiation; it does not
 disable TLS. `sslmode=require` still refuses an unencrypted database
 connection. The password remains a separate datasource property, so no
-password URL-encoding is needed in the JDBC URL.
+password URL-encoding is needed in the JDBC URL. `prepareThreshold=0` keeps
+pgJDBC server-side prepared statements disabled, which is required when the
+shared transaction pooler is used and is safe for session mode as well.
 
 Render is listed by Supabase as an IPv4-only platform. Unless the Supabase project has the IPv4 add-on, use the **Shared Pooler / Session mode** values from Supabase Dashboard > **Connect**:
 
@@ -111,7 +114,16 @@ Render is listed by Supabase as an IPv4-only platform. Unless the Supabase proje
 
 Do not derive the pooler hostname or project reference manually. If the project has the IPv4 add-on, the existing direct `db.<project-ref>.supabase.co:5432` endpoint can remain in use.
 
-Session mode is appropriate for this persistent Spring Boot/HikariCP service and supports prepared statements. Do not switch this application to the transaction pooler on port `6543` without a separate compatibility review. Supabase documents the relevant choices in [Connect to Postgres](https://supabase.com/docs/guides/database/connecting-to-postgres) and its [Spring Boot quickstart](https://supabase.com/docs/guides/getting-started/quickstarts/spring-boot).
+Session mode is preferred for this persistent Spring Boot/HikariCP service. If
+the Render network path repeatedly terminates TLS only on the session listener,
+the shared transaction pooler on port `6543` is the controlled fallback. Keep
+`DB_PREPARE_THRESHOLD=0`, keep Flyway's default PostgreSQL transactional lock,
+and retain a single Render instance while migrations run. Transaction mode
+does not support session-level state such as `LISTEN/NOTIFY`, session advisory
+locks, or temporary tables spanning transactions; the current application does
+not depend on those features. Supabase documents these choices in
+[Connect to Postgres](https://supabase.com/docs/guides/database/connecting-to-postgres)
+and its [Spring Boot quickstart](https://supabase.com/docs/guides/getting-started/quickstarts/spring-boot).
 
 Spring Boot selects HikariCP automatically through the JPA/JDBC dependencies. The staging default is bounded to five connections with one idle connection. For more than one Render instance, ensure:
 
