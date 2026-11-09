@@ -1,0 +1,32 @@
+.payment-confirmation-page {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(22px, 5vw, 60px);
+  background: radial-gradient(circle at 80% 24%, #e7f1ff, transparent 34%), linear-gradient(160deg, #f9fcff, #edf5ff);
+  isolation: isolate;
+}
+.payment-confirmation-page::before,.payment-confirmation-page::after { position: absolute; z-index: -1; left: -8%; width: 116%; height: 160px; border-radius: 50%; background: #d9eaff; content: ''; }
+.payment-confirmation-page::before { top: -115px; transform: rotate(-7deg); }
+.payment-confirmation-page::after { bottom: -125px; background: #c6e0ff; transform: rotate(5deg); }
+.payment-confirmation-card {
+  position: relative;
+  overflow: hidden;
+  width: min(100%, 610px);
+  border-color: #c8dfff;
+  border-radius: 20px;
+  padding: clamp(28px, 5vw, 50px);
+  background: #fff;
+  box-shadow: 0 20px 52px #173d6817;
+}
+.payment-confirmation-card::before { position: absolute; top: 0; right: 0; width: 210px; height: 145px; background: url('/images/customer-horse-illustration.svg') right -24px top -27px / 205px auto no-repeat; opacity: .22; content: ''; pointer-events: none; }
+.payment-confirmation-card .payment-return-mark.pending { position: relative; width: 72px; height: 72px; margin-bottom: 18px; border: 1px solid #d4e6fb; border-radius: 18px; background: #eaf3ff; color: #1558c9; font-size: 2rem; line-height: 1; }
+.payment-confirmation-card .customer-eyebrow { display: table; margin: 0 0 9px; border-radius: 8px; padding: 5px 10px; background: #e8f1ff; color: #1558c9; font-size: .76rem; font-weight: 800; letter-spacing: .03em; }
+.payment-confirmation-card h1 { position: relative; max-width: 13ch; margin: 0 0 18px; color: #082b5b; font-size: clamp(2rem, 5vw, 2.6rem); font-weight: 800; line-height: 1.18; letter-spacing: -.035em; }
+.payment-confirmation-card > p:not(.customer-eyebrow) { max-width: 50ch; margin-bottom: 26px; color: #526b85; font-size: .98rem; }
+.payment-confirmation-card .customer-primary-button { min-height: 47px; border-radius: 9px; padding-inline: 20px; background: #1558c9; box-shadow: 0 6px 14px #1558c92b; }
+.payment-confirmation-card .customer-primary-button:hover { background: #0f49ad; }
+.payment-confirmation-card .customer-primary-button:focus-visible { outline: 3px solid #7caff4; outline-offset: 3px; }
+@media (max-width: 600px) {
+  .payment-confirmation-card::before { opacity: .12; }
+  .payment-confirmation-card .customer-primary-button { width: 100%; text-align: center; }
+}

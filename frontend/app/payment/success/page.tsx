@@ -1,9 +1,10 @@
 import Link from "next/link";
+import "./payment-confirmation.css";
 
 export default function PaymentSuccessPage() {
   return (
-    <main className="payment-return-page">
-      <section className="payment-return-card" aria-labelledby="payment-return-title">
+    <main className="payment-return-page payment-confirmation-page">
+      <section className="payment-return-card payment-confirmation-card" aria-labelledby="payment-return-title">
         <span className="payment-return-mark pending" aria-hidden="true">…</span>
         <p className="customer-eyebrow">DEPOSIT CHECKOUT</p>
         <h1 id="payment-return-title">We’re confirming your payment</h1>

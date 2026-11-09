@@ -130,3 +130,61 @@
   .logistics-manager-page .lm-status-tabs { gap: 13px; }
   .logistics-manager-page .lm-status-tabs button { font-size: .8rem; }
 }
+
+/* Queue pages: shared layout for staff assignment and Route Plan reviews. */
+.logistics-manager-page .lm-page-heading:is(.lm-assignment-heading,.lm-reviews-heading) {
+  position: relative;
+  min-height: 132px;
+  overflow: hidden;
+  border: 1px solid #d7e4f2;
+  border-radius: 16px;
+  padding: 20px clamp(18px, 3vw, 30px);
+  background: linear-gradient(100deg, #f8fbff, #eaf3ff);
+  isolation: isolate;
+}
+.logistics-manager-page .lm-page-heading:is(.lm-assignment-heading,.lm-reviews-heading)::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: url('/images/customer-horse-illustration.svg') right 10% bottom -45px / 260px auto no-repeat;
+  opacity: .48;
+  content: '';
+}
+.logistics-manager-page .lm-page-heading:is(.lm-assignment-heading,.lm-reviews-heading) > div { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.logistics-manager-page .lm-page-heading:is(.lm-assignment-heading,.lm-reviews-heading) > div > div { min-width: 0; }
+.logistics-manager-page .lm-page-heading:is(.lm-assignment-heading,.lm-reviews-heading) h1 { color: #082b5b; font-size: clamp(1.55rem, 2.5vw, 2rem); font-weight: 800; }
+.logistics-manager-page .lm-page-heading:is(.lm-assignment-heading,.lm-reviews-heading) p { color: #526b85; }
+.logistics-manager-page .lm-heading-icon { display: grid; width: 48px; height: 48px; flex: 0 0 auto; place-items: center; border-radius: 12px; background: #dceaff; color: #1558c9; font-size: 1.7rem; line-height: 1; }
+.logistics-manager-page .lm-heading-icon svg { width: 28px; height: 28px; }
+.logistics-manager-page .lm-page-heading:is(.lm-assignment-heading,.lm-reviews-heading) > button { position: relative; background: #fff; box-shadow: 0 4px 14px #173d6818; }
+.logistics-manager-page .lm-queue-panel { border-color: #cddff2; border-radius: 16px; box-shadow: 0 10px 28px #173d680d; }
+.logistics-manager-page .lm-queue-panel .lm-status-tabs { gap: 8px; padding: 10px 16px 0; }
+.logistics-manager-page .lm-queue-panel .lm-status-tabs button { min-height: 48px; border-radius: 10px 10px 0 0; padding: 0 16px; }
+.logistics-manager-page .lm-queue-panel .lm-status-tabs button[aria-selected="true"] { background: #edf4ff; border-bottom-color: #1558c9; color: #1558c9; }
+.logistics-manager-page .lm-queue-panel .lm-list-toolbar { gap: 18px; padding: 16px 20px; background: #fff; }
+.logistics-manager-page .lm-queue-panel .lm-search input,.logistics-manager-page .lm-queue-panel .lm-filter select { min-height: 43px; border-color: #c8d9ec; border-radius: 8px; }
+.logistics-manager-page .lm-queue-panel .lm-search input { padding-left: 38px; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='17' height='17' viewBox='0 0 24 24' fill='none' stroke='%23557ca7' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m16 16 5 5'/%3E%3C/svg%3E") 13px center / 17px no-repeat; }
+.logistics-manager-page .lm-queue-panel .lm-management-table { min-width: 780px; }
+.logistics-manager-page .lm-queue-panel .lm-management-table th { background: #eaf3ff; color: #395c85; font-weight: 750; }
+.logistics-manager-page .lm-queue-panel .lm-management-table td { border-top-color: #e0eaf5; }
+.logistics-manager-page .lm-queue-panel .lm-management-table td:first-child strong { display: inline-block; border-radius: 10px; padding: 9px 12px; background: #edf4ff; color: #082b5b; white-space: nowrap; }
+.logistics-manager-page .lm-queue-panel .lm-management-table td:nth-child(4) small { display: table; border: 1px solid #c6dbfa; border-radius: 99px; padding: 1px 8px; background: #eef5ff; color: #1558c9; font-weight: 700; }
+.logistics-manager-page .lm-queue-panel .lm-management-table .customer-primary-button { min-height: 42px; border-radius: 9px; padding-inline: 15px; background: #1558c9; box-shadow: 0 5px 12px #1558c928; }
+.logistics-manager-page .lm-queue-panel .lm-management-table .customer-primary-button:hover { background: #0f49ad; }
+.logistics-manager-page .lm-queue-panel .lm-list-footer { padding: 13px 20px; color: #58718c; }
+.logistics-manager-page .lm-review-panel .lm-panel-heading { min-height: 57px; padding-inline: 18px; }
+.logistics-manager-page .lm-review-panel .lm-panel-heading h2 { color: #1558c9; }
+.logistics-manager-page .lm-review-panel .lm-panel-heading > span { color: #526e91; }
+.logistics-manager-page .lm-review-empty { display: grid; min-height: 290px; place-content: center; justify-items: center; padding: 28px; text-align: center; background: linear-gradient(#fff, #f9fcff); }
+.logistics-manager-page .lm-review-empty-art { position: relative; display: block; width: 200px; height: 105px; margin-bottom: 14px; background: url('/images/customer-horse-illustration.svg') right bottom / 135px auto no-repeat; }
+.logistics-manager-page .lm-review-empty-art::before { position: absolute; top: 8px; left: 20px; width: 65px; height: 83px; border: 5px solid #76a9ed; border-radius: 9px; background: repeating-linear-gradient(#fff 0 18px, #d8e9ff 19px 21px); box-shadow: 0 8px 16px #1558c91c; content: ''; }
+.logistics-manager-page .lm-review-empty-art::after { position: absolute; top: 25px; left: 36px; width: 12px; height: 12px; border: 2px solid #2877df; border-radius: 3px; box-shadow: 0 22px 0 -1px #fff, 0 22px 0 1px #2877df, 0 44px 0 -1px #fff, 0 44px 0 1px #2877df; content: ''; }
+.logistics-manager-page .lm-review-empty h2 { color: #082b5b; font-size: 1.45rem; font-weight: 800; }
+.logistics-manager-page .lm-review-empty p { max-width: 66ch; color: #526e91; line-height: 1.55; }
+@media (max-width: 760px) {
+  .logistics-manager-page .lm-page-heading:is(.lm-assignment-heading,.lm-reviews-heading) { align-items: flex-start; flex-direction: column; min-height: 0; }
+  .logistics-manager-page .lm-page-heading:is(.lm-assignment-heading,.lm-reviews-heading)::before { opacity: .18; }
+  .logistics-manager-page .lm-heading-icon { width: 40px; height: 40px; font-size: 1.4rem; }
+  .logistics-manager-page .lm-queue-panel .lm-management-table { min-width: 0; }
+  .logistics-manager-page .lm-review-panel .lm-panel-heading { flex-wrap: wrap; }
+}

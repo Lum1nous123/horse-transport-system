@@ -1,0 +1,86 @@
+.lm-assignment-detail-page { background: radial-gradient(ellipse at 85% 98%, #dceaff, transparent 35%), #f4f8fc; }
+.lm-assignment-detail-page .assignment-breadcrumb { margin: 0 0 10px; color: #60758e; }
+.lm-assignment-detail-page .assignment-breadcrumb a { color: #1558c9; }
+.lm-assignment-detail-page .assignment-detail-heading {
+  position: relative;
+  align-items: center;
+  min-height: 124px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  border: 1px solid #d3e3f5;
+  border-radius: 16px;
+  padding: 18px clamp(18px, 3vw, 28px);
+  background: linear-gradient(105deg, #f9fcff, #eaf3ff);
+  isolation: isolate;
+}
+.lm-assignment-detail-page .assignment-detail-heading::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: url('/images/customer-horse-illustration.svg') right 9% bottom -55px / 245px auto no-repeat;
+  opacity: .4;
+  content: '';
+}
+.lm-assignment-detail-page .assignment-heading-copy { min-width: 0; }
+.lm-assignment-detail-page .assignment-detail-heading .assignment-status { display: table; margin-bottom: 8px; border-radius: 99px; background: #fff0d5; color: #86520a; font-weight: 750; }
+.lm-assignment-detail-page .assignment-detail-heading .assignment-status.is-assigned { background: #dff4e7; color: #116037; }
+.lm-assignment-detail-page .assignment-heading-title { display: flex; align-items: center; gap: 12px; }
+.lm-assignment-detail-page .assignment-heading-title > div { min-width: 0; }
+.lm-assignment-detail-page .assignment-heading-icon { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border-radius: 10px; background: #dceaff; color: #1558c9; font-size: 1.7rem; line-height: 1; }
+.lm-assignment-detail-page .assignment-detail-heading h1 { margin: 0 0 3px; color: #082b5b; font-size: clamp(1.6rem, 2.5vw, 2rem); font-weight: 800; }
+.lm-assignment-detail-page .assignment-detail-heading p { color: #526b85; font-size: .86rem; }
+.lm-assignment-detail-page .assignment-back-link { position: relative; flex: 0 0 auto; min-height: 40px; border: 1px solid #c8daee; border-radius: 8px; padding: 0 13px; background: #fff; color: #1558c9; box-shadow: 0 4px 12px #173d6815; font-size: .8rem; }
+.lm-assignment-detail-page .assignment-back-link:hover { background: #f8fbff; }
+.lm-assignment-detail-page .assignment-back-link:focus-visible { outline: 3px solid #79acef; outline-offset: 2px; }
+.lm-assignment-detail-page .assignment-order-summary { grid-template-columns: .85fr 2.1fr 1.3fr .75fr .9fr; overflow: hidden; border-color: #d0e0f2; border-radius: 13px; box-shadow: 0 6px 20px #173d6810; }
+.lm-assignment-detail-page .assignment-order-summary > div { position: relative; min-height: 88px; gap: 3px; padding: 14px 12px 14px 56px; }
+.lm-assignment-detail-page .assignment-order-summary > div + div { border-left-color: #dbe8f6; }
+.lm-assignment-detail-page .assignment-summary-icon { position: absolute; top: 50%; left: 12px; display: grid; width: 34px; height: 34px; place-items: center; border-radius: 9px; background: #e6f1ff; color: #1558c9; transform: translateY(-50%); }
+.lm-assignment-detail-page .assignment-summary-icon svg { width: 21px; height: 21px; }
+.lm-assignment-detail-page .assignment-order-summary > div > span:not(.assignment-summary-icon) { color: #60758e; font-size: .72rem; }
+.lm-assignment-detail-page .assignment-order-summary strong { color: #082b5b; font-size: .83rem; font-weight: 750; }
+.lm-assignment-detail-page .assignment-order-summary > div:last-child strong { display: inline-flex; align-self: flex-start; border: 1px solid #bfd7f8; border-radius: 99px; padding: 2px 8px; background: #eaf3ff; color: #1558c9; font-size: .72rem; }
+.lm-assignment-detail-page .assignment-candidate-grid { gap: 14px; margin-top: 14px; }
+.lm-assignment-detail-page .assignment-candidate-group { overflow: hidden; border-color: #d0e0f2; border-radius: 13px; box-shadow: 0 6px 20px #173d680d; }
+.lm-assignment-detail-page .assignment-candidate-group legend { display: flex; align-items: center; gap: 10px; padding: 13px 15px 0; color: #082b5b; font-size: 1rem; font-weight: 800; }
+.lm-assignment-detail-page .assignment-role-icon { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border-radius: 9px; background: #e6f1ff; color: #1558c9; font-size: 1.35rem; line-height: 1; }
+.lm-assignment-detail-page .assignment-role-icon svg { width: 22px; height: 22px; }
+.lm-assignment-detail-page .assignment-candidate-group > p { padding: 2px 15px 13px 59px; color: #60758e; font-size: .75rem; }
+.lm-assignment-detail-page .assignment-candidate-header { border: 0; border-radius: 7px; margin: 0 10px; padding: 9px 11px; background: #eaf3ff; color: #395b83; }
+.lm-assignment-detail-page .assignment-candidate-list { padding: 0 10px 10px; }
+.lm-assignment-detail-page .assignment-candidate-row { min-height: 49px; border-radius: 5px; padding: 3px 11px; color: #304b68; }
+.lm-assignment-detail-page .assignment-candidate-row + .assignment-candidate-row { border-top-color: #e2ebf5; }
+.lm-assignment-detail-page .assignment-candidate-row.is-selected { background: #e8f1ff; box-shadow: inset 3px 0 #1558c9; }
+.lm-assignment-detail-page .assignment-candidate-row input { accent-color: #1558c9; }
+.lm-assignment-detail-page .assignment-candidate-row strong { color: #082b5b; font-size: .8rem; }
+.lm-assignment-detail-page .assignment-candidate-row > span:nth-child(3) { overflow-wrap: anywhere; }
+.lm-assignment-detail-page .assignment-active-orders { color: #082b5b; font-weight: 750; }
+.lm-assignment-detail-page .assignment-submit-bar { position: static; gap: 16px; margin-top: 14px; border-color: #d0e0f2; border-radius: 13px; padding: 13px 18px; box-shadow: 0 6px 20px #173d680d; }
+.lm-assignment-detail-page .assignment-submit-bar > div { position: relative; min-height: 40px; justify-content: center; padding-left: 47px; }
+.lm-assignment-detail-page .assignment-submit-bar > div::before { position: absolute; top: 50%; left: 0; width: 34px; height: 34px; border-radius: 9px; background: #e6f1ff url('/images/customer-horse-illustration.svg') center / 42px auto no-repeat; transform: translateY(-50%); content: ''; }
+.lm-assignment-detail-page .assignment-submit-bar > div + div { border-left: 1px solid #dbe8f6; padding-left: 61px; }
+.lm-assignment-detail-page .assignment-submit-bar > div + div::before { left: 14px; }
+.lm-assignment-detail-page .assignment-submit-bar strong { color: #082b5b; font-weight: 750; }
+.lm-assignment-detail-page .assignment-submit-bar .customer-primary-button { min-height: 42px; border-radius: 8px; background: #1558c9; }
+.lm-assignment-detail-page .assignment-submit-note { color: #60758e; }
+.lm-assignment-detail-page .assignment-readonly { border-color: #d0e0f2; border-radius: 13px; box-shadow: 0 6px 20px #173d680d; }
+@media (max-width: 1120px) {
+  .lm-assignment-detail-page .assignment-order-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .lm-assignment-detail-page .assignment-candidate-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .lm-assignment-detail-page .assignment-detail-heading { align-items: stretch; }
+  .lm-assignment-detail-page .assignment-detail-heading::before { opacity: .14; }
+  .lm-assignment-detail-page .assignment-back-link { justify-content: center; }
+  .lm-assignment-detail-page .assignment-order-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lm-assignment-detail-page .assignment-order-summary > div { min-height: 80px; }
+  .lm-assignment-detail-page .assignment-submit-bar > div + div { border-left: 0; padding-left: 47px; }
+  .lm-assignment-detail-page .assignment-submit-bar > div + div::before { left: 0; }
+}
+@media (max-width: 480px) {
+  .lm-assignment-detail-page .assignment-order-summary { grid-template-columns: minmax(0, 1fr); }
+  .lm-assignment-detail-page .assignment-order-summary > div + div { border-left: 0; border-top: 1px solid #dbe8f6; }
+  .lm-assignment-detail-page .assignment-candidate-header { display: none; }
+  .lm-assignment-detail-page .assignment-candidate-row { min-height: 0; padding: 9px 11px; }
+  .lm-assignment-detail-page .assignment-candidate-row small { display: block; }
+}

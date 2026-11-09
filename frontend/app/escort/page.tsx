@@ -92,9 +92,10 @@ export default function EscortQueuePage() {
       {roadLoading && <p className="escort-queue-loading" role="status" aria-label="Loading assigned ROAD work">Loading assigned ROAD work…</p>}
       {airLoading && <p className="escort-queue-loading" role="status" aria-label="Loading assigned AIR work">Loading assigned AIR work…</p>}
       {known && visible.length === 0 ? <section className="escort-queue-empty">
-        <h2>{modeRows.length === 0 ? "No assigned work in this view" : "No matching assignments"}</h2>
+        <span className="escort-empty-route" aria-hidden="true" />
+        <div className="escort-empty-copy"><h2>{modeRows.length === 0 ? "No assigned work in this view" : "No matching assignments"}</h2>
         <p>{modeRows.length === 0 ? "Only assignments returned by the service are shown. Try another mode." : "Try another execution group, mode or search."}</p>
-        <button className="customer-secondary-button" type="button" onClick={clearFilters}>Clear filters</button>
+        <button className="customer-secondary-button" type="button" onClick={clearFilters}>Clear filters</button></div>
       </section> : visible.length > 0 && <div className="escort-queue-table-wrap"><table className="escort-queue-table">
         <caption className="sr-only">Assigned ROAD and AIR executions</caption>
         <thead><tr><th scope="col">Assignment</th><th scope="col">Route</th><th scope="col">Vehicle / Scope</th><th scope="col">Departure</th><th scope="col">Execution</th><th scope="col">Next step</th></tr></thead>

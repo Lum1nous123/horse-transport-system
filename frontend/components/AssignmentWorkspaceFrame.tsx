@@ -11,9 +11,10 @@ type AssignmentWorkspaceFrameProps = {
   children: ReactNode;
   preview: boolean;
   activeSection?: "orders" | "assignments" | "reviews" | "tracking";
+  pageClassName?: string;
 };
 
-export default function AssignmentWorkspaceFrame({ children, preview, activeSection = "assignments" }: AssignmentWorkspaceFrameProps) {
+export default function AssignmentWorkspaceFrame({ children, preview, activeSection = "assignments", pageClassName = "" }: AssignmentWorkspaceFrameProps) {
   const router = useRouter();
 
   function signOut() {
@@ -22,7 +23,7 @@ export default function AssignmentWorkspaceFrame({ children, preview, activeSect
   }
 
   return (
-    <main className="customer-page logistics-page logistics-manager-page assignment-page">
+    <main className={`customer-page logistics-page logistics-manager-page assignment-page ${pageClassName}`.trim()}>
       <header className="customer-topbar">
         <Link className="customer-brand" href="/" aria-label="Horse Transport System home">
           <BrandMark />

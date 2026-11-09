@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { clearAccessToken, getAccessToken } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
+import "./document-workspace.css";
 
 type DocumentKey = "HORSE_PASSPORT_OR_IDENTIFICATION" | "VACCINATION_CERTIFICATE" | "VETERINARY_HEALTH_CERTIFICATE" | "OWNERSHIP_CERTIFICATE" | "EXPORT_IMPORT_PERMIT";
 type VersionStatus = "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";

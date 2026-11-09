@@ -54,11 +54,11 @@ export default function StaffAssignmentQueuePage() {
   const suffix = preview ? "?preview=1" : "";
   const count = (value: number) => loading || error ? null : value;
   return <AssignmentWorkspaceFrame preview={preview}>
-    <header className="lm-page-heading"><div><h1>Staff assignment</h1><p>Select one Transport Specialist and one Fleet &amp; Route Coordinator for each order.</p></div>
+    <header className="lm-page-heading lm-assignment-heading"><div><span className="lm-heading-icon" aria-hidden="true">♞</span><div><h1>Staff assignment</h1><p>Select one Transport Specialist and one Fleet &amp; Route Coordinator for each order.</p></div></div>
       <button className="customer-secondary-button compact" type="button" disabled={loading} onClick={() => void loadQueues()}>{loading ? "Refreshing…" : "Refresh queue"}</button>
     </header>
     {error && <div className="customer-alert" role="alert"><span>{error}{loaded && " Previously loaded orders are shown below and may be outdated."}</span><button type="button" disabled={loading} onClick={() => void loadQueues()}>Try again</button></div>}
-    <section className="lm-management-panel">
+    <section className="lm-management-panel lm-queue-panel lm-assignment-panel">
       <LogisticsStatusTabs label="Assignment queues" value={tab} onChange={setTab} panelId="assignment-orders" tabs={[
         { value: "needsAssignment", label: "Needs assignment", count: count(queues.needsAssignment.length) },
         { value: "assigned", label: "Assigned", count: count(queues.assigned.length) },
