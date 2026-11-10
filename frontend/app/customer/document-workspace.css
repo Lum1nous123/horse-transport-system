@@ -81,6 +81,22 @@
 .document-workspace-dialog .document-version-history li > p a { color: #a64c24; font-weight: 650; text-decoration: underline; text-underline-offset: 2px; }
 .document-workspace-dialog .document-version-history li > small { display: block; line-height: 1.55; }
 .document-workspace-dialog .document-item-actions { border-top: 1px solid #ece2da; padding-top: 14px; }
+.document-workspace-dialog .document-item-title { min-width: 0; }
+.document-workspace-dialog .document-item-actions .document-submit-select { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; margin-right: auto; color: #704b38; font-size: .76rem; font-weight: 650; }
+.document-workspace-dialog .document-submit-select input { width: 16px; height: 16px; accent-color: #b45326; }
+.document-workspace-dialog .document-draft-editor { margin-top: 12px; border-top-color: #ece2da; }
+.document-workspace-dialog .document-draft-editor h5 { color: #49372c; }
+.document-workspace-dialog .document-pending-file { overflow-wrap: anywhere; color: #95421f !important; font-weight: 650 !important; }
+.document-workspace-dialog .document-item-error { grid-column: 1 / -1; margin: 10px 0 0; }
+.document-workspace-dialog .document-batch-actions { position: sticky; z-index: 5; bottom: -1px; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 18px calc(0px - clamp(16px, 2.5vw, 26px)) calc(0px - clamp(16px, 2.5vw, 26px)); border-top: 1px solid #e7d7ca; padding: 14px clamp(16px, 2.5vw, 26px); background: rgb(255 253 251 / 96%); box-shadow: 0 -8px 18px rgb(48 34 27 / 5%); backdrop-filter: blur(8px); }
+.document-workspace-dialog .document-batch-actions > div:first-child { display: grid; gap: 3px; min-width: 0; }
+.document-workspace-dialog .document-batch-actions strong { color: #49372c; font-size: .84rem; }
+.document-workspace-dialog .document-batch-actions span { color: #74665d; font-size: .72rem; line-height: 1.4; }
+.document-workspace-dialog .document-batch-buttons { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
+.document-workspace-dialog .document-batch-actions .customer-primary-button,
+.document-workspace-dialog .document-batch-actions .customer-secondary-button { min-height: 40px; }
+.document-workspace-dialog .document-batch-actions button:disabled { cursor: not-allowed; opacity: .52; }
+.document-workspace-dialog .document-submit-list { display: grid; gap: 6px; margin: 0 0 18px; padding-left: 20px; color: #62544c; font-size: .86rem; }
 .document-workspace-dialog .customer-primary-button { background: #b45326; box-shadow: none; }
 .document-workspace-dialog .customer-primary-button:hover { background: #95421f; }
 .document-workspace-dialog .customer-secondary-button { border-color: #d8c4b5; color: #704b38; }
@@ -97,4 +113,11 @@
   .document-workspace-dialog .document-item-heading > div { padding-left: 50px; }
   .document-workspace-dialog .document-item-heading > div::before { width: 40px; height: 40px; }
   .document-workspace-dialog .document-item-card { padding: 14px; }
+  .document-workspace-dialog .document-item-actions { align-items: center; flex-direction: row; }
+  .document-workspace-dialog .document-item-actions > button { width: auto; }
+  .document-workspace-dialog .document-draft-editor .customer-field { min-width: 0; }
+  .document-workspace-dialog .document-draft-editor .customer-field input { width: 100%; min-width: 0; }
+  .document-workspace-dialog .document-batch-actions { align-items: stretch; flex-direction: column; gap: 10px; margin: 16px -16px -16px; padding: 12px 16px; }
+  .document-workspace-dialog .document-batch-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .document-workspace-dialog .document-batch-buttons button { min-width: 0; padding-inline: 10px; font-size: .76rem; }
 }
