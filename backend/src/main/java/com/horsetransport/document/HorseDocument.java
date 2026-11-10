@@ -42,6 +42,9 @@ public class HorseDocument {
 	@Column(name = "correction_deadline_at")
 	private LocalDateTime correctionDeadlineAt;
 
+	@Column(name = "correction_window_no", nullable = false)
+	private int correctionWindowNo;
+
 	protected HorseDocument() {
 	}
 
@@ -50,6 +53,7 @@ public class HorseDocument {
 		this.transportOrderHorse = transportOrderHorse;
 		this.documentType = documentType;
 		this.createdAt = LocalDateTime.now();
+		this.correctionWindowNo = 0;
 	}
 
 	@PrePersist
@@ -63,14 +67,19 @@ public class HorseDocument {
 		updatedAt = LocalDateTime.now();
 	}
 
-	void openCorrectionWindow(LocalDateTime deadline) {
+	void openCorrectionWindow(int windowNo, LocalDateTime deadline) {
 		if (deadline == null) {
 			throw new DocumentReviewValidationException("Correction deadline is required");
 		}
+		if (windowNo < 1 || windowNo > 2 || windowNo != correctionWindowNo + 1) {
+			throw new DocumentReviewValidationException("Correction windows must advance in order");
+		}
+		correctionWindowNo = windowNo;
 		correctionDeadlineAt = deadline;
 	}
 
-	void restoreCorrectionDeadline(LocalDateTime previousDeadline) {
+	void restoreCorrectionWindow(int previousWindowNo, LocalDateTime previousDeadline) {
+		correctionWindowNo = previousWindowNo;
 		correctionDeadlineAt = previousDeadline;
 	}
 
@@ -79,4 +88,5 @@ public class HorseDocument {
 	public TransportOrderHorse getTransportOrderHorse() { return transportOrderHorse; }
 	public DocumentType getDocumentType() { return documentType; }
 	public LocalDateTime getCorrectionDeadlineAt() { return correctionDeadlineAt; }
+	public int getCorrectionWindowNo() { return correctionWindowNo; }
 }

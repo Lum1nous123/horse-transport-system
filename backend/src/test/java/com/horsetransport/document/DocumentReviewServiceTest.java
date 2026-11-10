@@ -3,6 +3,7 @@ package com.horsetransport.document;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -55,6 +56,7 @@ class DocumentReviewServiceTest {
 	@Mock private StatusAuditLogRepository auditRepository;
 	@Mock private CurrentUserProvider currentUserProvider;
 	@Mock private TransportSpecialistAssignmentGuard assignmentGuard;
+	@Mock private DocumentDeadlineOrderProcessor deadlineOrderProcessor;
 	@Mock private HorseDocument document;
 	@Mock private TransportOrderHorse orderHorse;
 	@Mock private TransportOrder order;
@@ -64,7 +66,7 @@ class DocumentReviewServiceTest {
 	@BeforeEach
 	void setUp() {
 		service = new DocumentReviewService(documentRepository, versionRepository, orderRepository, auditRepository,
-				assignmentGuard, currentUserProvider, clockAt(REJECTED_AT));
+				assignmentGuard, deadlineOrderProcessor, currentUserProvider, clockAt(REJECTED_AT));
 		when(currentUserProvider.getCurrentUserId()).thenReturn(TS_ID);
 		when(documentRepository.findById(DOCUMENT_ID)).thenReturn(Optional.of(document));
 		when(documentRepository.findByIdForUpdate(DOCUMENT_ID)).thenReturn(Optional.of(document));
@@ -109,7 +111,7 @@ class DocumentReviewServiceTest {
 	}
 
 	@Test
-	void rejectsPendingVersionWithTrimmedReasonAndMovesHorseToNeedsRevision() {
+	void rejectsBeforeOriginalDeadlineWithoutOpeningCorrectionWindow() {
 		HorseDocumentVersion pending = pending(document);
 		when(versionRepository.findCurrentByOrderHorseId(ORDER_HORSE_ID)).thenReturn(List.of(pending));
 
@@ -118,7 +120,7 @@ class DocumentReviewServiceTest {
 
 		assertThat(response.status()).isEqualTo(DocumentVersionStatus.REJECTED);
 		assertThat(response.rejectionReason()).isEqualTo("Expired certificate");
-		verify(document).openCorrectionWindow(ORIGINAL_DEADLINE);
+		verify(document, never()).openCorrectionWindow(anyInt(), any(LocalDateTime.class));
 		assertThat(pending.getReviewedBy()).isEqualTo(TS_ID);
 		verify(orderHorse).markDocumentsNeedingRevision();
 		ArgumentCaptor<StatusAuditLog> audits = ArgumentCaptor.forClass(StatusAuditLog.class);
@@ -268,7 +270,8 @@ class DocumentReviewServiceTest {
 	void pastDeadlineDoesNotAutoDecideOrCancelOrder() {
 		LocalDateTime rejectedAfterOriginalDeadline = ORIGINAL_DEADLINE.plusHours(2);
 		service = new DocumentReviewService(documentRepository, versionRepository, orderRepository, auditRepository,
-				assignmentGuard, currentUserProvider, clockAt(rejectedAfterOriginalDeadline));
+				assignmentGuard, deadlineOrderProcessor, currentUserProvider,
+				clockAt(rejectedAfterOriginalDeadline));
 		HorseDocumentVersion pending = pending(document);
 		when(versionRepository.findCurrentByOrderHorseId(ORDER_HORSE_ID)).thenReturn(List.of(pending));
 
@@ -277,59 +280,91 @@ class DocumentReviewServiceTest {
 
 		assertThat(pending.getStatus()).isEqualTo(DocumentVersionStatus.REJECTED);
 		assertThat(order.getStatus()).isEqualTo(OrderStatus.APPROVED);
-		verify(document).openCorrectionWindow(rejectedAfterOriginalDeadline.plusHours(24));
+		verify(document).openCorrectionWindow(1, rejectedAfterOriginalDeadline.plusHours(24));
 	}
 
 	@Test
-	void rejectionNearOriginalDeadlineStillProvidesFullTwentyFourHours() {
+	void rejectionNearOriginalDeadlineStillUsesOriginalPeriod() {
 		LocalDateTime rejectedNearDeadline = ORIGINAL_DEADLINE.minusMinutes(30);
 		service = new DocumentReviewService(documentRepository, versionRepository, orderRepository, auditRepository,
-				assignmentGuard, currentUserProvider, clockAt(rejectedNearDeadline));
+				assignmentGuard, deadlineOrderProcessor, currentUserProvider, clockAt(rejectedNearDeadline));
 		HorseDocumentVersion pending = pending(document);
 		when(versionRepository.findCurrentByOrderHorseId(ORDER_HORSE_ID)).thenReturn(List.of(pending));
 
 		service.reject(DOCUMENT_ID, pending.getId(),
 				new RejectDocumentVersionRequest("Correction required"));
 
-		verify(document).openCorrectionWindow(rejectedNearDeadline.plusHours(24));
+		verify(document, never()).openCorrectionWindow(anyInt(), any(LocalDateTime.class));
 	}
 
 	@Test
-	void secondRejectionStillOpensFinalCorrectionWindow() {
-		when(versionRepository.countByHorseDocument_IdAndStatus(
-				DOCUMENT_ID, DocumentVersionStatus.REJECTED)).thenReturn(1L);
+	void repeatedRejectionInsideFirstWindowKeepsSameDeadline() {
+		LocalDateTime reviewAt = ORIGINAL_DEADLINE.plusHours(12);
+		service = new DocumentReviewService(documentRepository, versionRepository, orderRepository, auditRepository,
+				assignmentGuard, deadlineOrderProcessor, currentUserProvider, clockAt(reviewAt));
+		when(document.getCorrectionWindowNo()).thenReturn(1);
+		when(document.getCorrectionDeadlineAt()).thenReturn(ORIGINAL_DEADLINE.plusHours(24));
 		HorseDocumentVersion pending = pending(document);
 		when(versionRepository.findCurrentByOrderHorseId(ORDER_HORSE_ID)).thenReturn(List.of(pending));
 
 		DocumentVersionResponse response = service.reject(DOCUMENT_ID, pending.getId(),
-				new RejectDocumentVersionRequest("Second correction required"));
+				new RejectDocumentVersionRequest("Another correction is required"));
 
 		assertThat(response.status()).isEqualTo(DocumentVersionStatus.REJECTED);
-		verify(document).openCorrectionWindow(ORIGINAL_DEADLINE);
-		verify(order, never()).cancelForDocumentCorrectionLimit(any());
+		verify(document, never()).openCorrectionWindow(anyInt(), any(LocalDateTime.class));
+		verify(deadlineOrderProcessor, never()).cancelAfterFinalCorrectionRejection(any(), any(), any());
 	}
 
 	@Test
-	void thirdRejectionAttemptCancelsOrderWithoutRejectingVersionOrOpeningAnotherDeadline() {
-		when(versionRepository.countByHorseDocument_IdAndStatus(
-				DOCUMENT_ID, DocumentVersionStatus.REJECTED)).thenReturn(2L);
+	void rejectionOfProtectedSubmissionAfterFirstWindowOpensSecondWindow() {
+		LocalDateTime reviewAt = ORIGINAL_DEADLINE.plusHours(25);
+		service = new DocumentReviewService(documentRepository, versionRepository, orderRepository, auditRepository,
+				assignmentGuard, deadlineOrderProcessor, currentUserProvider, clockAt(reviewAt));
+		when(document.getCorrectionWindowNo()).thenReturn(1);
+		when(document.getCorrectionDeadlineAt()).thenReturn(ORIGINAL_DEADLINE.plusHours(24));
 		HorseDocumentVersion pending = pending(document);
+		when(versionRepository.findCurrentByOrderHorseId(ORDER_HORSE_ID)).thenReturn(List.of(pending));
 
 		DocumentVersionResponse response = service.reject(DOCUMENT_ID, pending.getId(),
-				new RejectDocumentVersionRequest("Still invalid"));
+				new RejectDocumentVersionRequest("Correction day two is required"));
 
-		assertThat(response.status()).isEqualTo(DocumentVersionStatus.PENDING_REVIEW);
-		verify(order).cancelForDocumentCorrectionLimit(REJECTED_AT);
-		verify(orderRepository).saveAndFlush(order);
-		verify(document, never()).openCorrectionWindow(any());
-		verify(versionRepository, never()).saveAndFlush(pending);
-		ArgumentCaptor<StatusAuditLog> audit = ArgumentCaptor.forClass(StatusAuditLog.class);
-		verify(auditRepository).saveAndFlush(audit.capture());
-		assertThat(audit.getValue().getEntityType()).isEqualTo(AuditEntityType.TRANSPORT_ORDER);
-		assertThat(audit.getValue().getOldStatus()).isEqualTo("APPROVED");
-		assertThat(audit.getValue().getNewStatus()).isEqualTo("CANCELLED");
-		assertThat(audit.getValue().getActorUserId()).isEqualTo(TS_ID);
-		assertThat(audit.getValue().getReason()).isEqualTo("Maximum document correction attempts reached");
+		assertThat(response.status()).isEqualTo(DocumentVersionStatus.REJECTED);
+		verify(document).openCorrectionWindow(2, reviewAt.plusHours(24));
+		verify(deadlineOrderProcessor, never()).cancelAfterFinalCorrectionRejection(any(), any(), any());
+	}
+
+	@Test
+	void repeatedRejectionInsideSecondWindowKeepsSameDeadline() {
+		LocalDateTime reviewAt = ORIGINAL_DEADLINE.plusHours(30);
+		service = new DocumentReviewService(documentRepository, versionRepository, orderRepository, auditRepository,
+				assignmentGuard, deadlineOrderProcessor, currentUserProvider, clockAt(reviewAt));
+		when(document.getCorrectionWindowNo()).thenReturn(2);
+		when(document.getCorrectionDeadlineAt()).thenReturn(ORIGINAL_DEADLINE.plusHours(48));
+		HorseDocumentVersion pending = pending(document);
+		when(versionRepository.findCurrentByOrderHorseId(ORDER_HORSE_ID)).thenReturn(List.of(pending));
+
+		service.reject(DOCUMENT_ID, pending.getId(), new RejectDocumentVersionRequest("Still invalid"));
+
+		verify(document, never()).openCorrectionWindow(anyInt(), any(LocalDateTime.class));
+		verify(deadlineOrderProcessor, never()).cancelAfterFinalCorrectionRejection(any(), any(), any());
+	}
+
+	@Test
+	void rejectionOfProtectedSubmissionAfterSecondWindowCancelsAfterRecordingDecision() {
+		LocalDateTime reviewAt = ORIGINAL_DEADLINE.plusHours(49);
+		service = new DocumentReviewService(documentRepository, versionRepository, orderRepository, auditRepository,
+				assignmentGuard, deadlineOrderProcessor, currentUserProvider, clockAt(reviewAt));
+		when(document.getCorrectionWindowNo()).thenReturn(2);
+		when(document.getCorrectionDeadlineAt()).thenReturn(ORIGINAL_DEADLINE.plusHours(48));
+		HorseDocumentVersion pending = pending(document);
+		when(versionRepository.findCurrentByOrderHorseId(ORDER_HORSE_ID)).thenReturn(List.of(pending));
+
+		DocumentVersionResponse response = service.reject(DOCUMENT_ID, pending.getId(),
+				new RejectDocumentVersionRequest("Final protected submission is invalid"));
+
+		assertThat(response.status()).isEqualTo(DocumentVersionStatus.REJECTED);
+		verify(document, never()).openCorrectionWindow(anyInt(), any(LocalDateTime.class));
+		verify(deadlineOrderProcessor).cancelAfterFinalCorrectionRejection(ORDER_ID, reviewAt, TS_ID);
 	}
 
 	private Clock clockAt(LocalDateTime time) {

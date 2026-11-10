@@ -1,6 +1,7 @@
 package com.horsetransport.document;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DocumentDeadlineOrderProcessor {
 
 	private static final Set<DocumentType> MANDATORY_TYPES = EnumSet.allOf(DocumentType.class);
+	private static final String FINAL_CORRECTION_REASON = "Final document correction window exhausted";
 	private enum DeadlineFailure { NONE, ORIGINAL_DEADLINE, CORRECTION_DEADLINE }
 
 	private final TransportOrderRepository orderRepository;
@@ -57,11 +59,31 @@ public class DocumentDeadlineOrderProcessor {
 		List<TransportOrderHorse> horses = order.getHorses();
 		List<HorseDocument> documents = horses.isEmpty() ? List.of()
 				: documentRepository.findAllByOrderHorseIds(horses.stream().map(TransportOrderHorse::getId).toList());
-		DeadlineFailure failure = deadlineFailure(horses, documents, evaluatedAt);
+		DeadlineFailure failure = deadlineFailure(horses, documents,
+				order.getDocumentCompletionDeadlineAt(), evaluatedAt);
 		if (failure == DeadlineFailure.NONE) return false;
 
 		cancelWithoutRefund(order, evaluatedAt, failure);
 		return true;
+	}
+
+	@Transactional
+	public void cancelAfterFinalCorrectionRejection(UUID orderId, LocalDateTime cancelledAt,
+			UUID actorUserId) {
+		TransportOrder order = orderRepository.findByIdForUpdate(orderId)
+				.orElseThrow(() -> new IllegalStateException("Document Order no longer exists"));
+		if (order.getStatus() != OrderStatus.APPROVED || order.getDocumentsLockedAt() != null) {
+			throw new DocumentVersionConflictException("Order is not in an active document phase");
+		}
+		requirePaidDeposit(order);
+
+		OrderStatus previousStatus = order.getStatus();
+		order.cancelAfterFinalDocumentCorrection(cancelledAt);
+		orderRepository.saveAndFlush(order);
+		auditRepository.saveAndFlush(StatusAuditLog.userTransition(AuditEntityType.TRANSPORT_ORDER,
+				order.getId(), previousStatus.name(), OrderStatus.CANCELLED.name(), actorUserId,
+				FINAL_CORRECTION_REASON));
+		notificationService.createOrderCancelledForCorrectionDeadline(order.getCustomerId(), order.getId());
 	}
 
 	private boolean isActiveDeadlineOrder(TransportOrder order, LocalDateTime evaluatedAt) {
@@ -72,7 +94,7 @@ public class DocumentDeadlineOrderProcessor {
 	}
 
 	private DeadlineFailure deadlineFailure(List<TransportOrderHorse> horses,
-			List<HorseDocument> documents, LocalDateTime evaluatedAt) {
+			List<HorseDocument> documents, LocalDateTime originalDeadline, LocalDateTime evaluatedAt) {
 		if (horses.isEmpty()) return DeadlineFailure.ORIGINAL_DEADLINE;
 		Map<UUID, Set<DocumentType>> typesByHorse = new HashMap<>();
 		for (HorseDocument document : documents) {
@@ -91,27 +113,37 @@ public class DocumentDeadlineOrderProcessor {
 			versionRepository.findCurrentByHorseDocumentIds(documentIds)
 					.forEach(version -> currentByDocument.put(version.getHorseDocumentId(), version));
 		}
-		DeadlineFailure result = DeadlineFailure.NONE;
+		List<HorseDocument> firstWindowsToOpen = new ArrayList<>();
 		for (HorseDocument document : documents) {
 			HorseDocumentVersion current = currentByDocument.get(document.getId());
-			if (current == null || current.getStatus() == DocumentVersionStatus.DRAFT
-					|| current.getStatus() == DocumentVersionStatus.REJECTED) {
-				LocalDateTime correctionDeadline = document.getCorrectionDeadlineAt();
-				if (correctionDeadline == null) return DeadlineFailure.ORIGINAL_DEADLINE;
-				if (!evaluatedAt.isBefore(correctionDeadline)) result = DeadlineFailure.CORRECTION_DEADLINE;
+			if (current != null && (current.getStatus() == DocumentVersionStatus.PENDING_REVIEW
+					|| current.getStatus() == DocumentVersionStatus.APPROVED)) continue;
+
+			if (document.getCorrectionWindowNo() == 0) {
+				if (current != null && current.getStatus() == DocumentVersionStatus.REJECTED) {
+					firstWindowsToOpen.add(document);
+					continue;
+				}
+				return DeadlineFailure.ORIGINAL_DEADLINE;
+			}
+
+			LocalDateTime correctionDeadline = document.getCorrectionDeadlineAt();
+			if (correctionDeadline == null || !evaluatedAt.isBefore(correctionDeadline)) {
+				return DeadlineFailure.CORRECTION_DEADLINE;
 			}
 		}
-		return result;
+
+		if (!firstWindowsToOpen.isEmpty()) {
+			LocalDateTime firstCorrectionDeadline = originalDeadline.plusHours(24);
+			firstWindowsToOpen.forEach(document -> document.openCorrectionWindow(1, firstCorrectionDeadline));
+			documentRepository.saveAll(firstWindowsToOpen);
+		}
+		return DeadlineFailure.NONE;
 	}
 
 	private void cancelWithoutRefund(TransportOrder order, LocalDateTime cancelledAt,
 			DeadlineFailure failure) {
-		Payment payment = paymentRepository.findByTransportOrderIdAndPaymentType(
-				order.getId(), PaymentType.DEPOSIT)
-			.orElseThrow(() -> new IllegalStateException("Approved Order has no Deposit payment"));
-		if (payment.getStatus() != PaymentStatus.PAID) {
-			throw new IllegalStateException("Approved Order Deposit is not PAID");
-		}
+		requirePaidDeposit(order);
 
 		OrderStatus previousStatus = order.getStatus();
 		order.cancelForDocumentDeadline(cancelledAt);
@@ -123,6 +155,15 @@ public class DocumentDeadlineOrderProcessor {
 		}
 		else {
 			notificationService.createOrderCancelledForDocumentDeadline(order.getCustomerId(), order.getId());
+		}
+	}
+
+	private void requirePaidDeposit(TransportOrder order) {
+		Payment payment = paymentRepository.findByTransportOrderIdAndPaymentType(
+				order.getId(), PaymentType.DEPOSIT)
+				.orElseThrow(() -> new IllegalStateException("Approved Order has no Deposit payment"));
+		if (payment.getStatus() != PaymentStatus.PAID) {
+			throw new IllegalStateException("Approved Order Deposit is not PAID");
 		}
 	}
 }
