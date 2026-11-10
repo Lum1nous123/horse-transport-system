@@ -29,7 +29,8 @@ final class PostgresMigrationAssertions {
 				new HistoryRow("3", "V3__add_frc_eligible_to_transport_orders.sql", 0, true),
 				new HistoryRow("5", "V5__add_transport_order_code_sequence.sql", 125409323, true),
 				new HistoryRow("6", "V6__add_order_cancelled_notification_type.sql", -2077767481, true),
-				new HistoryRow("7", "V7__add_document_correction_deadline.sql", -808977492, true));
+				new HistoryRow("7", "V7__add_document_correction_deadline.sql", -808977492, true),
+				new HistoryRow("8", "V8__track_document_correction_windows.sql", 225419598, true));
 	}
 
 	static void assertRefundSchema(JdbcTemplate jdbcTemplate) {
@@ -138,6 +139,19 @@ final class PostgresMigrationAssertions {
 		assertThat(correctionDeadline.dataType()).isEqualTo("timestamp without time zone");
 		assertThat(correctionDeadline.nullable()).isEqualTo("YES");
 		assertThat(correctionDeadline.defaultValue()).isNull();
+
+		ColumnMetadata correctionWindowNo = jdbcTemplate.queryForObject("""
+				select data_type, is_nullable, column_default
+				from information_schema.columns
+				where table_schema = 'public'
+					and table_name = 'horse_documents'
+					and column_name = 'correction_window_no'
+				""", (resultSet, rowNumber) -> new ColumnMetadata(
+				resultSet.getString("data_type"), resultSet.getString("is_nullable"),
+				resultSet.getString("column_default")));
+		assertThat(correctionWindowNo.dataType()).isEqualTo("integer");
+		assertThat(correctionWindowNo.nullable()).isEqualTo("NO");
+		assertThat(correctionWindowNo.defaultValue()).contains("0");
 	}
 
 	private static ColumnMetadata column(JdbcTemplate jdbcTemplate, String columnName) {

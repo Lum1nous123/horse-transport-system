@@ -3,6 +3,7 @@ package com.horsetransport.document;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -123,13 +124,15 @@ class DocumentDeadlineOrderProcessorTest {
 	}
 
 	@Test
-	void cancelsAtDeadlineWhenCurrentDocumentRemainsRejected() {
+	void opensFirstCorrectionWindowAtOriginalDeadlineWhenCurrentDocumentIsRejected() {
 		when(versions.getFirst().getStatus()).thenReturn(DocumentVersionStatus.REJECTED);
 
-		assertThat(processor.cancelForIncompleteDeadline(ORDER_ID, DEADLINE)).isTrue();
+		assertThat(processor.cancelForIncompleteDeadline(ORDER_ID, DEADLINE)).isFalse();
 
-		verify(order).cancelForDocumentDeadline(DEADLINE);
-		verify(notificationService).createOrderCancelledForDocumentDeadline(CUSTOMER_ID, ORDER_ID);
+		verify(documents.getFirst()).openCorrectionWindow(1, DEADLINE.plusHours(24));
+		verify(documentRepository).saveAll(anyCollection());
+		verify(orderRepository, never()).saveAndFlush(any());
+		verify(notificationService, never()).createOrderCancelledForDocumentDeadline(any(), any());
 	}
 
 	@Test
@@ -162,6 +165,7 @@ class DocumentDeadlineOrderProcessorTest {
 	void rejectionAfterOriginalDeadlineKeepsOrderActiveDuringCorrectionWindow() {
 		LocalDateTime correctionDeadline = DEADLINE.plusHours(24);
 		when(versions.getFirst().getStatus()).thenReturn(DocumentVersionStatus.REJECTED);
+		when(documents.getFirst().getCorrectionWindowNo()).thenReturn(1);
 		when(documents.getFirst().getCorrectionDeadlineAt()).thenReturn(correctionDeadline);
 
 		assertThat(processor.cancelForIncompleteDeadline(ORDER_ID, DEADLINE.plusHours(1))).isFalse();
@@ -175,6 +179,7 @@ class DocumentDeadlineOrderProcessorTest {
 	void missedCorrectionDeadlineCancelsWithoutRefundingPaidDeposit() {
 		LocalDateTime correctionDeadline = DEADLINE.plusHours(24);
 		when(versions.getFirst().getStatus()).thenReturn(DocumentVersionStatus.DRAFT);
+		when(documents.getFirst().getCorrectionWindowNo()).thenReturn(1);
 		when(documents.getFirst().getCorrectionDeadlineAt()).thenReturn(correctionDeadline);
 
 		assertThat(processor.cancelForIncompleteDeadline(ORDER_ID, correctionDeadline)).isTrue();
@@ -190,12 +195,43 @@ class DocumentDeadlineOrderProcessorTest {
 	void resubmittedPendingVersionDoesNotCancelAtCorrectionDeadline() {
 		LocalDateTime correctionDeadline = DEADLINE.plusHours(24);
 		when(versions.getFirst().getStatus()).thenReturn(DocumentVersionStatus.PENDING_REVIEW);
+		when(documents.getFirst().getCorrectionWindowNo()).thenReturn(1);
 		when(documents.getFirst().getCorrectionDeadlineAt()).thenReturn(correctionDeadline);
 
 		assertThat(processor.cancelForIncompleteDeadline(ORDER_ID, correctionDeadline)).isFalse();
 
 		verify(orderRepository, never()).saveAndFlush(any());
 		verify(notificationService, never()).createOrderCancelledForCorrectionDeadline(any(), any());
+	}
+
+	@Test
+	void missedSecondCorrectionWindowCancelsWithoutOpeningThirdWindow() {
+		LocalDateTime correctionDeadline = DEADLINE.plusHours(48);
+		when(versions.getFirst().getStatus()).thenReturn(DocumentVersionStatus.REJECTED);
+		when(documents.getFirst().getCorrectionWindowNo()).thenReturn(2);
+		when(documents.getFirst().getCorrectionDeadlineAt()).thenReturn(correctionDeadline);
+
+		assertThat(processor.cancelForIncompleteDeadline(ORDER_ID, correctionDeadline)).isTrue();
+
+		verify(documents.getFirst(), never()).openCorrectionWindow(anyInt(), any(LocalDateTime.class));
+		verify(order).cancelForDocumentDeadline(correctionDeadline);
+		verify(notificationService).createOrderCancelledForCorrectionDeadline(CUSTOMER_ID, ORDER_ID);
+	}
+
+	@Test
+	void finalProtectedSubmissionRejectionCancelsWithUserAuditAndKeepsDepositPaid() {
+		UUID actorId = UUID.fromString("44444444-4444-4444-4444-444444444444");
+		LocalDateTime rejectedAt = DEADLINE.plusHours(49);
+
+		processor.cancelAfterFinalCorrectionRejection(ORDER_ID, rejectedAt, actorId);
+
+		verify(order).cancelAfterFinalDocumentCorrection(rejectedAt);
+		ArgumentCaptor<StatusAuditLog> audit = ArgumentCaptor.forClass(StatusAuditLog.class);
+		verify(auditRepository).saveAndFlush(audit.capture());
+		assertThat(audit.getValue().getActorUserId()).isEqualTo(actorId);
+		assertThat(audit.getValue().getReason()).isEqualTo("Final document correction window exhausted");
+		assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PAID);
+		verify(notificationService).createOrderCancelledForCorrectionDeadline(CUSTOMER_ID, ORDER_ID);
 	}
 
 	@Test

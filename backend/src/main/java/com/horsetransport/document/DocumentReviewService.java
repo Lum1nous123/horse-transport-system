@@ -20,27 +20,27 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class DocumentReviewService {
-	private static final long MAX_REJECTIONS_PER_DOCUMENT = 2;
-	private static final String CORRECTION_LIMIT_REASON = "Maximum document correction attempts reached";
-
 	private final HorseDocumentRepository documentRepository;
 	private final HorseDocumentVersionRepository versionRepository;
 	private final TransportOrderRepository orderRepository;
 	private final StatusAuditLogRepository auditRepository;
 	private final TransportSpecialistAssignmentGuard assignmentGuard;
+	private final DocumentDeadlineOrderProcessor deadlineOrderProcessor;
 	private final CurrentUserProvider currentUserProvider;
 	private final Clock clock;
 
 	public DocumentReviewService(HorseDocumentRepository documentRepository,
 			HorseDocumentVersionRepository versionRepository, TransportOrderRepository orderRepository,
 			StatusAuditLogRepository auditRepository,
-			TransportSpecialistAssignmentGuard assignmentGuard, CurrentUserProvider currentUserProvider,
-			Clock clock) {
+			TransportSpecialistAssignmentGuard assignmentGuard,
+			DocumentDeadlineOrderProcessor deadlineOrderProcessor,
+			CurrentUserProvider currentUserProvider, Clock clock) {
 		this.documentRepository = documentRepository;
 		this.versionRepository = versionRepository;
 		this.orderRepository = orderRepository;
 		this.auditRepository = auditRepository;
 		this.assignmentGuard = assignmentGuard;
+		this.deadlineOrderProcessor = deadlineOrderProcessor;
 		this.currentUserProvider = currentUserProvider;
 		this.clock = clock;
 	}
@@ -69,6 +69,8 @@ public class DocumentReviewService {
 		TransportOrder order = orderHorse.getTransportOrder();
 		OrderHorseDocumentStatus previousHorseStatus = orderHorse.getDocumentStatus();
 		LocalDateTime previousCorrectionDeadline = document.getCorrectionDeadlineAt();
+		int previousCorrectionWindowNo = document.getCorrectionWindowNo();
+		boolean cancelAfterReview = false;
 
 		if (approved) {
 			version.approve(actorUserId, LocalDateTime.now(clock));
@@ -76,18 +78,9 @@ public class DocumentReviewService {
 		else {
 			LocalDateTime rejectedAt = LocalDateTime.now(clock);
 			version.requireReviewable();
-			long rejectionCount = versionRepository.countByHorseDocument_IdAndStatus(
-					documentId, DocumentVersionStatus.REJECTED);
-			if (rejectionCount >= MAX_REJECTIONS_PER_DOCUMENT) {
-				order.cancelForDocumentCorrectionLimit(rejectedAt);
-				orderRepository.saveAndFlush(order);
-				auditRepository.saveAndFlush(StatusAuditLog.userTransition(
-						AuditEntityType.TRANSPORT_ORDER, order.getId(), OrderStatus.APPROVED.name(),
-						OrderStatus.CANCELLED.name(), actorUserId, CORRECTION_LIMIT_REASON));
-				return DocumentVersionResponse.from(version);
-			}
+			cancelAfterReview = applyCorrectionWindow(document,
+					order.getDocumentCompletionDeadlineAt(), rejectedAt);
 			version.reject(actorUserId, reason, rejectedAt);
-			document.openCorrectionWindow(correctionDeadline(order.getDocumentCompletionDeadlineAt(), rejectedAt));
 		}
 
 		try {
@@ -97,20 +90,44 @@ public class DocumentReviewService {
 					DocumentVersionStatus.PENDING_REVIEW.name(), version.getStatus().name(),
 					actorUserId, version.getRejectionReason()));
 			updateHorseStatus(orderHorse, actorUserId);
+			if (cancelAfterReview) {
+				deadlineOrderProcessor.cancelAfterFinalCorrectionRejection(
+						order.getId(), version.getReviewedAt(), actorUserId);
+			}
 			return DocumentVersionResponse.from(version);
 		}
 		catch (RuntimeException exception) {
 			version.restorePendingAfterReviewFailure();
-			document.restoreCorrectionDeadline(previousCorrectionDeadline);
+			document.restoreCorrectionWindow(previousCorrectionWindowNo, previousCorrectionDeadline);
 			orderHorse.restoreDocumentStatus(previousHorseStatus);
 			throw exception;
 		}
 	}
 
-	private LocalDateTime correctionDeadline(LocalDateTime originalDeadline, LocalDateTime rejectedAt) {
-		LocalDateTime minimumCorrectionWindow = rejectedAt.plusHours(24);
-		return originalDeadline != null && originalDeadline.isAfter(minimumCorrectionWindow)
-				? originalDeadline : minimumCorrectionWindow;
+	private boolean applyCorrectionWindow(HorseDocument document, LocalDateTime originalDeadline,
+			LocalDateTime rejectedAt) {
+		if (originalDeadline == null || rejectedAt.isBefore(originalDeadline)) {
+			return false;
+		}
+
+		int currentWindow = document.getCorrectionWindowNo();
+		if (currentWindow == 0) {
+			document.openCorrectionWindow(1, rejectedAt.plusHours(24));
+			return false;
+		}
+
+		LocalDateTime currentDeadline = document.getCorrectionDeadlineAt();
+		if (currentDeadline == null) {
+			throw new DocumentReviewValidationException("Active correction window requires a deadline");
+		}
+		if (rejectedAt.isBefore(currentDeadline)) {
+			return false;
+		}
+		if (currentWindow == 1) {
+			document.openCorrectionWindow(2, rejectedAt.plusHours(24));
+			return false;
+		}
+		return true;
 	}
 
 	private HorseDocumentVersion findVersion(UUID documentId, UUID versionId) {

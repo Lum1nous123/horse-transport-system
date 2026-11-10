@@ -182,9 +182,9 @@ public class TransportOrder {
 		this.cancelledAt = cancelledAt;
 	}
 
-	public void cancelForDocumentCorrectionLimit(LocalDateTime cancelledAt) {
+	public void cancelAfterFinalDocumentCorrection(LocalDateTime cancelledAt) {
 		status = OrderStatus.CANCELLED;
-		cancellationReason = "Maximum document correction attempts reached";
+		cancellationReason = "Final document correction window exhausted";
 		this.cancelledAt = cancelledAt;
 	}
 
