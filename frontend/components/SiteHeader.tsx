@@ -12,7 +12,7 @@ export default function SiteHeader({ currentPage }: SiteHeaderProps) {
       <div className="content-container header-content">
         <Link className="brand-link" href="/" aria-label="Horse Transport home">
           <Image
-            src="/logo.svg"
+            src="/logo.png"
             alt="Horse Transport logo"
             width={500}
             height={500}
