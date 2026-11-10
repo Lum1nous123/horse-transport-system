@@ -159,7 +159,7 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
-### Customer dashboard visual refresh — local implementation (2026-11-10)
+### Customer dashboard visual refresh — merged in PR #146 (2026-11-11)
 
 - Customer dashboard presentation is updated locally to the Human-directed
   white / burnt-orange design: wide transparent chestnut horse hero with a
@@ -171,7 +171,8 @@ These follow-ups do not change approved requirements and must not be used to inf
 - The Horse documents modal now shares the dashboard's warm palette: a pale
   orange fading header illustration, cream / white surfaces, and matching
   orange controls. Existing customer data, navigation, API calls, and actions
-  remain unchanged. No commit or external publication has been made.
+  remain unchanged. The visual refresh was merged into `main` in PR #146;
+  branch `codex/ui-concept-refresh` is retained for follow-up design changes.
 - The public landing page now uses the same cream, burnt-orange, and dark
   chestnut palette across its header, hero accents, overview tabs, section
   backgrounds, actions, and footer.
@@ -190,7 +191,7 @@ These follow-ups do not change approved requirements and must not be used to inf
   colors and new logo, and login/register photo and glass-panel compositions.
   Automated tests were not run for this visual change.
 
-### Logistics Manager workspace visual refresh — local implementation (2026-11-10)
+### Logistics Manager workspace visual refresh — merged in PR #146 (2026-11-11)
 
 - Submitted orders and quotations, staff assignment queues and details, route
   review queues and details, and journey tracking now use the same warm
@@ -228,7 +229,7 @@ These follow-ups do not change approved requirements and must not be used to inf
 - Publication is approved; the repository history and PR record the resulting
   commit/merge status. Local UI remains available at /driver and /escort.
 
-### Driver and Escort visual refresh — local implementation (2026-11-10)
+### Driver and Escort visual refresh — merged in PR #146 (2026-11-11)
 
 - Driver and Escort dashboards and execution detail screens now share the
   warm orange, cream, white, and chestnut palette: white page canvas, orange
