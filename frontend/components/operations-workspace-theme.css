@@ -1,0 +1,279 @@
+/* Shared warm visual language for the Transport Specialist and FRC workspaces. */
+.customer-page.ts-workspace-page,
+.customer-page.frc-workspace-page {
+  --color-primary: #b45326;
+  --color-primary-hover: #95421f;
+  --color-navy: #352720;
+  --color-ink: #352720;
+  --color-body: #62544c;
+  --color-muted: #74665d;
+  --color-border: #e6d9ce;
+  --color-surface-soft: #fbf6f1;
+  --color-surface-blue: #f8ece2;
+  --ts-navy: #352720;
+  --ts-blue: #b45326;
+  --ts-border: #e6d9ce;
+  min-height: 100vh;
+  background: #fff;
+  color: #352720;
+}
+
+.customer-page.ts-workspace-page::before,
+.customer-page.ts-workspace-page::after { content: none; }
+
+.customer-page:is(.ts-workspace-page,.frc-workspace-page) .customer-topbar {
+  width: min(calc(100% - 48px), 1840px);
+  min-height: 68px;
+  margin: 10px auto 0;
+  border: 1px solid #b85a2d;
+  border-radius: 16px;
+  padding: 6px 24px;
+  background: #c3652d;
+  box-shadow: 0 5px 16px rgb(83 43 25 / 12%);
+}
+.customer-page:is(.ts-workspace-page,.frc-workspace-page) .customer-brand { color: #fff; }
+.customer-page:is(.ts-workspace-page,.frc-workspace-page) .customer-brand-mark { border-radius: 50%; padding: 2px; background: #fff; }
+.customer-page:is(.ts-workspace-page,.frc-workspace-page) .customer-topbar-actions { color: #fff; }
+.customer-page:is(.ts-workspace-page,.frc-workspace-page) .customer-link-button { border-left-color: rgb(255 255 255 / 38%); color: #fff; }
+.customer-page:is(.ts-workspace-page,.frc-workspace-page) .customer-link-button:hover { color: #f8e1d3; }
+.customer-page:is(.ts-workspace-page,.frc-workspace-page) :is(a,button,input,select,textarea):focus-visible { outline-color: #b45326; }
+.customer-page.ts-workspace-page .ts-role,
+.customer-page.frc-workspace-page .frc-role { border-radius: 9px; background: rgb(255 255 255 / 16%); color: #fff; }
+
+.customer-page.ts-workspace-page .ts-topbar-nav a,
+.customer-page.frc-workspace-page .frc-topbar-nav a { color: #fff; }
+.customer-page.ts-workspace-page .ts-topbar-nav a.is-current,
+.customer-page.ts-workspace-page .ts-topbar-nav a:hover,
+.customer-page.frc-workspace-page .frc-topbar-nav a.is-current,
+.customer-page.frc-workspace-page .frc-topbar-nav a:hover { border-color: transparent; border-radius: 9px; background: #fff7f0; color: #95421f; }
+.customer-page.ts-workspace-page .ts-topbar-nav a svg,
+.customer-page.frc-workspace-page .frc-topbar-nav a svg { color: currentColor; }
+.customer-page.frc-workspace-page .frc-topbar-nav a::after { background: transparent; }
+.customer-page:is(.ts-workspace-page,.frc-workspace-page) .customer-preview-banner { border-color: #ead2bf; background: #fbf2e9; color: #62544c; }
+.customer-page:is(.ts-workspace-page,.frc-workspace-page) .customer-preview-banner strong { color: #95421f; }
+
+/* TS queue and document review */
+.customer-page.ts-workspace-page .ts-workspace-content { width: min(calc(100% - 56px), 1440px); padding-top: 22px; }
+.customer-page.ts-workspace-page .ts-queue-heading {
+  min-height: 150px;
+  margin-bottom: 20px;
+  border: 1px solid #ecd7c7;
+  border-radius: 18px;
+  padding: 22px 24px;
+  background: linear-gradient(105deg, #fffaf6 0%, #fbf2e9 66%, #f7e9dc 100%);
+}
+.customer-page.ts-workspace-page .ts-queue-heading::before { inset: 0; border-radius: inherit; background: linear-gradient(90deg, #fffaf6 0%, rgb(255 250 246 / 94%) 45%, rgb(251 242 233 / 22%) 100%); }
+.customer-page.ts-workspace-page .ts-hero-art { inset: -4px 0 -4px 42%; opacity: .5; filter: sepia(.55) saturate(.55); }
+.customer-page.ts-workspace-page .ts-queue-heading .customer-eyebrow { color: #a24c24; }
+.customer-page.ts-workspace-page .ts-queue-heading h1 { color: #352720; }
+.customer-page.ts-workspace-page .ts-queue-heading .customer-intro { color: #62544c; }
+.customer-page.ts-workspace-page .ts-hero-accent { background: #b45326; }
+.customer-page.ts-workspace-page .ts-refresh-button { border-color: #dfc5b3; background: #fff; color: #78452d; box-shadow: 0 3px 10px rgb(83 43 25 / 8%); }
+.customer-page.ts-workspace-page .ts-refresh-button svg,
+.customer-page.ts-workspace-page .ts-refresh-button > span { color: #b45326; }
+.customer-page.ts-workspace-page .ts-refresh-button:hover:not(:disabled) { border-color: #bd7954; background: #fbf2e9; }
+.customer-page.ts-workspace-page .ts-triage-dashboard { gap: 22px; }
+.customer-page.ts-workspace-page .ts-queue-summary,
+.customer-page.ts-workspace-page .ts-attention-card,
+.customer-page.ts-workspace-page .ts-dashboard-empty,
+.customer-page.ts-workspace-page .ts-completed-table-wrap { border-color: #e6d9ce; box-shadow: 0 5px 16px rgb(65 43 30 / 6%); }
+.customer-page.ts-workspace-page .ts-queue-summary { border-radius: 14px; }
+.customer-page.ts-workspace-page .ts-queue-summary > div { border-color: #eee2d8; background: #fff; }
+.customer-page.ts-workspace-page .ts-queue-summary > div.is-attention { background: #fff8f2; }
+.customer-page.ts-workspace-page .ts-queue-summary dt { color: #62544c; }
+.customer-page.ts-workspace-page .ts-queue-summary dd { background: #f8ece2; color: #95421f; }
+.customer-page.ts-workspace-page .ts-queue-summary .is-attention dd { background: #f3dfcf; color: #95421f; }
+.customer-page.ts-workspace-page .ts-dashboard-section-heading h2,
+.customer-page.ts-workspace-page .ts-attention-card .ts-order-code-line h3 { color: #352720; }
+.customer-page.ts-workspace-page .ts-dashboard-section-heading p,
+.customer-page.ts-workspace-page .ts-dashboard-section-heading > span { color: #74665d; }
+.customer-page.ts-workspace-page .ts-attention-card { border-radius: 14px; border-color: #e6d9ce; background: #fff; }
+.customer-page.ts-workspace-page .ts-attention-card .ts-state-badge { background: #f8ece2; color: #78452d; }
+.customer-page.ts-workspace-page .ts-open-order-button,
+.customer-page.ts-workspace-page .ts-table-actions .customer-primary-button { background: #b45326; box-shadow: 0 3px 8px rgb(83 43 25 / 13%); }
+.customer-page.ts-workspace-page .ts-open-order-button:hover:not(:disabled),
+.customer-page.ts-workspace-page .ts-table-actions .customer-primary-button:hover:not(:disabled) { background: #95421f; }
+.customer-page.ts-workspace-page .ts-attention-route,
+.customer-page.ts-workspace-page .ts-attention-progress { border-color: #eee2d8; }
+.customer-page.ts-workspace-page .ts-attention-route > span,
+.customer-page.ts-workspace-page .ts-attention-progress > div > span,
+.customer-page.ts-workspace-page .ts-attention-route small,
+.customer-page.ts-workspace-page .ts-attention-progress small { color: #74665d; }
+.customer-page.ts-workspace-page .ts-attention-route > strong,
+.customer-page.ts-workspace-page .ts-attention-progress > div > strong { color: #352720; }
+.customer-page.ts-workspace-page .ts-attention-route > strong b { color: #b45326; }
+.customer-page.ts-workspace-page .ts-attention-progress progress,
+.customer-page.ts-workspace-page .ts-order-progress progress,
+.customer-page.ts-workspace-page .ts-progress-summary progress { accent-color: #b45326; }
+.customer-page.ts-workspace-page .ts-attention-progress progress::-webkit-progress-value,
+.customer-page.ts-workspace-page .ts-order-progress progress::-webkit-progress-value,
+.customer-page.ts-workspace-page .ts-progress-summary progress::-webkit-progress-value { background: #b45326; }
+.customer-page.ts-workspace-page .ts-state-badge.is-eligible,
+.customer-page.ts-workspace-page .ts-state-badge.is-locked { background: #f3eee8; color: #62544c; }
+.customer-page.ts-workspace-page .ts-dashboard-empty { background: #fff; }
+.customer-page.ts-workspace-page .ts-completed-table th,
+.customer-page.ts-workspace-page .ts-document-table th { border-color: #eadfd6; background: #fbf6f1; color: #74665d; }
+.customer-page.ts-workspace-page .ts-completed-table td,
+.customer-page.ts-workspace-page .ts-document-table td { border-color: #eee5de; color: #62544c; }
+.customer-page.ts-workspace-page .ts-completed-table td:first-child > strong,
+.customer-page.ts-workspace-page .ts-completed-table td:last-child a,
+.customer-page.ts-workspace-page .assignment-back-link,
+.customer-page.ts-workspace-page .ts-table-file > a { color: #a64c24; }
+.customer-page.ts-workspace-page .ts-completed-table td:nth-child(2) > strong { color: #352720; }
+.customer-page.ts-workspace-page .ts-completed-table td:nth-child(2) > strong b { color: #b45326; }
+.customer-page.ts-workspace-page .ts-completed-table tbody tr:hover,
+.customer-page.ts-workspace-page .ts-document-table tbody tr:hover:not(.ts-table-rejection-row) { background: #fffaf6; }
+
+.customer-page.ts-workspace-page .ts-detail-header h1,
+.customer-page.ts-workspace-page .ts-detail-header p { color: #352720; }
+.customer-page.ts-workspace-page .ts-order-facts > div { border-color: #e6d9ce; background: #fff; box-shadow: 0 3px 10px rgb(65 43 30 / 5%); }
+.customer-page.ts-workspace-page .ts-fact-icon { background: #f8ece2; color: #a64c24; }
+.customer-page.ts-workspace-page .ts-order-facts dt { color: #74665d; }
+.customer-page.ts-workspace-page .ts-guided-workflow .ts-workflow-step { border-color: #e6d9ce; background: #fff; box-shadow: 0 4px 14px rgb(65 43 30 / 5%); }
+.customer-page.ts-workspace-page .ts-guided-workflow .ts-workflow-step.is-current { border-color: #c77b51; box-shadow: 0 0 0 1px rgb(180 83 38 / 12%), 0 5px 14px rgb(65 43 30 / 7%); }
+.customer-page.ts-workspace-page .ts-guided-workflow .ts-workflow-step.is-locked { background: #fcfaf8; }
+.customer-page.ts-workspace-page .ts-workflow-number,
+.customer-page.ts-workspace-page .ts-workflow-step.is-current .ts-workflow-number { border-color: #a64c24; background: #b45326; color: #fff; box-shadow: none; }
+.customer-page.ts-workspace-page .ts-workflow-step.is-complete .ts-workflow-number { border-color: #b6d4bf; background: #eaf4ec; color: #356447; }
+.customer-page.ts-workspace-page .ts-workflow-step.is-locked .ts-workflow-number { border-color: #e4d9d0; background: #f3eee8; color: #74665d; }
+.customer-page.ts-workspace-page .ts-workflow-step-header,
+.customer-page.ts-workspace-page .ts-workflow-heading strong { color: #352720; }
+.customer-page.ts-workspace-page .ts-workflow-step-header:hover { background: #fffaf6; }
+.customer-page.ts-workspace-page .ts-workflow-step-header:focus-visible { outline-color: rgb(180 83 38 / 34%); }
+.customer-page.ts-workspace-page .ts-workflow-heading small,
+.customer-page.ts-workspace-page .ts-workflow-step-body p { color: #74665d; }
+.customer-page.ts-workspace-page .ts-workflow-chevron,
+.customer-page.ts-workspace-page .ts-workflow-lock,
+.customer-page.ts-workspace-page .ts-workflow-step-body h2 { color: #95421f; }
+.customer-page.ts-workspace-page .ts-workflow-step-body { border-top-color: #eee2d8; }
+.customer-page.ts-workspace-page .ts-horse-tabs { border-color: #e6d9ce; }
+.customer-page.ts-workspace-page .ts-horse-tabs button[aria-selected="true"] { border-color: #b45326; background: #fbf2e9; color: #95421f; }
+.customer-page.ts-workspace-page .ts-horse-tabs button span,
+.customer-page.ts-workspace-page .ts-horse-heading h3 { color: #352720; }
+.customer-page.ts-workspace-page .ts-horse-tabs button small,
+.customer-page.ts-workspace-page .ts-horse-heading p,
+.customer-page.ts-workspace-page .ts-horse-heading > span { color: #74665d; }
+.customer-page.ts-workspace-page .ts-document-table-wrap { border-color: #e6d9ce; }
+.customer-page.ts-workspace-page .ts-document-table td:first-child strong { color: #352720; }
+.customer-page.ts-workspace-page .ts-table-file > span,
+.customer-page.ts-workspace-page .ts-table-file > small,
+.customer-page.ts-workspace-page .ts-table-empty,
+.customer-page.ts-workspace-page .ts-table-no-action { color: #74665d; }
+.customer-page.ts-workspace-page .document-version-status.pending_review { background: #f8ece2; color: #95421f; }
+.customer-page.ts-workspace-page .ts-table-actions .customer-secondary-button { border-color: #dfc5b3; color: #78452d; }
+.customer-page.ts-workspace-page .ts-table-actions .customer-secondary-button:hover:not(:disabled) { background: #fbf2e9; }
+
+/* FRC planning queue and route-plan editor */
+.customer-page.frc-workspace-page { padding-top: 1px; }
+.customer-page.frc-workspace-page .frc-workspace-content { width: min(calc(100% - 56px), 1440px); padding-top: 22px; padding-bottom: 60px; }
+.customer-page.frc-workspace-page .customer-preview-banner strong { border-right-color: #ead2bf; }
+.customer-page.frc-workspace-page .frc-page-heading,
+.customer-page.frc-workspace-page .frc-detail-heading { border: 1px solid #ecd7c7; border-radius: 18px; padding: 22px 24px; background: linear-gradient(105deg, #fffaf6 0%, #fbf2e9 66%, #f7e9dc 100%); }
+.customer-page.frc-workspace-page .frc-page-heading h1,
+.customer-page.frc-workspace-page .frc-detail-heading h1 { color: #352720; }
+.customer-page.frc-workspace-page .frc-detail-heading h1 b { color: #95421f; }
+.customer-page.frc-workspace-page .frc-page-heading p,
+.customer-page.frc-workspace-page .frc-detail-heading p { color: #62544c; }
+.customer-page.frc-workspace-page .frc-page-context,
+.customer-page.frc-workspace-page .frc-detail-context { color: #a24c24; }
+.customer-page.frc-workspace-page .frc-hero-accent { background: #b45326; }
+.customer-page.frc-workspace-page .frc-hero-art,
+.customer-page.frc-workspace-page .frc-transport-art { filter: sepia(.55) saturate(.55); opacity: .52; }
+.customer-page.frc-workspace-page .frc-refresh-button,
+.customer-page.frc-workspace-page .customer-secondary-button { border-color: #dfc5b3; color: #78452d; }
+.customer-page.frc-workspace-page .frc-refresh-button:hover:not(:disabled),
+.customer-page.frc-workspace-page .customer-secondary-button:hover:not(:disabled) { border-color: #bd7954; background: #fbf2e9; }
+.customer-page.frc-workspace-page .customer-primary-button { background: #b45326; box-shadow: 0 3px 8px rgb(83 43 25 / 13%); }
+.customer-page.frc-workspace-page .customer-primary-button:hover:not(:disabled) { background: #95421f; }
+.customer-page.frc-workspace-page .customer-primary-button:disabled { background: #dfb39b; }
+.customer-page.frc-workspace-page .route-plan-heading > .customer-primary-button,
+.customer-page.frc-workspace-page .route-plan-empty .customer-primary-button,
+.customer-page.frc-workspace-page .route-plan-footer .customer-primary-button { background: #b45326; }
+.customer-page.frc-workspace-page .route-plan-heading > .customer-primary-button:hover:not(:disabled),
+.customer-page.frc-workspace-page .route-plan-empty .customer-primary-button:hover:not(:disabled),
+.customer-page.frc-workspace-page .route-plan-footer .customer-primary-button:hover:not(:disabled) { background: #95421f; }
+.customer-page.frc-workspace-page .frc-planning-table tbody tr { border-color: #e6d9ce; }
+.customer-page.frc-workspace-page .frc-queue-summary > div { border-color: #e6d9ce !important; box-shadow: 0 4px 12px rgb(65 43 30 / 6%); }
+.customer-page.frc-workspace-page .frc-summary-icon,
+.customer-page.frc-workspace-page .frc-summary-icon.is-draft,
+.customer-page.frc-workspace-page .frc-summary-icon.is-returned { background: #f8ece2; }
+.customer-page.frc-workspace-page .frc-summary-icon svg { filter: sepia(.75) saturate(.7); }
+.customer-page.frc-workspace-page .frc-queue-summary dt,
+.customer-page.frc-workspace-page .frc-queue-summary dd { color: #352720; }
+.customer-page.frc-workspace-page .frc-queue-summary small { color: #74665d; }
+.customer-page.frc-workspace-page .frc-queue-summary .is-returned dd { color: #95421f; }
+.customer-page.frc-workspace-page .frc-queue-panel { border-color: #e6d9ce; box-shadow: 0 5px 16px rgb(65 43 30 / 6%); }
+.customer-page.frc-workspace-page .frc-panel-title > svg { color: #955033; }
+.customer-page.frc-workspace-page .frc-queue-panel-heading { border-color: #eadfd6; }
+.customer-page.frc-workspace-page .frc-queue-panel-heading h2 { color: #352720; }
+.customer-page.frc-workspace-page .frc-queue-panel-heading p,
+.customer-page.frc-workspace-page .frc-planning-table time,
+.customer-page.frc-workspace-page .frc-muted-value { color: #74665d; }
+.customer-page.frc-workspace-page .frc-queue-panel-heading > span { background: #f8ece2; color: #95421f; }
+.customer-page.frc-workspace-page .frc-planning-table th { background: #fbf6f1; color: #74665d; }
+.customer-page.frc-workspace-page .frc-planning-table td { border-color: #eee5de; color: #62544c; }
+.customer-page.frc-workspace-page .frc-planning-table tbody tr:hover { background: #fffaf6; }
+.customer-page.frc-workspace-page .frc-planning-table td:first-child > strong,
+.customer-page.frc-workspace-page .frc-planning-table time strong,
+.customer-page.frc-workspace-page .frc-number-cell { color: #352720; }
+.customer-page.frc-workspace-page .frc-planning-table td:first-child > small,
+.customer-page.frc-workspace-page .frc-planning-table time small { color: #74665d; }
+.customer-page.frc-workspace-page .frc-route-cell i { border-color: #b45326; }
+.customer-page.frc-workspace-page .frc-route-cell i:last-child { border-color: #78452d; }
+.customer-page.frc-workspace-page .frc-route-cell b { color: #352720; }
+.customer-page.frc-workspace-page .frc-mode-pill { border-color: #eadfd6; background: #fbf6f1; color: #62544c; }
+.customer-page.frc-workspace-page .frc-plan-status.is-draft { background: #f8ece2; color: #95421f; }
+.customer-page.frc-workspace-page .frc-open-order { border-color: #c77b51; color: #95421f; }
+.customer-page.frc-workspace-page .frc-open-order:hover { background: #fbf2e9; }
+.customer-page.frc-workspace-page .frc-queue-note { border-color: #eadfd6; background: #fff; color: #74665d; }
+.customer-page.frc-workspace-page .frc-queue-note > span { border-color: #c77b51; color: #95421f; }
+.customer-page.frc-workspace-page .frc-empty-state,
+.customer-page.frc-workspace-page .frc-order-context,
+.customer-page.frc-workspace-page .frc-readiness,
+.customer-page.frc-workspace-page .frc-detail-unavailable { border-color: #e6d9ce; background: #fff; }
+.customer-page.frc-workspace-page .frc-empty-state h2,
+.customer-page.frc-workspace-page .frc-order-context h2,
+.customer-page.frc-workspace-page .frc-readiness h2,
+.customer-page.frc-workspace-page .frc-detail-unavailable h1 { color: #352720; }
+.customer-page.frc-workspace-page .frc-order-context dd,
+.customer-page.frc-workspace-page .frc-readiness strong { color: #352720; }
+.customer-page.frc-workspace-page .frc-section-heading,
+.customer-page.frc-workspace-page .frc-order-context dl > div { border-color: #eee5de; }
+.customer-page.frc-workspace-page .frc-readiness li.is-current > span { border-color: #b45326; color: #95421f; }
+.customer-page.frc-workspace-page .frc-editor-handoff { background: #fbf6f1; }
+.customer-page.frc-workspace-page .frc-editor-handoff strong { color: #352720; }
+.customer-page.frc-workspace-page .frc-context-banner { border-color: #ead2bf; background: #fbf6f1; }
+.customer-page.frc-workspace-page .frc-context-banner.is-returned { border-color: #e6c77d; background: #fff9eb; }
+.customer-page.frc-workspace-page .frc-context-banner.is-pending_lm_review { border-color: #d8c8e8; background: #faf7fc; }
+.customer-page.frc-workspace-page .frc-context-banner.is-approved { border-color: #b6d4bf; background: #f3f8f3; }
+.customer-page.frc-workspace-page .frc-context-banner h2 { color: #352720; }
+.customer-page.frc-workspace-page .frc-plan-overview,
+.customer-page.frc-workspace-page .route-plan-shell { border-color: #e6d9ce; box-shadow: 0 5px 15px rgb(65 43 30 / 6%); }
+.customer-page.frc-workspace-page .frc-plan-overview > div,
+.customer-page.frc-workspace-page .route-plan-heading,
+.customer-page.frc-workspace-page .route-plan-table td { border-color: #eee5de; }
+.customer-page.frc-workspace-page .frc-plan-overview span,
+.customer-page.frc-workspace-page .route-plan-table th { color: #74665d; }
+.customer-page.frc-workspace-page .frc-plan-overview strong,
+.customer-page.frc-workspace-page .route-plan-heading h2,
+.customer-page.frc-workspace-page .route-plan-empty h3 { color: #352720; }
+.customer-page.frc-workspace-page .route-plan-heading > div > span,
+.customer-page.frc-workspace-page .route-plan-table td[data-label="Route"] > span { color: #95421f; }
+.customer-page.frc-workspace-page .route-plan-status.is-draft,
+.customer-page.frc-workspace-page .route-leg-type.is-air { background: #f8ece2; color: #95421f; }
+.customer-page.frc-workspace-page .route-plan-table tbody tr.is-selected { background: #fff8f2; }
+.customer-page.frc-workspace-page .route-plan-row-actions button:hover:not(:disabled) { background: #fbf2e9; }
+.customer-page.frc-workspace-page .route-plan-inspector { background: #fbf6f1; }
+.customer-page.frc-workspace-page .route-plan-inspector-heading h3 { color: #352720; }
+.customer-page.frc-workspace-page .route-plan-inspector input:focus,
+.customer-page.frc-workspace-page .route-plan-inspector textarea:focus { outline-color: rgb(180 83 38 / 18%); }
+.customer-page.frc-workspace-page .route-plan-type-options input:checked + span { background: #fbf2e9; color: #95421f; }
+.customer-page.frc-workspace-page .route-plan-type-options input:focus-visible + span { outline-color: #b45326; }
+
+@media (max-width: 760px) {
+  .customer-page.ts-workspace-page .ts-workspace-content,
+  .customer-page.frc-workspace-page .frc-workspace-content { width: calc(100% - 28px); }
+  .customer-page.ts-workspace-page .ts-queue-heading,
+  .customer-page.frc-workspace-page .frc-page-heading,
+  .customer-page.frc-workspace-page .frc-detail-heading { border-radius: 14px; padding: 16px; }
+}
