@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 type AuthShellProps = {
+  variant?: "warm" | "register";
   title: string;
   headingClassName?: string;
   description: string;
@@ -20,6 +21,7 @@ const capabilities = [
 ];
 
 export default function AuthShell({
+  variant = "register",
   title,
   headingClassName,
   description,
@@ -29,20 +31,22 @@ export default function AuthShell({
   linkHref,
 }: AuthShellProps) {
   return (
-    <main className="auth-shell">
+    <main className={`auth-shell${variant === "warm" ? " auth-shell-warm" : ""}`}>
       <section className="auth-visual" aria-label="Horse Transport">
-        <Image
-          className="auth-visual-image"
-          src="/images/Hero.png"
-          alt=""
-          fill
-          priority
-          sizes="(min-width: 900px) 54vw, 100vw"
-        />
+        {variant !== "warm" && (
+          <Image
+            className="auth-visual-image"
+            src="/images/Hero.png"
+            alt=""
+            fill
+            priority
+            sizes="(min-width: 900px) 54vw, 100vw"
+          />
+        )}
         <div className="auth-visual-content">
           <Link className="auth-brand" href="/" aria-label="Horse Transport home">
             <span className="auth-brand-mark">
-              <Image src="/logo.png" alt="" width={500} height={500} priority />
+              <Image src="/logo.svg" alt="" width={500} height={500} priority />
             </span>
             <span className="auth-brand-name">Horse Transport</span>
           </Link>
@@ -66,7 +70,7 @@ export default function AuthShell({
       <section className="auth-content" aria-labelledby="auth-title">
         <div className="auth-panel">
           <Link className="auth-mobile-brand" href="/" aria-label="Horse Transport home">
-            <Image src="/logo.png" alt="" width={500} height={500} priority />
+            <Image src="/logo.svg" alt="" width={500} height={500} priority />
             <span>Horse Transport</span>
           </Link>
           <p className="auth-form-eyebrow">Customer account</p>

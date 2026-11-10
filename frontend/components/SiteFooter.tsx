@@ -13,7 +13,7 @@ export default function SiteFooter({ variant = "default" }: SiteFooterProps) {
           <div className="footer-home-brand-area">
             <Link className="footer-home-logo" href="/" aria-label="Horse Transport home">
               <Image
-                src="/logo.png"
+                src="/logo.svg"
                 alt=""
                 width={500}
                 height={500}

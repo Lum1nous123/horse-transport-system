@@ -5,7 +5,7 @@ export default function BrandMark({ className = "customer-brand-mark" }: { class
     <span className={className} aria-hidden="true">
       <Image
         className="customer-brand-logo"
-        src="/logo.png"
+        src="/logo.svg"
         alt=""
         width={500}
         height={500}
