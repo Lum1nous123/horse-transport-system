@@ -9463,3 +9463,226 @@ button.ts-workflow-step-header:focus-visible {
     transition: none;
   }
 }
+
+/* Logistics Manager workspace uses the approved warm customer palette. */
+.logistics-manager-page {
+  --lm-border: #e6d9ce;
+  --lm-muted: #74665d;
+  --lm-navy: #352720;
+  --lm-blue: #b45326;
+  --color-primary: #b45326;
+  --color-primary-hover: #95421f;
+  --color-navy: #352720;
+  --color-ink: #352720;
+  --color-body: #62544c;
+  --color-muted: #74665d;
+  --color-border: #e6d9ce;
+  --color-surface-soft: #fbf6f1;
+  --color-surface-blue: #f8ece2;
+  background: #c3652d;
+  color: #352720;
+}
+.logistics-manager-page .customer-topbar {
+  width: min(calc(100% - 48px), 1840px);
+  min-height: 68px;
+  margin: 10px auto 0;
+  border: 1px solid #b45326;
+  border-radius: 16px;
+  padding-inline: 24px;
+  background: #c3652d;
+  box-shadow: 0 5px 16px rgb(83 43 25 / 12%);
+  color: #fff8ef;
+}
+.logistics-manager-page .customer-brand,
+.logistics-manager-page .customer-topbar-actions { color: #fff8ef; }
+.logistics-manager-page .customer-topbar-actions > span { border-color: rgb(255 248 239 / 35%); }
+.logistics-manager-page .customer-link-button { color: #fff8ef; }
+.logistics-manager-page .lm-primary-nav a { border-radius: 9px; color: #fff8ef; }
+.logistics-manager-page .lm-primary-nav a:hover { background: rgb(255 248 239 / 14%); color: #fff; }
+.logistics-manager-page .lm-primary-nav a[aria-current="page"] { background: #fff8ef; color: #733719; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 35%); }
+.logistics-manager-page .logistics-content,
+.logistics-manager-page .assignment-content,
+.logistics-manager-page .journey-content { width: min(calc(100% - 48px), 1840px); max-width: none; padding: 22px 0 42px; }
+.logistics-manager-page .customer-preview-banner { border-color: #ead7c8; background: #fffaf6; color: #62544c; }
+.logistics-manager-page .customer-preview-banner strong { color: #733719; }
+.logistics-manager-page .customer-primary-button { border-color: #a84921; background: #b45326; box-shadow: 0 5px 14px rgb(83 43 25 / 18%); }
+.logistics-manager-page .customer-primary-button:hover:not(:disabled) { border-color: #7f391c; background: #95421f; }
+.logistics-manager-page .customer-primary-button:focus-visible,
+.logistics-manager-page :is(a, button, input, select, textarea):focus-visible { outline-color: #d18b5e; }
+.logistics-manager-page .customer-secondary-button { border-color: #d8c4b5; color: #4c2a19; }
+.logistics-manager-page .customer-secondary-button:hover:not(:disabled) { border-color: #c78c68; background: #fffaf6; }
+.logistics-manager-page .customer-text-button,
+.logistics-manager-page .lm-row-link,
+.logistics-manager-page .lm-scope-note a,
+.logistics-manager-page .lm-preview-history a { color: #95421f; }
+.logistics-manager-page .lm-page-heading:is(.lm-assignment-heading,.lm-reviews-heading),
+.logistics-manager-page.lm-submitted-page .logistics-heading,
+.logistics-manager-page.lm-assignment-detail-page .assignment-detail-heading,
+.logistics-manager-page.lm-route-review-detail-page .route-review-detail-heading {
+  border-color: #e6d2c2;
+  background: linear-gradient(105deg, #fffaf6, #f8ece2);
+  box-shadow: 0 6px 20px rgb(83 43 25 / 8%);
+}
+.logistics-manager-page .lm-page-heading h1,
+.logistics-manager-page .logistics-heading h1,
+.logistics-manager-page .assignment-detail-heading h1,
+.logistics-manager-page .route-review-detail-heading h1 { color: #352720; }
+.logistics-manager-page .lm-page-heading p,
+.logistics-manager-page .logistics-heading .customer-intro,
+.logistics-manager-page .assignment-detail-heading p,
+.logistics-manager-page .route-review-detail-heading p { color: #74665d; }
+.logistics-manager-page .lm-heading-icon,
+.logistics-manager-page .logistics-heading-icon,
+.logistics-manager-page .assignment-heading-icon,
+.logistics-manager-page .route-review-heading-mark { border-color: #ead7c8; background: #f8ece2; color: #95421f; }
+.logistics-manager-page .lm-management-panel,
+.logistics-manager-page .assignment-queue-section,
+.logistics-manager-page .assignment-order-summary,
+.logistics-manager-page .assignment-submit-bar,
+.logistics-manager-page .assignment-readonly,
+.logistics-manager-page .assignment-candidate-grid > section,
+.logistics-manager-page .route-review-summary,
+.logistics-manager-page .route-review-audit,
+.logistics-manager-page .route-review-validation-list,
+.logistics-manager-page .route-review-staffing-rule,
+.logistics-manager-page .journey-panel,
+.logistics-manager-page .journey-state { border-color: #e6d9ce; background-color: #fff; box-shadow: 0 6px 20px rgb(83 43 25 / 8%); }
+.logistics-manager-page .lm-panel-heading,
+.logistics-manager-page .assignment-section-heading,
+.logistics-manager-page .lm-list-toolbar,
+.logistics-manager-page .lm-management-table th,
+.logistics-manager-page .assignment-candidate-header,
+.logistics-manager-page .route-review-audit-table th { background-color: #fbf6f1; color: #74665d; }
+.logistics-manager-page .lm-panel-heading h2,
+.logistics-manager-page .assignment-section-heading h2,
+.logistics-manager-page .route-review-audit-heading h2,
+.logistics-manager-page .journey-heading h1,
+.logistics-manager-page .journey-panel h2 { color: #352720; }
+.logistics-manager-page .lm-status-tabs button[aria-selected="true"],
+.logistics-manager-page .lm-queue-panel .lm-status-tabs button[aria-selected="true"] { border-bottom-color: #b45326; background: #f8ece2; color: #95421f; }
+.logistics-manager-page .lm-tab-count,
+.logistics-manager-page .assignment-count,
+.logistics-manager-page .lm-status-tabs .lm-tab-count,
+.logistics-manager-page .lm-queue-panel .lm-management-table td:first-child strong,
+.logistics-manager-page .route-review-leg-type { background: #f8ece2; color: #733719; }
+.logistics-manager-page .lm-management-table th,
+.logistics-manager-page .lm-management-table td,
+.logistics-manager-page .assignment-order-list a,
+.logistics-manager-page .assignment-candidate-row,
+.logistics-manager-page .route-review-audit-table td { border-color: #eee4dc; }
+.logistics-manager-page .lm-management-table td strong,
+.logistics-manager-page .assignment-order-main strong,
+.logistics-manager-page .assignment-active-orders,
+.logistics-manager-page .route-review-summary strong { color: #352720; }
+.logistics-manager-page .lm-management-table tbody tr:hover,
+.logistics-manager-page .assignment-candidate-row.is-selected { background: #fbf3ec; }
+.logistics-manager-page .lm-destination b,
+.logistics-manager-page .lm-queue-panel .lm-management-table td:nth-child(4) small,
+.logistics-manager-page .assignment-open-label,
+.logistics-manager-page .assignment-breadcrumb a,
+.logistics-manager-page .route-review-order-code,
+.logistics-manager-page .route-review-details-button,
+.logistics-manager-page .journey-breadcrumb a,
+.logistics-manager-page .journey-checkpoints a,
+.logistics-manager-page .journey-air-welfare a { color: #b45326; }
+.logistics-manager-page .lm-queue-panel .lm-management-table td:nth-child(4) small { border-color: #ead7c8; background: #fffaf6; }
+.logistics-manager-page .assignment-candidate-row.is-selected { box-shadow: inset 3px 0 #b45326; }
+.logistics-manager-page .assignment-candidate-row input { accent-color: #b45326; }
+.logistics-manager-page .lm-review-empty,
+.logistics-manager-page .route-review-readonly,
+.logistics-manager-page .journey-vehicle,
+.logistics-manager-page .journey-air-welfare { background: #fbf6f1; }
+.logistics-manager-page .lm-review-empty h2 { color: #352720; }
+.logistics-manager-page .lm-filter-notice { border-color: #ead7c8; background: #fffaf6; color: #62544c; }
+.logistics-manager-page .lm-assignment-detail-page,
+.logistics-manager-page .lm-route-review-detail-page,
+.journey-page.logistics-manager-page { background: #c3652d; }
+.journey-page.logistics-manager-page .journey-heading { border-color: #e6d9ce; background: #fff; }
+.journey-page.logistics-manager-page .journey-heading .customer-eyebrow { color: #b45326; }
+.journey-page.logistics-manager-page .journey-status { background: #f8ece2; color: #733719; }
+.journey-page.logistics-manager-page .journey-overview { border-color: #e6d9ce; background: linear-gradient(135deg, #fffaf6, #f8ece2); box-shadow: 0 6px 20px rgb(83 43 25 / 8%); }
+.journey-page.logistics-manager-page .journey-overview h2,
+.journey-page.logistics-manager-page .journey-overview-step { color: #352720; }
+.journey-page.logistics-manager-page .journey-overview-step { background: #f8ece2; }
+.journey-page.logistics-manager-page .journey-mode { background: #f8ece2; color: #95421f; }
+.journey-page.logistics-manager-page .journey-leg { border-color: #e6d9ce; }
+.journey-page.logistics-manager-page .journey-contact { border-color: #e6d9ce; }
+.journey-page.logistics-manager-page .journey-contact p { color: #95421f; }
+@media (max-width: 680px) {
+  .logistics-manager-page .customer-topbar { width: calc(100% - 24px); margin-top: 7px; border-radius: 12px; padding-inline: 10px; }
+  .logistics-manager-page .logistics-content,
+  .logistics-manager-page .assignment-content,
+  .logistics-manager-page .journey-content { width: calc(100% - 28px); padding-top: 20px; }
+}
+
+/* Keep breadcrumbs and preview context readable on the orange canvas. */
+.logistics-manager-page.lm-assignment-detail-page .assignment-breadcrumb,
+.logistics-manager-page.lm-assignment-detail-page .assignment-breadcrumb a,
+.logistics-manager-page.lm-route-review-detail-page .assignment-breadcrumb,
+.logistics-manager-page.lm-route-review-detail-page .assignment-breadcrumb a,
+.logistics-manager-page.lm-route-review-detail-page .field-hint[role="status"] { color: #fff8ef !important; }
+
+/* Staff assignment and Route Review queues use white panels and warm nav/tabs. */
+.logistics-manager-page .customer-topbar .lm-primary-nav a { color: #fff8ef !important; }
+.logistics-manager-page .customer-topbar .lm-primary-nav a[aria-current="page"] { background: #fff8ef !important; color: #733719 !important; }
+.logistics-manager-page .lm-page-heading.lm-assignment-heading,
+.logistics-manager-page .lm-page-heading.lm-reviews-heading { border-color: #e6d9ce !important; background: #fff !important; }
+.logistics-manager-page .lm-page-heading:is(.lm-assignment-heading,.lm-reviews-heading)::before { filter: sepia(.78) saturate(.85) hue-rotate(335deg); opacity: .16; }
+.logistics-manager-page .lm-page-heading:is(.lm-assignment-heading,.lm-reviews-heading) h1 { color: #352720 !important; }
+.logistics-manager-page .lm-page-heading:is(.lm-assignment-heading,.lm-reviews-heading) p { color: #74665d !important; }
+.logistics-manager-page .lm-page-heading:is(.lm-assignment-heading,.lm-reviews-heading) .lm-heading-icon { border-color: #ead7c8; background: #f8ece2; color: #95421f; }
+.logistics-manager-page .lm-queue-panel .lm-status-tabs button[aria-selected="true"] { border-bottom-color: #b45326 !important; background: #fff !important; color: #95421f !important; }
+.logistics-manager-page .lm-queue-panel .lm-status-tabs button[aria-selected="true"] .lm-tab-count { background: #f8ece2 !important; color: #733719 !important; }
+.logistics-manager-page .lm-queue-panel .lm-search input,.logistics-manager-page .lm-queue-panel .lm-filter select { border-color: #d8c4b5 !important; }
+.logistics-manager-page,
+.logistics-manager-page.lm-submitted-page,
+.logistics-manager-page.lm-assignment-detail-page,
+.logistics-manager-page.lm-route-review-detail-page,
+.journey-page.logistics-manager-page { background: #fff !important; }
+
+/* Escort shares the white canvas and warm navigation used by Customer and LM. */
+.escort-workspace-page {
+  --color-primary: #b45326;
+  --color-primary-hover: #95421f;
+  --color-navy: #352720;
+  --color-ink: #352720;
+  --color-body: #62544c;
+  --color-muted: #74665d;
+  --color-border: #e6d9ce;
+  --color-surface-soft: #fbf6f1;
+  --color-surface-blue: #f8ece2;
+  background: #fff !important;
+}
+.escort-workspace-page .escort-topbar { width: min(calc(100% - 48px),1840px); min-height: 68px; margin: 10px auto 0; border: 1px solid #b45326; border-radius: 16px; padding-inline: 24px; background: #c3652d; box-shadow: 0 5px 16px rgb(83 43 25 / 12%); color: #fff8ef; }
+.escort-workspace-page .customer-brand,.escort-workspace-page .customer-topbar-actions,.escort-workspace-page .customer-link-button { color: #fff8ef; }
+.escort-workspace-page .customer-topbar-actions > span { border-color: rgb(255 248 239 / 35%); }
+.escort-workspace-page .escort-topbar-nav a { border-color: transparent; border-radius: 8px; color: #fff8ef; }
+.escort-workspace-page .escort-topbar-nav a[aria-current="page"] { border: 0; background: #fff8ef; color: #733719; }
+.escort-workspace-page .customer-preview-banner { border-color: #ead7c8; background: #fffaf6; color: #62544c; }
+.escort-workspace-page .customer-preview-banner strong { color: #733719; }
+.escort-workspace-page .escort-status { background: #f8ece2; color: #733719; }
+.escort-workspace-page .escort-status.is-destination { background: #fff1cf; color: #76520a; }
+.escort-workspace-page .escort-status.is-completed { background: #e2f3e9; color: #12653c; }
+.escort-workspace-page .escort-route-line { background: #fbf6f1; }
+.escort-workspace-page .escort-air-card { border-top-color: #c78c68; }
+.escort-workspace-page .escort-mode-heading > strong,.escort-workspace-page .escort-panel-heading > span,.escort-workspace-page .escort-section-heading > strong { background: #f8ece2; color: #733719; }
+.escort-workspace-page .escort-horses article > span { background: #f8ece2; color: #95421f; }
+.escort-workspace-page .escort-work-card,.escort-workspace-page .escort-horses article,.escort-workspace-page .escort-air-progress li { border-color: #e6d9ce; }
+.escort-workspace-page .escort-route-line { background: #fbf6f1; }
+.escort-workspace-page .escort-welfare-fields input,.escort-workspace-page .escort-welfare-fields textarea,.escort-workspace-page .escort-pod-fields input,.escort-workspace-page .escort-pod-fields textarea { border-color: #d8c4b5; }
+.escort-workspace-page .escort-welfare-fields input:focus,.escort-workspace-page .escort-welfare-fields textarea:focus,.escort-workspace-page .escort-pod-fields input:focus,.escort-workspace-page .escort-pod-fields textarea:focus { outline-color: #d18b5e55; }
+.escort-workspace-page .escort-status:not(.is-destination):not(.is-completed):not(.is-not_started) { background: #f8ece2; color: #733719; }
+.escort-workspace-page .escort-status.is-not_started { background: #f3e8df; color: #62544c; }
+.escort-workspace-page .escort-air-progress li.is-current { border-color: #c78c68; background: #fffaf6; }
+.escort-workspace-page .escort-air-progress li.is-current > span { background: #f8ece2; color: #733719; }
+.escort-workspace-page .escort-air-progress li:not(.is-current):not(.is-complete) { background: #fff; }
+.escort-workspace-page .escort-air-progress li > span { background: #f3e8df; color: #74665d; }
+.escort-workspace-page .escort-air-action { border-color: #e6d9ce; background: #fff; }
+.escort-workspace-page .escort-mode-section,.escort-workspace-page .escort-work-list,.escort-workspace-page .escort-queue-panel { border-color: #e6d9ce; background: #fff; }
+.escort-workspace-page .escort-route-line::before { background: #d8c4b5; }
+.escort-workspace-page .escort-workspace-content a:not(.customer-link-button) { color: #95421f; }
+.escort-workspace-page .escort-workspace-content :is(button,input,select,textarea):focus-visible { outline-color: #d18b5e; }
+@media (max-width: 680px) {
+  .escort-workspace-page .escort-topbar { width: calc(100% - 24px); margin-top: 7px; border-radius: 12px; padding-inline: 10px; }
+  .escort-workspace-page .escort-workspace-content { width: min(calc(100% - 28px),1180px); padding-top: 22px; }
+}

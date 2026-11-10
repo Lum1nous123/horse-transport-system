@@ -190,6 +190,17 @@ These follow-ups do not change approved requirements and must not be used to inf
   colors and new logo, and login/register photo and glass-panel compositions.
   Automated tests were not run for this visual change.
 
+### Logistics Manager workspace visual refresh — local implementation (2026-11-10)
+
+- Submitted orders and quotations, staff assignment queues and details, route
+  review queues and details, and journey tracking now use the same warm
+  burnt-orange, cream, white, and chestnut visual language as the Customer
+  workspace. The LM navigation header, page canvas, hero panels, tabs, tables,
+  search fields, icons, and primary actions were brought into that palette.
+- Workflows, status meanings, data, API calls, navigation, and role permissions
+  were left unchanged. Visual preview was checked across LM lists and selected
+  detail views. Automated tests were not run for this visual refresh.
+
 ### Driver/Escort assigned-work dashboard improvements (2026-11-09)
 
 - PO visually approved the implementation and authorized commit, push and merge
@@ -216,6 +227,15 @@ These follow-ups do not change approved requirements and must not be used to inf
   Start/checkpoints/destination and Escort PoD image regression; no real Backend E2E.
 - Publication is approved; the repository history and PR record the resulting
   commit/merge status. Local UI remains available at /driver and /escort.
+
+### Driver and Escort visual refresh — local implementation (2026-11-10)
+
+- Driver and Escort dashboards and execution detail screens now share the
+  warm orange, cream, white, and chestnut palette: white page canvas, orange
+  rounded header, warm selected states, and cream action/progress surfaces.
+- Execution rules, statuses, data, API calls, and role permissions remain
+  unchanged. Browser preview was checked; automated tests were not run for
+  this visual update.
 
 ### LM workspace integration with latest main (2026-11-09)
 

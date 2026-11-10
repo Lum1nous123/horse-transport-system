@@ -84,3 +84,28 @@
   .lm-assignment-detail-page .assignment-candidate-row { min-height: 0; padding: 9px 11px; }
   .lm-assignment-detail-page .assignment-candidate-row small { display: block; }
 }
+
+/* Approved warm palette for staff assignment details. */
+.lm-assignment-detail-page { background: #c3652d; }
+.lm-assignment-detail-page .assignment-breadcrumb,.lm-assignment-detail-page .assignment-submit-note { color: #74665d; }
+.lm-assignment-detail-page .assignment-breadcrumb a,.lm-assignment-detail-page .assignment-active-orders { color: #95421f; }
+.lm-assignment-detail-page .assignment-detail-heading { border-color: #e6d2c2; background: linear-gradient(105deg,#fffaf6,#f8ece2); box-shadow: 0 6px 20px rgb(83 43 25 / 8%); }
+.lm-assignment-detail-page .assignment-detail-heading::before { filter: sepia(.72) saturate(.82) hue-rotate(335deg); opacity: .25; }
+.lm-assignment-detail-page .assignment-detail-heading h1,.lm-assignment-detail-page .assignment-order-summary strong,.lm-assignment-detail-page .assignment-candidate-row strong,.lm-assignment-detail-page .assignment-submit-bar strong { color: #352720; }
+.lm-assignment-detail-page .assignment-heading-icon,.lm-assignment-detail-page .assignment-summary-icon,.lm-assignment-detail-page .assignment-role-icon { border-color: #ead7c8; background: #f8ece2; color: #95421f; }
+.lm-assignment-detail-page .assignment-back-link,.lm-assignment-detail-page .assignment-page-heading > .customer-secondary-button { border-color: #d8c4b5; color: #733719; }
+.lm-assignment-detail-page .assignment-order-summary,.lm-assignment-detail-page .assignment-queue-section,.lm-assignment-detail-page .assignment-submit-bar,.lm-assignment-detail-page .assignment-readonly { border-color: #e6d9ce; box-shadow: 0 6px 20px rgb(83 43 25 / 8%); }
+.lm-assignment-detail-page .assignment-order-summary > div + div { border-left-color: #eee4dc; }
+.lm-assignment-detail-page .assignment-order-summary > div:last-child strong { border-color: #ead7c8; background: #f8ece2; color: #733719; }
+.lm-assignment-detail-page .assignment-candidate-header { background: #fbf6f1; color: #74665d; }
+.lm-assignment-detail-page .assignment-candidate-row { color: #62544c; }
+.lm-assignment-detail-page .assignment-candidate-row + .assignment-candidate-row { border-color: #eee4dc; }
+.lm-assignment-detail-page .assignment-candidate-row.is-selected { background: #fbf1e7; box-shadow: inset 3px 0 #b45326; }
+.lm-assignment-detail-page .assignment-candidate-row input { accent-color: #b45326; }
+.lm-assignment-detail-page .assignment-submit-bar > div::before { background-color: #f8ece2; }
+.lm-assignment-detail-page .assignment-submit-bar > div + div { border-color: #eee4dc; }
+.lm-assignment-detail-page .assignment-submit-bar .customer-primary-button { border-color: #a84921; background: #b45326; }
+.lm-assignment-detail-page .assignment-back-link:focus-visible { outline-color: #d18b5e; }
+.lm-assignment-detail-page .assignment-page-heading .customer-primary-button,.lm-assignment-detail-page .assignment-submit-bar .customer-primary-button { border-color: #a84921; background: #b45326; }
+.lm-assignment-detail-page .assignment-page-heading .customer-primary-button:hover,.lm-assignment-detail-page .assignment-submit-bar .customer-primary-button:hover { background: #95421f; }
+.logistics-manager-page.lm-assignment-detail-page .assignment-breadcrumb,.logistics-manager-page.lm-assignment-detail-page .assignment-breadcrumb a { color: #fff8ef; }

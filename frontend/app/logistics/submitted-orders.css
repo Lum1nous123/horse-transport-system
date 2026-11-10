@@ -83,3 +83,49 @@
   .lm-submitted-page .logistics-summary dl > div:first-child { border-top: 0; }
   .lm-submitted-page .logistics-quote-fields { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Keep submitted-order inbox and detail on the shared warm LM theme. */
+.lm-submitted-page { background: #c3652d; }
+.lm-submitted-page .logistics-heading { border-color: #e6d2c2; background: linear-gradient(105deg,#fffaf6,#f8ece2); box-shadow: 0 6px 20px rgb(83 43 25 / 8%); }
+.lm-submitted-page .logistics-heading::before { filter: sepia(.72) saturate(.82) hue-rotate(335deg); opacity: .25; }
+.lm-submitted-page .logistics-heading h1,.lm-submitted-page .logistics-detail-title h2,.lm-submitted-page .logistics-summary dd,.lm-submitted-page .logistics-detail-grid .logistics-info-section h3,.lm-submitted-page .logistics-quotation-heading h3 { color: #352720; }
+.lm-submitted-page .logistics-heading .customer-eyebrow,.lm-submitted-page .logistics-inbox-title .customer-text-button,.lm-submitted-page .logistics-summary dt svg,.lm-submitted-page .logistics-quotation-heading h3 svg { color: #b45326; }
+.lm-submitted-page .logistics-heading-icon,.lm-submitted-page .logistics-summary dt svg,.lm-submitted-page .logistics-detail-title::before { background-color: #f8ece2; }
+.lm-submitted-page .logistics-heading .customer-intro,.lm-submitted-page .logistics-inbox-title span,.lm-submitted-page .logistics-detail-title > p,.lm-submitted-page .logistics-summary dt,.lm-submitted-page .logistics-quotation-heading p,.lm-submitted-page .logistics-editor-footer > p { color: #74665d; }
+.lm-submitted-page .logistics-inbox,.lm-submitted-page .logistics-detail-heading,.lm-submitted-page .logistics-summary,.lm-submitted-page .logistics-detail-grid .logistics-info-section,.lm-submitted-page .logistics-quotation-section { border-color: #e6d9ce; box-shadow: 0 6px 20px rgb(83 43 25 / 8%); }
+.lm-submitted-page .logistics-inbox-header,.lm-submitted-page .logistics-detail-heading { border-color: #eee4dc; background: #fff; }
+.lm-submitted-page .logistics-inbox-title h2,.lm-submitted-page .logistics-order-card-top strong { color: #352720; }
+.lm-submitted-page .logistics-search input,.lm-submitted-page .lm-inbox-controls select,.lm-submitted-page .logistics-quote-fields input,.lm-submitted-page .logistics-quotation-section textarea { border-color: #d8c4b5; }
+.lm-submitted-page .logistics-order-card { border-color: #eee4dc; }
+.lm-submitted-page .logistics-order-card:hover { border-color: #d8b9a3; background: #fffaf6; }
+.lm-submitted-page .logistics-order-card.is-selected { border-color: #c78c68; background: #fbf1e7; box-shadow: inset 3px 0 #b45326,0 4px 12px rgb(83 43 25 / 8%); }
+.lm-submitted-page .logistics-route,.lm-submitted-page .logistics-summary dd,.lm-submitted-page .logistics-info-section dd { color: #4c2a19; }
+.lm-submitted-page .logistics-summary dl > div + div { border-color: #eee4dc; }
+.lm-submitted-page .logistics-quotation-section { background: linear-gradient(140deg,#fffaf6,#f8ece2); }
+.lm-submitted-page .lm-editor-heading { border-color: #e6d9ce; color: #733719; }
+.lm-submitted-page .logistics-quote-fields input[readonly] { background: #fbf6f1; color: #74665d; }
+.lm-submitted-page .logistics-editor-footer { border-color: #e6d9ce; }
+.lm-submitted-page .logistics-editor-footer .customer-secondary-button { border-color: #d8c4b5; color: #4c2a19; }
+.lm-submitted-page .logistics-editor-footer .customer-primary-button { border-color: #a84921; background: #b45326; }
+.lm-submitted-page :is(.logistics-order-card,.logistics-search input,.lm-inbox-controls select,.logistics-header-actions button,.logistics-editor-footer button):focus-visible { outline-color: #d18b5e; }
+.lm-submitted-page .logistics-search input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='17' height='17' viewBox='0 0 24 24' fill='none' stroke='%2395421f' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m16 16 5 5'/%3E%3C/svg%3E"); }
+.lm-submitted-page .lm-order-tabs { border-color: #e6d9ce !important; }
+.lm-submitted-page .lm-order-tabs a { color: #74665d !important; }
+.lm-submitted-page .lm-order-tabs a[aria-current="page"] { border-color: #b45326 !important; color: #95421f !important; }
+.lm-submitted-page .logistics-inbox,.lm-submitted-page .logistics-detail-heading,.lm-submitted-page .logistics-summary,.lm-submitted-page .logistics-detail-grid .logistics-info-section,.lm-submitted-page .logistics-quotation-section { border-color: #e6d9ce !important; }
+.lm-submitted-page .logistics-inbox-header,.lm-submitted-page .logistics-detail-heading { border-color: #eee4dc !important; background: #fff !important; }
+.lm-submitted-page .logistics-heading-icon,.lm-submitted-page .logistics-detail-title::before,.lm-submitted-page .logistics-summary dt svg { border-color: #ead7c8 !important; background-color: #f8ece2 !important; color: #95421f !important; }
+.lm-submitted-page .logistics-search input,.lm-submitted-page .lm-inbox-controls select { border-color: #d8c4b5 !important; }
+.lm-submitted-page .logistics-order-card { border-color: #eee4dc !important; }
+.lm-submitted-page .logistics-order-card.is-selected { border-color: #c78c68 !important; background: #fbf1e7 !important; box-shadow: inset 3px 0 #b45326,0 4px 12px rgb(83 43 25 / 8%) !important; }
+.lm-submitted-page .logistics-order-card:hover { border-color: #d8b9a3 !important; background: #fffaf6 !important; }
+.lm-submitted-page .logistics-detail-title h2,.lm-submitted-page .logistics-detail-grid .logistics-info-section h3,.lm-submitted-page .logistics-quotation-heading h3 { color: #352720 !important; }
+.lm-submitted-page .logistics-detail-title > p,.lm-submitted-page .logistics-summary dt,.lm-submitted-page .logistics-quotation-heading p { color: #74665d !important; }
+.lm-submitted-page .logistics-route,.lm-submitted-page .logistics-summary dd,.lm-submitted-page .logistics-info-section dd { color: #4c2a19 !important; }
+.lm-submitted-page .logistics-summary dl > div + div { border-color: #eee4dc !important; }
+.lm-submitted-page .logistics-quotation-section { background: linear-gradient(140deg,#fffaf6,#f8ece2) !important; }
+.lm-submitted-page .logistics-editor-footer { border-color: #e6d9ce !important; }
+.lm-submitted-page .logistics-detail-title > p svg,.lm-submitted-page .logistics-quotation-heading h3 svg { color: #95421f !important; }
+.lm-submitted-page .logistics-detail-grid .logistics-info-section h3 svg { color: #95421f !important; }
+.lm-submitted-page .logistics-info-section dd a { color: #95421f !important; }
+.lm-submitted-page .quotation-state.not-started { border-color: #ead7c8; background: #f8ece2; color: #733719; }

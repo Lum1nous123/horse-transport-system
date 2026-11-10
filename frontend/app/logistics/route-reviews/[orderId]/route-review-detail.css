@@ -92,3 +92,27 @@
   .lm-route-review-detail-page .route-review-audit-heading { align-items: flex-start; }
   .lm-route-review-detail-page .route-review-validation-list ul,.lm-route-review-detail-page .route-review-validation-list > p,.lm-route-review-detail-page .route-review-staffing-rule > div,.lm-route-review-detail-page .route-review-staffing-rule p { margin-left: 0; }
 }
+
+/* Approved warm palette for Route Plan review details. */
+.lm-route-review-detail-page { background: #c3652d; }
+.lm-route-review-detail-page .route-review-detail-heading { border-color: #e6d2c2; background: linear-gradient(105deg,#fffaf6,#f8ece2); box-shadow: 0 6px 20px rgb(83 43 25 / 8%); }
+.lm-route-review-detail-page .route-review-detail-heading::before { filter: sepia(.72) saturate(.82) hue-rotate(335deg); opacity: .25; }
+.lm-route-review-detail-page .assignment-breadcrumb a { color: #95421f; }
+.lm-route-review-detail-page .route-review-detail-heading .customer-secondary-button { border-color: #d8c4b5; color: #733719; }
+.lm-route-review-detail-page .route-review-detail-heading .customer-secondary-button:hover { background: #fffaf6; }
+.lm-route-review-detail-page .route-review-heading-mark,.lm-route-review-detail-page .route-review-audit-heading h2 .route-review-icon,.lm-route-review-detail-page .route-review-summary .route-review-icon,.lm-route-review-detail-page .route-review-validation-list h3 .route-review-icon,.lm-route-review-detail-page .route-review-staffing-rule h3 .route-review-icon { background: #f8ece2; color: #95421f; }
+.lm-route-review-detail-page .route-review-order-code,.lm-route-review-detail-page .route-review-detail-heading h1 b { color: #95421f; }
+.lm-route-review-detail-page .route-review-detail-heading h1,.lm-route-review-detail-page .route-review-summary strong,.lm-route-review-detail-page .route-review-audit-heading h2,.lm-route-review-detail-page .route-review-audit-table td strong,.lm-route-review-detail-page .route-review-validation-list h3,.lm-route-review-detail-page .route-review-staffing-rule h3 { color: #352720; }
+.lm-route-review-detail-page .route-review-summary,.lm-route-review-detail-page .route-review-audit,.lm-route-review-detail-page .route-review-validation-list,.lm-route-review-detail-page .route-review-staffing-rule { border-color: #e6d9ce; box-shadow: 0 6px 20px rgb(83 43 25 / 8%); }
+.lm-route-review-detail-page .route-review-summary > div,.lm-route-review-detail-page .route-review-audit-table td { border-color: #eee4dc; }
+.lm-route-review-detail-page .route-review-audit-table th { background: #fbf6f1; color: #74665d; }
+.lm-route-review-detail-page .route-review-readonly { border-color: #e6d9ce; background: #fbf6f1; color: #733719; }
+.lm-route-review-detail-page .route-review-leg-type { background: #f8ece2; color: #733719; }
+.lm-route-review-detail-page .route-review-details-button { color: #95421f; }
+.lm-route-review-detail-page .route-review-staffing-rule > div > span { border-color: #ead7c8; background: #fffaf6; }
+.lm-route-review-detail-page .route-review-staffing-rule b,.lm-route-review-detail-page .route-review-staffing-rule strong { color: #4c2a19; }
+.lm-route-review-detail-page .route-review-decision-panel.is-confirm { border-color: #e6d9ce; background: #fbf6f1; }
+.lm-route-review-detail-page .route-review-actions .customer-primary-button { border-color: #a84921; background: #b45326; }
+.lm-route-review-detail-page :is(.route-review-details-button,.route-review-actions button,.route-review-decision-panel button,.route-review-decision-panel textarea,.route-review-detail-heading a,.route-review-detail-heading button):focus-visible { outline-color: #d18b5e; }
+.logistics-manager-page.lm-route-review-detail-page .assignment-breadcrumb,.logistics-manager-page.lm-route-review-detail-page .assignment-breadcrumb a { color: #fff8ef; }
+.logistics-manager-page.lm-route-review-detail-page .field-hint[role="status"] { color: #fff8ef !important; }
