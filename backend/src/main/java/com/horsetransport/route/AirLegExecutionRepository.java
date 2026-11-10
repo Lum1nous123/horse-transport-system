@@ -34,6 +34,8 @@ public interface AirLegExecutionRepository extends JpaRepository<AirLegExecution
 
 	List<AirLegExecution> findAllByRouteLegIdIn(Collection<UUID> routeLegIds);
 
+	Optional<AirLegExecution> findByRouteLegId(UUID routeLegId);
+
 	long countByEscortIdAndStatusIn(UUID escortId, Collection<ExecutionStatus> statuses);
 
 	@Query("""

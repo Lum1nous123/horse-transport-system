@@ -82,7 +82,7 @@ const customerIconPaths: Record<CustomerIconName, string[]> = {
   journey: ["M5 19V7m0 0 3 3M5 7 2 3", "M5 16h9a5 5 0 0 0 5-5V5"],
   progress: ["M12 7v5l3 2", "M21 12a9 9 0 1 1-2.64-6.36", "M21 3v6h-6"],
   horse: ["M20 8v8l-3 1-3.09-5.5c-.26-.46-.99-.23-.91.31L14 21 4 17l1.15-8.06A6.92 6.92 0 0 1 12 3h8l-1.58 2.37C19.36 5.88 20 6.86 20 8"],
-  horseHead: ["M20 5.5c-2.2-.5-4.6.2-6.1 1.9l-2 2.2H8.5A3.5 3.5 0 0 0 5 13.1v1.2L3.5 17v3h5l3-2h3.8l2.2-3.5v-2.7l2.5-2.3z", "m12.2 10.1 1.3 2.4m2.1-3.8 1.8 1.8"],
+  horseHead: ["M20 8v8l-3 1-3.09-5.5c-.26-.46-.99-.23-.91.31L14 21 4 17l1.15-8.06A6.92 6.92 0 0 1 12 3h8l-1.58 2.37C19.36 5.88 20 6.86 20 8"],
   truck: ["M2 6h12v11H2z", "M14 10h4l4 4v3h-8z", "M7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm11 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"],
   user: ["M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z", "M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2z"],
   logout: ["M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5", "m16 7 5 5-5 5m5-5H9"],
@@ -95,7 +95,7 @@ const customerIconPaths: Record<CustomerIconName, string[]> = {
 };
 
 function CustomerIcon({ name }: { name: CustomerIconName }) {
-  const filled = name === "horse";
+  const filled = name === "horse" || name === "horseHead";
   return <svg className="customer-dashboard-icon" viewBox="0 0 24 24" aria-hidden="true" fill={filled ? "currentColor" : "none"} stroke={filled ? "none" : "currentColor"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{customerIconPaths[name].map((path) => <path d={path} key={path} />)}</svg>;
 }
 
@@ -659,7 +659,6 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
         {loadError && <div className="customer-alert" role="alert"><span>{loadError}</span><button type="button" onClick={() => void loadWorkspace()}>Try again</button></div>}
         {loading ? <div className="customer-loading customer-dashboard-loading" role="status">Loading your workspace…</div> : <>
           {view === "dashboard" && <>
-          <div className="customer-dashboard-lower">
           <section className="customer-dashboard-summary" aria-label="Workspace summary">
             <article className="is-total"><span className="customer-summary-icon"><CustomerIcon name="orders" /></span><div><strong>{orders.length}</strong><span>Total requests</span></div><SummaryWatermark kind="horse" /></article>
             <article className="is-draft"><span className="customer-summary-icon"><CustomerIcon name="draft" /></span><div><strong>{dashboardSummary.drafts}</strong><span>Draft requests</span></div><SummaryWatermark kind="folder" /></article>
@@ -692,7 +691,6 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
             </div>}
             {horses.length === 0 ? <div className="horse-empty"><Image className="customer-horse-art" src="/images/customer-horse-illustration.svg" width={360} height={180} alt="" unoptimized /><p>No horse profiles yet.</p><span>Add a profile before preparing a request.</span></div> : visibleHorses.length === 0 ? <div className="horse-empty customer-horse-filter-empty"><p>No matching horses</p><span>Try another horse name.</span><button className="customer-text-button compact" type="button" onClick={() => setHorseQuery("")}>Clear search</button></div> : <ul className="horse-list">{visibleHorses.map((horse) => <li key={horse.id}><span className="horse-avatar" aria-hidden="true">{horse.name.slice(0, 1).toUpperCase()}</span><span className="horse-list-name"><strong>{horse.name}</strong><small>Microchip · {horse.microchipId}</small><span className="customer-horse-facts"><span className={`customer-horse-gender is-${horseGender(horse.sex).tone}`}><b aria-hidden="true">{horseGender(horse.sex).symbol}</b>{horseGender(horse.sex).label}</span><span className="customer-horse-age"><CustomerIcon name="calendar" />{formatHorseAge(horse.dateOfBirth)}</span></span></span><span className="customer-horse-row-actions"><button className="customer-horse-edit-button" type="button" aria-label={`Edit ${horse.name}`} onClick={() => openHorseEditor(horse)}><CustomerIcon name="edit" /><span>Edit</span></button><button className="customer-horse-delete-button" type="button" aria-label={`Delete ${horse.name}`} onClick={() => { setHorseToDelete(horse); setHorseDeleteError(""); }}><CustomerIcon name="trash" /><span>Delete</span></button></span></li>)}</ul>}
           </section>
-          </div>
           </div>
           </>}
 
