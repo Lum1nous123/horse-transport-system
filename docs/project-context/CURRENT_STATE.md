@@ -159,20 +159,20 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
-### TS and FRC workspace visual refresh (2026-11-11)
+### TS and FRC workspace visual refresh — merged in PR #150 (2026-11-11)
 
 - Transport Specialist queues and document-review screens, plus Fleet & Route Coordinator queues and route-plan screens, share the established white, burnt-orange, cream, and chestnut theme. Existing workflows, status meanings, APIs, data, and permissions are unchanged.
 - The shared theme is scoped to TS/FRC workspace page classes; it does not override the separately themed customer journey screen.
 
 
-### Logistics Manager dashboard overview (2026-11-11)
+### Logistics Manager dashboard overview — merged in PR #149 (2026-11-11)
 
 - Added a standalone `/logistics/dashboard` workspace using the approved warm palette and the dashboard layout reference: live queue counts, current work by queue, direct links to action queues, active journeys, and planned departures.
 - Data is read from existing submitted-order, staff-assignment, route-review, and tracking services. Preview fixtures are limited to preview mode; workflows and APIs are unchanged.
 - Queue counts remain separated by lifecycle source and are not presented as a single total. No trend chart is shown because current APIs do not provide a complete historical series.
 
 
-### Customer Journey tracking visual refresh and notifications (2026-11-11)
+### Customer Journey tracking visual refresh and notifications — merged in PR #148 (2026-11-11)
 
 - Customer journey tracking uses the established white, cream, burnt-orange,
   and chestnut palette across the page header, journey overview, route legs,
@@ -182,7 +182,7 @@ These follow-ups do not change approved requirements and must not be used to inf
   close button. Notification content, data, API requests, and role access are
   unchanged.
 
-### Customer dashboard visual refresh — local implementation (2026-11-10)
+### Customer dashboard visual refresh — merged in PR #146 (2026-11-11)
 
 - Customer dashboard presentation is updated locally to the Human-directed
   white / burnt-orange design: wide transparent chestnut horse hero with a
@@ -194,7 +194,8 @@ These follow-ups do not change approved requirements and must not be used to inf
 - The Horse documents modal now shares the dashboard's warm palette: a pale
   orange fading header illustration, cream / white surfaces, and matching
   orange controls. Existing customer data, navigation, API calls, and actions
-  remain unchanged. No commit or external publication has been made.
+  remain unchanged. The visual refresh was merged into `main` in PR #146;
+  branch `codex/ui-concept-refresh` is retained for follow-up design changes.
 - The public landing page now uses the same cream, burnt-orange, and dark
   chestnut palette across its header, hero accents, overview tabs, section
   backgrounds, actions, and footer.
@@ -213,7 +214,7 @@ These follow-ups do not change approved requirements and must not be used to inf
   colors and new logo, and login/register photo and glass-panel compositions.
   Automated tests were not run for this visual change.
 
-### Logistics Manager workspace visual refresh — local implementation (2026-11-10)
+### Logistics Manager workspace visual refresh — merged in PR #146 (2026-11-11)
 
 - Submitted orders and quotations, staff assignment queues and details, route
   review queues and details, and journey tracking now use the same warm
@@ -251,7 +252,7 @@ These follow-ups do not change approved requirements and must not be used to inf
 - Publication is approved; the repository history and PR record the resulting
   commit/merge status. Local UI remains available at /driver and /escort.
 
-### Driver and Escort visual refresh — local implementation (2026-11-10)
+### Driver and Escort visual refresh — merged in PR #146 (2026-11-11)
 
 - Driver and Escort dashboards and execution detail screens now share the
   warm orange, cream, white, and chestnut palette: white page canvas, orange
@@ -259,6 +260,10 @@ These follow-ups do not change approved requirements and must not be used to inf
 - Execution rules, statuses, data, API calls, and role permissions remain
   unchanged. Browser preview was checked; automated tests were not run for
   this visual update.
+
+### Frontend backend environment (2026-11-11)
+
+- The team confirmed the backend is hosted on Render at `https://horse-transport-system.onrender.com`. Frontend development should use the configured API base URL for that service; do not assume a local backend.
 
 ### LM workspace integration with latest main (2026-11-09)
 
