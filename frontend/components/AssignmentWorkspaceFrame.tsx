@@ -10,7 +10,7 @@ import { LogisticsNavigation } from "@/components/LogisticsWorkspaceUI";
 type AssignmentWorkspaceFrameProps = {
   children: ReactNode;
   preview: boolean;
-  activeSection?: "orders" | "assignments" | "reviews" | "tracking";
+  activeSection?: "dashboard" | "orders" | "assignments" | "reviews" | "tracking";
   pageClassName?: string;
 };
 

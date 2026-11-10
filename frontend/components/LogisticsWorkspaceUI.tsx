@@ -4,10 +4,11 @@ import Link from "next/link";
 import "./logistics-workspace.css";
 
 export function LogisticsNavigation({ section, preview = false }: {
-  section: "orders" | "assignments" | "reviews" | "tracking"; preview?: boolean;
+  section: "dashboard" | "orders" | "assignments" | "reviews" | "tracking"; preview?: boolean;
 }) {
   const suffix = preview ? "?preview=1" : "";
   const links = [
+    { href: `/logistics/dashboard${suffix}`, label: "Dashboard", current: section === "dashboard" },
     { href: `/logistics${suffix}`, label: "Orders & quotations", current: section === "orders" || section === "tracking" },
     { href: `/logistics/assignments${suffix}`, label: "Staff assignment", current: section === "assignments" },
     { href: `/logistics/route-reviews${suffix}`, label: "Route reviews", current: section === "reviews" },
