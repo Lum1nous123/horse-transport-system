@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { clearAccessToken, getAccessToken, getCurrentUser } from "@/lib/auth";
 import { previewJourneyScenario, previewTracking } from "@/lib/journey-tracking/preview";
 import { JourneyReadError, readJourneyNotifications, readJourneyTracking } from "@/lib/journey-tracking/service";
@@ -64,6 +64,24 @@ export default function JourneyTrackingView({ role }: { role: Role }) {
   const [tracking, setTracking] = useState<JourneyTracking | null>(null);
   const [notifications, setNotifications] = useState<JourneyNotification[]>([]);
   const [notificationWarning, setNotificationWarning] = useState("");
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationControlRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!notificationsOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setNotificationsOpen(false);
+    };
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (event.target instanceof Node && !notificationControlRef.current?.contains(event.target)) setNotificationsOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+    };
+  }, [notificationsOpen]);
 
   const load = useCallback(async () => {
     if (preview) {
@@ -115,10 +133,9 @@ export default function JourneyTrackingView({ role }: { role: Role }) {
       {preview && <div className="customer-preview-banner" role="status"><strong>Preview mode</strong><span>Sample journey data. No backend request is sent.</span></div>}
       <nav className="journey-breadcrumb" aria-label="Breadcrumb"><Link href={preview ? `${backHref}?preview=1` : backHref}>{role === "CUSTOMER" ? "My Orders" : "Orders"}</Link><span>/</span><span>{tracking?.orderCode ?? orderId}</span></nav>
       {state === "checking" || state === "loading" ? <p className="journey-state" role="status">Loading journey tracking…</p> : state === "forbidden" ? <section className="journey-state" role="alert"><h1>You can’t view this journey</h1><p>Tracking is available only to the Order owner and Logistics Manager.</p><Link href={backHref}>Back to Orders</Link></section> : state === "error" ? <section className="journey-state" role="alert"><h1>Journey unavailable</h1><p>{message}</p><button className="customer-secondary-button" type="button" onClick={() => void load()}>Try again</button></section> : tracking && <>
-        <div className="journey-heading"><div><p className="customer-eyebrow">ORDER {tracking.orderCode}</p><h1>Journey tracking</h1><p>{tracking.origin} <span aria-hidden="true">→</span> {tracking.destination}</p></div><div><span className="journey-status">{tracking.orderStatus.replaceAll("_", " ")}</span><small>Last updated {dateTime(tracking.updatedAt)}</small><button className="customer-secondary-button compact" type="button" onClick={() => void load()}>Refresh tracking</button></div></div>
+        <div className="journey-heading"><div><p className="customer-eyebrow">ORDER {tracking.orderCode}</p><h1>Journey tracking</h1><p>{tracking.origin} <span aria-hidden="true">→</span> {tracking.destination}</p></div><div className="journey-heading-actions"><span className="journey-status">{tracking.orderStatus.replaceAll("_", " ")}</span><small>Last updated {dateTime(tracking.updatedAt)}</small><div className="journey-heading-buttons">{role === "CUSTOMER" && <div className="journey-notification-control" ref={notificationControlRef}><button className="journey-notification-trigger" type="button" aria-label={notificationWarning ? "Notifications, updates temporarily unavailable" : `Notifications, ${notifications.length} updates`} aria-expanded={notificationsOpen} aria-controls="journey-notifications-panel" onClick={() => setNotificationsOpen((open) => !open)}><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>{notifications.length > 0 && <span className="journey-notification-count">{notifications.length > 99 ? "99+" : notifications.length}</span>}{notificationWarning && <span className="journey-notification-indicator" aria-hidden="true" />}</button>{notificationsOpen && <aside className="journey-panel journey-notifications" id="journey-notifications-panel" aria-label="Order notifications"><div className="journey-notifications-heading"><div><h2>Notifications</h2><p>Updates for this Order</p></div><button type="button" className="journey-notifications-close" aria-label="Close notifications" onClick={() => setNotificationsOpen(false)}>×</button></div>{notificationWarning ? <p className="journey-notification-warning" role="status">{notificationWarning}</p> : notifications.length === 0 ? <p className="journey-empty">No updates yet.</p> : <ul>{notifications.map((notice) => <li key={notice.id}><strong>{notice.title}</strong><p>{notice.message}</p><time>{dateTime(notice.createdAt)}</time></li>)}</ul>}</aside>}</div>}<button className="customer-secondary-button compact" type="button" onClick={() => void load()}>Refresh tracking</button></div></div></div>
         {tracking.legs.length > 0 && <JourneyProgress legs={tracking.legs} />}
-        <div className="journey-layout"><section className="journey-panel"><div className="journey-panel-heading"><div><h2>Route progress</h2><p>Open a route leg to review vehicles, milestones, staff, and welfare evidence.</p></div><span>{tracking.legs.length} {tracking.legs.length === 1 ? "leg" : "legs"}</span></div>{tracking.legs.length === 0 ? <p className="journey-empty">No journey progress has been recorded yet.</p> : <ol className="journey-legs">{[...tracking.legs].sort((a, b) => a.sequenceNo - b.sequenceNo).map((leg) => <li key={leg.id}><Leg leg={leg} /></li>)}</ol>}{tracking.deliveryEvents.length > 0 && <div className="journey-delivery"><h3>Delivery events</h3>{tracking.deliveryEvents.map((event) => <p key={event.id}>{event.label} · {dateTime(event.occurredAt)}</p>)}</div>}</section>
-        {role === "CUSTOMER" && <aside className="journey-panel journey-notifications"><h2>Latest updates</h2><p>Automatic in-app notices for this Order.</p>{notificationWarning ? <p className="journey-notification-warning" role="status">{notificationWarning}</p> : notifications.length === 0 ? <p className="journey-empty">No updates yet.</p> : <ul>{notifications.map((notice) => <li key={notice.id}><strong>{notice.title}</strong><p>{notice.message}</p><time>{dateTime(notice.createdAt)}</time></li>)}</ul>}</aside>}</div>
+        <div className="journey-layout"><section className="journey-panel"><div className="journey-panel-heading"><div><h2>Route progress</h2><p>Open a route leg to review vehicles, milestones, staff, and welfare evidence.</p></div><span>{tracking.legs.length} {tracking.legs.length === 1 ? "leg" : "legs"}</span></div>{tracking.legs.length === 0 ? <p className="journey-empty">No journey progress has been recorded yet.</p> : <ol className="journey-legs">{[...tracking.legs].sort((a, b) => a.sequenceNo - b.sequenceNo).map((leg) => <li key={leg.id}><Leg leg={leg} /></li>)}</ol>}{tracking.deliveryEvents.length > 0 && <div className="journey-delivery"><h3>Delivery events</h3>{tracking.deliveryEvents.map((event) => <p key={event.id}>{event.label} · {dateTime(event.occurredAt)}</p>)}</div>}</section></div>
       </>}
     </div>
   </main>;

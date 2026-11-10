@@ -159,6 +159,16 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### Customer Journey tracking visual refresh and notifications (2026-11-11)
+
+- Customer journey tracking uses the established white, cream, burnt-orange,
+  and chestnut palette across the page header, journey overview, route legs,
+  statuses, and details.
+- Customer order notifications are grouped under a bell button and shown in a
+  popover only on activation. The panel closes on outside click, Escape, or its
+  close button. Notification content, data, API requests, and role access are
+  unchanged.
+
 ### Customer dashboard visual refresh — local implementation (2026-11-10)
 
 - Customer dashboard presentation is updated locally to the Human-directed
