@@ -9686,3 +9686,149 @@ button.ts-workflow-step-header:focus-visible {
   .escort-workspace-page .escort-topbar { width: calc(100% - 24px); margin-top: 7px; border-radius: 12px; padding-inline: 10px; }
   .escort-workspace-page .escort-workspace-content { width: min(calc(100% - 28px),1180px); padding-top: 22px; }
 }
+
+/* Customer journey tracking warm theme and notification popover. */
+/* Customer journey tracking follows the established white / chestnut theme. */
+.customer-page.journey-page:not(.logistics-manager-page) {
+  --journey-ink: #352720;
+  --journey-body: #62544c;
+  --journey-muted: #74665d;
+  --journey-border: #e6d9ce;
+  --journey-cream: #fbf6f1;
+  --journey-pale: #f8ece2;
+  --journey-orange: #b45326;
+  --journey-orange-dark: #95421f;
+  background: #fff;
+}
+.customer-page.journey-page:not(.logistics-manager-page) .customer-topbar {
+  width: min(calc(100% - 48px), 1840px);
+  min-height: 68px;
+  margin: 10px auto 0;
+  border: 1px solid var(--journey-orange);
+  border-radius: 16px;
+  padding-inline: 24px;
+  background: #c3652d;
+  box-shadow: 0 5px 16px rgb(83 43 25 / 12%);
+}
+.customer-page.journey-page:not(.logistics-manager-page) .customer-brand,
+.customer-page.journey-page:not(.logistics-manager-page) .customer-topbar-actions,
+.customer-page.journey-page:not(.logistics-manager-page) .customer-link-button { color: #fff8ef; }
+.customer-page.journey-page:not(.logistics-manager-page) .customer-topbar-actions > span { border-color: rgb(255 248 239 / 35%); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-content { width: min(calc(100% - 48px), 1840px); padding: 22px 0 48px; }
+.customer-page.journey-page:not(.logistics-manager-page) .customer-preview-banner { border-color: var(--journey-border); background: #fffaf6; color: var(--journey-body); }
+.customer-page.journey-page:not(.logistics-manager-page) .customer-preview-banner strong { color: #733719; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-breadcrumb { margin-bottom: 14px; color: var(--journey-muted); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-breadcrumb a,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-checkpoints a,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-air-welfare a { color: var(--journey-orange); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-heading {
+  align-items: center;
+  margin-bottom: 14px;
+  border: 1px solid var(--journey-border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  background: linear-gradient(105deg, #fffaf6, var(--journey-pale));
+  box-shadow: 0 6px 20px rgb(83 43 25 / 8%);
+}
+.customer-page.journey-page:not(.logistics-manager-page) .journey-heading h1 { color: var(--journey-ink); font-size: clamp(1.65rem, 3vw, 2.1rem); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-heading p { color: var(--journey-body); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-heading .customer-eyebrow { color: var(--journey-orange); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-heading-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px 12px; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-heading-actions small { width: 100%; color: var(--journey-muted); text-align: right; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-heading-buttons { display: flex; align-items: center; gap: 10px; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-heading .customer-secondary-button { min-height: 38px; border-color: #d8c4b5; color: #733719; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-status { background: var(--journey-pale); color: #733719; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-leg-status:not(.is-completed) { background: var(--journey-pale); color: #733719; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-leg-status.is-upcoming { background: #f2ede8; color: var(--journey-muted); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-overview { border-color: var(--journey-border); background: linear-gradient(135deg, #fffaf6, var(--journey-pale)); box-shadow: 0 6px 20px rgb(83 43 25 / 8%); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-overview-heading h2,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-overview li strong { color: var(--journey-ink); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-overview-heading p,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-overview li > div > span { color: var(--journey-muted); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-overview li.is-in_progress,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-overview li.is-ready { border-color: #d7ad91; box-shadow: inset 3px 0 var(--journey-orange); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-overview-step { background: #f1e8e0; color: var(--journey-body); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-overview .is-in_progress .journey-overview-step,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-overview .is-ready .journey-overview-step { background: var(--journey-orange); color: #fff; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-overview li > div b { color: var(--journey-orange); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-panel,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-state { border-color: var(--journey-border); box-shadow: 0 6px 20px rgb(83 43 25 / 8%); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-panel h2,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-panel h3,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-vehicle-heading strong,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-contact strong,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-state h1 { color: var(--journey-ink); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-panel-heading > span { background: var(--journey-pale); color: #733719; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-leg { border-color: var(--journey-border); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-leg.is-in_progress,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-leg.is-ready { border-color: #d7ad91; box-shadow: inset 3px 0 var(--journey-orange), 0 5px 16px rgb(83 43 25 / 8%); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-leg:hover .journey-leg-heading,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-leg[open] > .journey-leg-heading,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-leg.is-in_progress[open] > .journey-leg-heading,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-leg.is-ready[open] > .journey-leg-heading { background: var(--journey-cream); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-mode { background: var(--journey-pale); color: var(--journey-orange-dark); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-leg-disclosure,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-contact p { color: var(--journey-orange-dark); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-vehicle,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-air-welfare { background: var(--journey-cream); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-contact { border-color: var(--journey-border); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-checkpoints li.is-pending,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-checkpoints time,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-events time,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-vehicle-heading span,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-contact span,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-notifications time { color: var(--journey-muted); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-checkpoints::before { background: #e6d9ce; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-checkpoint-marker { background: #eadfd6; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-events li,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-air-welfare li + li { border-color: var(--journey-border); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-notification-control { position: relative; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-notification-trigger {
+  position: relative;
+  display: inline-grid;
+  width: 40px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid #d8c4b5;
+  border-radius: 9px;
+  background: #fff;
+  color: var(--journey-orange-dark);
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+.customer-page.journey-page:not(.logistics-manager-page) .journey-notification-trigger:hover,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-notification-trigger[aria-expanded="true"] { border-color: #c78c68; background: var(--journey-cream); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-notification-trigger:focus-visible,
+.customer-page.journey-page:not(.logistics-manager-page) .journey-notifications-close:focus-visible { outline: 3px solid #d18b5e; outline-offset: 2px; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-notification-trigger svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-notification-count { position: absolute; top: -6px; right: -6px; min-width: 17px; height: 17px; border: 2px solid #fff; border-radius: 999px; padding: 0 4px; background: var(--journey-orange); color: #fff; font-size: .6rem; font-weight: 750; line-height: 13px; text-align: center; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-notification-indicator { position: absolute; top: 4px; right: 4px; width: 7px; height: 7px; border: 1px solid #fff; border-radius: 50%; background: #b45326; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-notifications { position: absolute; z-index: 30; top: calc(100% + 10px); right: 0; width: min(380px, calc(100vw - 32px)); max-height: min(70vh, 560px); overflow: auto; padding: 18px; border-color: var(--journey-border); border-radius: 12px; box-shadow: 0 16px 44px rgb(53 39 32 / 18%); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-notifications-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-notifications-heading h2 { margin: 0; font-size: 1rem; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-notifications-heading p { margin: 3px 0 0; color: var(--journey-muted); font-size: .78rem; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-notifications-close { display: grid; width: 30px; height: 30px; flex: none; place-items: center; border: 1px solid var(--journey-border); border-radius: 8px; background: #fff; color: var(--journey-body); cursor: pointer; font-size: 1.2rem; line-height: 1; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-notifications li { border-color: var(--journey-border); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-notifications li strong { color: var(--journey-ink); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-notifications li p { margin: 4px 0; color: var(--journey-body); font-size: .85rem; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-notification-warning { border-color: #ecd39a; background: #fff8e8; color: #755414; }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-empty { color: var(--journey-muted); }
+.customer-page.journey-page:not(.logistics-manager-page) .journey-state a { color: var(--journey-orange); }
+@media (max-width: 680px) {
+  .customer-page.journey-page:not(.logistics-manager-page) .customer-topbar { width: calc(100% - 24px); margin-top: 7px; border-radius: 12px; padding-inline: 12px; }
+  .customer-page.journey-page:not(.logistics-manager-page) .journey-content { width: calc(100% - 28px); padding-top: 18px; }
+}
+@media (max-width: 800px) {
+  .customer-page.journey-page:not(.logistics-manager-page) .journey-heading { align-items: flex-start; flex-direction: column; }
+  .customer-page.journey-page:not(.logistics-manager-page) .journey-heading > div:first-child { align-self: stretch; width: 100%; text-align: left; }
+  .customer-page.journey-page:not(.logistics-manager-page) .journey-heading-actions { align-self: stretch; justify-content: flex-start; }
+  .customer-page.journey-page:not(.logistics-manager-page) .journey-heading-actions small { text-align: left; }
+  .customer-page.journey-page:not(.logistics-manager-page) .journey-notifications { position: fixed; top: 82px; right: 14px; width: min(380px, calc(100vw - 28px)); }
+}
+@media (max-width: 540px) {
+  .customer-page.journey-page:not(.logistics-manager-page) .journey-heading { align-items: flex-start; padding: 15px; }
+  .customer-page.journey-page:not(.logistics-manager-page) .journey-heading > div:first-child { align-self: stretch; width: 100%; text-align: left; }
+  .customer-page.journey-page:not(.logistics-manager-page) .journey-heading-actions { justify-content: flex-start; }
+  .customer-page.journey-page:not(.logistics-manager-page) .journey-heading-actions small { text-align: left; }
+  .customer-page.journey-page:not(.logistics-manager-page) .journey-notifications { position: fixed; top: 82px; right: 14px; width: min(380px, calc(100vw - 28px)); }
+}
