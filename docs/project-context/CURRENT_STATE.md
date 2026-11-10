@@ -159,6 +159,13 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### Logistics Manager dashboard overview (2026-11-11)
+
+- Added a standalone `/logistics/dashboard` workspace using the approved warm palette and the dashboard layout reference: live queue counts, current work by queue, direct links to action queues, active journeys, and planned departures.
+- Data is read from existing submitted-order, staff-assignment, route-review, and tracking services. Preview fixtures are limited to preview mode; workflows and APIs are unchanged.
+- Queue counts remain separated by lifecycle source and are not presented as a single total. No trend chart is shown because current APIs do not provide a complete historical series.
+
+
 ### Customer Journey tracking visual refresh and notifications (2026-11-11)
 
 - Customer journey tracking uses the established white, cream, burnt-orange,
