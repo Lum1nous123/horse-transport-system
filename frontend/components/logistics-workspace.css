@@ -188,3 +188,57 @@
   .logistics-manager-page .lm-queue-panel .lm-management-table { min-width: 0; }
   .logistics-manager-page .lm-review-panel .lm-panel-heading { flex-wrap: wrap; }
 }
+
+/* Warm chestnut / cream theme shared across LM queues and detail workspaces. */
+.logistics-manager-page .customer-topbar { width: min(calc(100% - 48px),1840px); min-height: 68px; margin: 10px auto 0; border: 1px solid #b45326; border-radius: 16px; padding-inline: 24px; background: #c3652d; box-shadow: 0 5px 16px rgb(83 43 25 / 12%); color: #fff8ef; }
+.logistics-manager-page .customer-brand,.logistics-manager-page .customer-topbar-actions,.logistics-manager-page .customer-link-button { color: #fff8ef; }
+.logistics-manager-page .customer-topbar-actions > span { border-color: rgb(255 248 239 / 35%); }
+.logistics-manager-page .lm-primary-nav a { border-radius: 9px; color: #fff8ef; }
+.logistics-manager-page .lm-primary-nav a:hover { background: rgb(255 248 239 / 14%); color: #fff; }
+.logistics-manager-page .lm-primary-nav a[aria-current="page"] { background: #fff8ef; color: #733719; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 35%); }
+.logistics-manager-page .logistics-content,.logistics-manager-page .assignment-content,.logistics-manager-page .journey-content { width: min(calc(100% - 48px),1840px); max-width: none; padding: 22px 0 42px; }
+.logistics-manager-page .customer-primary-button { border-color: #a84921; background: #b45326; box-shadow: 0 5px 14px rgb(83 43 25 / 18%); }
+.logistics-manager-page .customer-primary-button:hover:not(:disabled) { border-color: #7f391c; background: #95421f; }
+.logistics-manager-page .customer-primary-button:focus-visible,.logistics-manager-page :is(a,button,input,select,textarea):focus-visible { outline-color: #d18b5e; }
+.logistics-manager-page .customer-secondary-button { border-color: #d8c4b5; color: #4c2a19; }
+.logistics-manager-page .customer-secondary-button:hover:not(:disabled) { border-color: #c78c68; background: #fffaf6; }
+.logistics-manager-page .customer-text-button,.logistics-manager-page .lm-row-link,.logistics-manager-page .lm-scope-note a,.logistics-manager-page .lm-preview-history a { color: #95421f; }
+.logistics-manager-page .customer-preview-banner { border-color: #ead7c8; background: #fffaf6; color: #62544c; }
+.logistics-manager-page .customer-preview-banner strong { color: #733719; }
+.logistics-manager-page .lm-page-heading:is(.lm-assignment-heading,.lm-reviews-heading) { border-color: #e6d2c2; background: linear-gradient(105deg,#fffaf6,#f8ece2); }
+.logistics-manager-page .lm-page-heading:is(.lm-assignment-heading,.lm-reviews-heading) h1 { color: #352720; }
+.logistics-manager-page .lm-page-heading:is(.lm-assignment-heading,.lm-reviews-heading) p { color: #74665d; }
+.logistics-manager-page .lm-page-heading { border-color: #e6d2c2; border-radius: 15px; padding: 18px clamp(18px,3vw,28px); background: linear-gradient(105deg,#fffaf6,#f8ece2); box-shadow: 0 6px 20px rgb(83 43 25 / 8%); }
+.logistics-manager-page .lm-page-heading h1 { color: #352720; }
+.logistics-manager-page .lm-page-heading p { color: #74665d; }
+.logistics-manager-page .lm-heading-icon { background: #f8ece2; color: #95421f; }
+.logistics-manager-page .lm-page-heading:is(.lm-assignment-heading,.lm-reviews-heading)::before { filter: sepia(.72) saturate(.82) hue-rotate(335deg); opacity: .27; }
+.logistics-manager-page .lm-status-tabs [aria-selected="true"] .lm-tab-count { background: #ead7c8; color: #733719; }
+.logistics-manager-page .lm-order-tabs { border-color: #e6d9ce; }
+.logistics-manager-page .lm-order-tabs a { color: #fff8ef; }
+.logistics-manager-page .lm-order-tabs a:hover { color: #fff; }
+.logistics-manager-page .lm-order-tabs a[aria-current="page"] { border-color: #fff8ef; color: #fff; }
+.logistics-manager-page .lm-management-panel,.logistics-manager-page .assignment-queue-section,.logistics-manager-page .assignment-order-summary,.logistics-manager-page .assignment-submit-bar,.logistics-manager-page .assignment-readonly,.logistics-manager-page .route-review-summary,.logistics-manager-page .route-review-audit,.logistics-manager-page .route-review-validation-list,.logistics-manager-page .route-review-staffing-rule,.logistics-manager-page .journey-panel { border-color: #e6d9ce; box-shadow: 0 6px 20px rgb(83 43 25 / 8%); }
+.logistics-manager-page .lm-panel-heading,.logistics-manager-page .assignment-section-heading,.logistics-manager-page .lm-list-toolbar,.logistics-manager-page .lm-management-table th,.logistics-manager-page .assignment-candidate-header,.logistics-manager-page .route-review-audit-table th { background: #fbf6f1; color: #74665d; }
+.logistics-manager-page .lm-panel-heading h2,.logistics-manager-page .assignment-section-heading h2,.logistics-manager-page .route-review-audit-heading h2,.logistics-manager-page .journey-panel h2 { color: #352720; }
+.logistics-manager-page .lm-status-tabs button[aria-selected="true"],.logistics-manager-page .lm-queue-panel .lm-status-tabs button[aria-selected="true"] { border-bottom-color: #b45326; background: #f8ece2; color: #95421f; }
+.logistics-manager-page .lm-tab-count,.logistics-manager-page .assignment-count,.logistics-manager-page .lm-queue-panel .lm-management-table td:first-child strong { background: #f8ece2; color: #733719; }
+.logistics-manager-page .lm-queue-panel .lm-management-table th { background: #fbf6f1; color: #74665d; }
+.logistics-manager-page .lm-queue-panel .lm-management-table .customer-primary-button { border-color: #a84921; background: #b45326; box-shadow: 0 5px 12px rgb(83 43 25 / 16%); }
+.logistics-manager-page .lm-queue-panel .lm-management-table .customer-primary-button:hover { background: #95421f; }
+.logistics-manager-page .lm-review-panel .lm-panel-heading h2,.logistics-manager-page .lm-review-empty h2 { color: #352720; }
+.logistics-manager-page .lm-review-empty { background: linear-gradient(#fffaf6,#fbf6f1); }
+.logistics-manager-page .lm-review-empty-art::before { border-color: #c78c68; box-shadow: 0 8px 16px rgb(83 43 25 / 10%); }
+.logistics-manager-page .lm-review-empty-art::after { border-color: #b45326; box-shadow: 0 22px 0 -1px #fff,0 22px 0 1px #b45326,0 44px 0 -1px #fff,0 44px 0 1px #b45326; }
+.logistics-manager-page .lm-search input:focus-visible,.logistics-manager-page .lm-filter select:focus-visible,.logistics-manager-page .lm-status-tabs button:focus-visible,.logistics-manager-page .lm-primary-nav a:focus-visible { outline-color: #d18b5e; }
+.logistics-manager-page .lm-queue-panel .lm-search input { border-color: #d8c4b5; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='17' height='17' viewBox='0 0 24 24' fill='none' stroke='%2395421f' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m16 16 5 5'/%3E%3C/svg%3E"); }
+.logistics-manager-page .lm-queue-panel .lm-status-tabs button[aria-selected="true"] { border-bottom-color: #b45326; background: #f8ece2; color: #95421f; }
+.logistics-manager-page .lm-queue-panel .lm-management-table td:first-child strong { background: #f8ece2; color: #733719; }
+.logistics-manager-page .lm-queue-panel .lm-management-table td:nth-child(4) small { border-color: #ead7c8; background: #fffaf6; color: #733719; }
+.logistics-manager-page .lm-queue-panel .lm-management-table .customer-primary-button { border-color: #a84921; background: #b45326; }
+.logistics-manager-page .lm-queue-panel .lm-management-table .customer-primary-button:hover { background: #95421f; }
+.logistics-manager-page .lm-review-panel .lm-panel-heading h2 { color: #352720; }
+@media (max-width: 680px) {
+  .logistics-manager-page .customer-topbar { width: calc(100% - 24px); margin-top: 7px; border-radius: 12px; padding-inline: 10px; }
+  .logistics-manager-page .logistics-content,.logistics-manager-page .assignment-content,.logistics-manager-page .journey-content { width: calc(100% - 28px); padding-top: 20px; }
+}

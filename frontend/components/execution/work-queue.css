@@ -1,8 +1,8 @@
 .work-queue-controls { overflow: hidden; margin-bottom: 18px; border: 1px solid #d5e1ee; border-radius: 10px; background: #fff; color: #173850; }
 .work-queue-groups { display: flex; gap: 16px; overflow-x: auto; padding: 0 16px; border-bottom: 1px solid #e1e8f1; }
 .work-queue-groups button { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 8px; min-height: 48px; padding: 8px 2px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #536b82; font: inherit; font-size: .85rem; font-weight: 650; cursor: pointer; }
-.work-queue-groups button[aria-pressed="true"] { border-color: #1d4ed8; color: #1749b2; }
-.work-queue-groups button span { border-radius: 5px; padding: 2px 6px; background: #edf3fc; font-size: .75rem; }
+.work-queue-groups button[aria-pressed="true"] { border-color: #b45326; color: #95421f; }
+.work-queue-groups button span { border-radius: 5px; padding: 2px 6px; background: #f8ece2; color: #733719; font-size: .75rem; }
 .work-queue-controls button:disabled, .work-queue-toolbar :disabled { cursor: wait; opacity: .6; }
 .work-queue-toolbar { display: flex; flex-wrap: wrap; gap: 12px; margin: 0; border: 0; padding: 14px 16px; }
 .work-queue-toolbar label { display: grid; gap: 5px; min-width: 0; color: #596e83; font-size: .75rem; }
@@ -10,7 +10,7 @@
 .work-queue-toolbar input, .work-queue-toolbar select { width: 100%; min-width: 0; min-height: 40px; padding: 8px 10px; border: 1px solid #cddbe9; border-radius: 6px; background: #fff; color: #183b59; font: inherit; font-size: .84rem; }
 .work-queue-date { display: block; line-height: 1.5; font-size: .8rem; font-variant-numeric: tabular-nums; }
 .work-queue-date small { display: block; color: #637a90; font-size: .75rem; }
-.work-queue-controls :focus-visible { outline: 2px solid #1d4ed8; outline-offset: 3px; }
+.work-queue-controls :focus-visible { outline: 2px solid #d18b5e; outline-offset: 3px; }
 @media (max-width: 600px) {
   .work-queue-toolbar { display: grid; grid-template-columns: minmax(0,1fr); }
   .work-queue-toolbar .work-queue-search { min-width: 0; }

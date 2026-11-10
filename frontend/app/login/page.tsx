@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function LoginPage() {
   return (
     <AuthShell
+      variant="warm"
       title="Welcome back"
       description="Sign in to continue managing your horse transport requests."
       prompt="Don't have an account?"

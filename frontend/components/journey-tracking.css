@@ -64,6 +64,21 @@
 @media (max-width: 800px) { .journey-layout { grid-template-columns: 1fr; } .journey-heading { align-items: start; flex-direction: column; } .journey-heading > div:last-child { justify-items: start; } }
 @media (max-width: 540px) { .journey-panel { padding: 16px; } .journey-leg { padding: 14px; } .journey-leg-heading { display: grid; grid-template-columns: 34px minmax(0, 1fr); } .journey-leg-heading > div { min-width: 0; } .journey-leg-heading .journey-leg-status { grid-column: 2; justify-self: start; } .journey-contacts { grid-template-columns: 1fr; } .journey-events, .journey-air-welfare { margin-left: 0; } }
 
+/* Logistics Manager tracking inherits the shared chestnut / cream treatment. */
+.journey-page.logistics-manager-page { background: #c3652d; }
+.journey-page.logistics-manager-page .journey-heading { border-color: #e6d9ce; background: #fff; box-shadow: 0 6px 20px rgb(83 43 25 / 8%); }
+.journey-page.logistics-manager-page .journey-heading h1,.journey-page.logistics-manager-page .journey-overview-heading h2,.journey-page.logistics-manager-page .journey-panel h2 { color: #352720; }
+.journey-page.logistics-manager-page .journey-heading .customer-eyebrow { color: #b45326; }
+.journey-page.logistics-manager-page .journey-heading .customer-secondary-button { border-color: #d8c4b5; color: #733719; }
+.journey-page.logistics-manager-page .journey-status { background: #f8ece2; color: #733719; }
+.journey-page.logistics-manager-page .journey-content { width: min(calc(100% - 48px),1840px); max-width: none; padding: 22px 0 42px; }
+.journey-page.logistics-manager-page .journey-overview { border-color: #e6d9ce; background: linear-gradient(135deg,#fffaf6,#f8ece2); box-shadow: 0 6px 20px rgb(83 43 25 / 8%); }
+.journey-page.logistics-manager-page .journey-overview-step,.journey-page.logistics-manager-page .journey-mode { background: #f8ece2; color: #95421f; }
+.journey-page.logistics-manager-page .journey-panel,.journey-page.logistics-manager-page .journey-leg,.journey-page.logistics-manager-page .journey-contact { border-color: #e6d9ce; }
+.journey-page.logistics-manager-page .journey-vehicle,.journey-page.logistics-manager-page .journey-air-welfare { background: #fbf6f1; }
+.journey-page.logistics-manager-page .journey-contact p,.journey-page.logistics-manager-page .journey-checkpoints a,.journey-page.logistics-manager-page .journey-air-welfare a { color: #95421f; }
+@media (max-width: 680px) { .journey-page.logistics-manager-page .journey-content { width: calc(100% - 28px); padding-top: 20px; } }
+
 /* Operational tracking workspace: compact overview, clear current state, progressive detail. */
 .journey-page.logistics-manager-page .journey-content { width: calc(100% - 44px); max-width: none; padding: 18px 0 48px; }
 .journey-page.logistics-manager-page .journey-breadcrumb { margin-bottom: 14px; font-size: .72rem; }
@@ -164,3 +179,15 @@
   .journey-checkpoints { grid-template-columns: minmax(0, 1fr); }
   .journey-checkpoints::before { top: 10px; right: auto; bottom: 10px; left: 10px; width: 2px; height: auto; }
 }
+
+/* Final palette pass after the operational tracking styles. */
+.journey-page.logistics-manager-page .journey-heading { background: linear-gradient(105deg,#fffaf6,#f8ece2); }
+.journey-page.logistics-manager-page .journey-heading .customer-eyebrow { color: #b45326; }
+.journey-page.logistics-manager-page .journey-heading .customer-secondary-button { border-color: #d8c4b5; color: #733719; }
+.journey-page.logistics-manager-page .journey-status,.journey-page.logistics-manager-page .journey-panel-heading > span { background: #f8ece2; color: #733719; }
+.journey-page.logistics-manager-page .journey-overview { border-color: #e6d9ce; background: linear-gradient(135deg,#fffaf6,#f8ece2); box-shadow: 0 6px 20px rgb(83 43 25 / 8%); }
+.journey-page.logistics-manager-page .journey-overview li.is-in_progress,.journey-page.logistics-manager-page .journey-overview li.is-ready,.journey-page.logistics-manager-page .journey-leg.is-in_progress,.journey-page.logistics-manager-page .journey-leg.is-ready { border-color: #c78c68; box-shadow: inset 3px 0 #b45326,0 5px 16px rgb(83 43 25 / 8%); }
+.journey-page.logistics-manager-page .journey-overview-step,.journey-page.logistics-manager-page .journey-mode { background: #f8ece2; color: #95421f; }
+.journey-page.logistics-manager-page .journey-overview .is-in_progress .journey-overview-step,.journey-page.logistics-manager-page .journey-overview .is-ready .journey-overview-step { background: #b45326; color: #fff; }
+.journey-page.logistics-manager-page .journey-overview li > div b,.journey-page.logistics-manager-page .journey-leg-disclosure { color: #95421f; }
+.journey-page.logistics-manager-page .journey-leg:hover .journey-leg-heading,.journey-page.logistics-manager-page .journey-leg[open] > .journey-leg-heading,.journey-page.logistics-manager-page .journey-leg.is-in_progress[open] > .journey-leg-heading,.journey-page.logistics-manager-page .journey-leg.is-ready[open] > .journey-leg-heading { background: #fbf6f1; }

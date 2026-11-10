@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Horse Transport System FPT"><style>@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Cinzel:wght@600&amp;display=swap');</style><circle cx="100" cy="100" r="96" fill="#3B2416"/>
+<circle cx="100" cy="100" r="88" fill="none" stroke="#C9A46A" stroke-width="1.5"/>
+<g transform="translate(24 8) scale(0.76)"><path d="M62 50 C44 96 60 158 100 158 C140 158 156 96 138 50" fill="none" stroke="#F1E4CC" stroke-width="27" stroke-linejoin="round"/>
+<circle cx="56.4" cy="70.0" r="3.3" fill="#3B2416"/><circle cx="143.6" cy="70.0" r="3.3" fill="#3B2416"/><circle cx="56.1" cy="107.9" r="3.3" fill="#3B2416"/><circle cx="143.9" cy="107.9" r="3.3" fill="#3B2416"/><circle cx="69.3" cy="141.5" r="3.3" fill="#3B2416"/><circle cx="130.7" cy="141.5" r="3.3" fill="#3B2416"/>
+<path d="M88 136 C122 118 78 96 110 70" fill="none" stroke="#C9A46A" stroke-width="2.8" stroke-linecap="round" stroke-dasharray="1 6.5"/>
+<circle cx="88" cy="136" r="4" fill="#C9A46A"/><circle cx="110" cy="70" r="5.2" fill="none" stroke="#C9A46A" stroke-width="2.3"/><circle cx="110" cy="70" r="2" fill="#C9A46A"/></g>
+<text x="99" y="170" text-anchor="middle" font-family="'Cinzel','Cormorant Garamond',Georgia,serif" font-size="25" font-weight="600" letter-spacing="9" fill="#C9A46A">FPT</text></svg>

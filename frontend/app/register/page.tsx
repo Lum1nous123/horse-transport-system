@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function RegisterPage() {
   return (
     <AuthShell
+      variant="warm"
       title="Create your account"
       headingClassName="auth-title-register"
       description="Set up your Customer account to start managing horse transport requests."
