@@ -159,6 +159,12 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### TS and FRC workspace visual refresh (2026-11-11)
+
+- Transport Specialist queues and document-review screens, plus Fleet & Route Coordinator queues and route-plan screens, share the established white, burnt-orange, cream, and chestnut theme. Existing workflows, status meanings, APIs, data, and permissions are unchanged.
+- The shared theme is scoped to TS/FRC workspace page classes; it does not override the separately themed customer journey screen.
+
+
 ### Logistics Manager dashboard overview (2026-11-11)
 
 - Added a standalone `/logistics/dashboard` workspace using the approved warm palette and the dashboard layout reference: live queue counts, current work by queue, direct links to action queues, active journeys, and planned departures.
