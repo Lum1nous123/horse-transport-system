@@ -16,7 +16,8 @@ const raw = (status = "PENDING_LM_REVIEW") => ({
     horseCapacity: 2, orderHorseIds: ["order-horse-id"],
   }] }],
   executionStaffing: { roadVehicleExecutions: status === "APPROVED" ? [{
-    roadLegVehicleId: "allocation-1", driverId: "driver-id", escortId: "escort-id",
+    roadLegVehicleId: "allocation-1", driverId: "driver-id", driverFullName: "Dana Driver", driverEmail: "dana.driver@example.com",
+    escortId: "escort-id", escortFullName: "Eli Escort", escortEmail: "eli.escort@example.com",
   }] : [], airLegExecutions: [] },
   orderStatus: status === "APPROVED" ? "READY_TO_SHIP" : null,
 });
@@ -38,13 +39,15 @@ beforeEach(() => {
 });
 
 describe("real LM review adapter", () => {
-  it("keeps missing names/revision/validation metadata absent and preserves labelled IDs", async () => {
+  it("maps execution staff profiles without exposing IDs as display labels", async () => {
     const result = await service.confirmPlan("order-1");
     expect(result.customerName).toBeUndefined();
     expect(result.revision).toBeUndefined();
     expect(result.validations).toEqual([]);
     expect(result.legs[0].roadVehicles[0]).toMatchObject({
-      horseNames: [], orderHorseIds: ["order-horse-id"], driver: { id: "driver-id", fullName: null },
+      horseNames: [], orderHorseIds: ["order-horse-id"],
+      driver: { id: "driver-id", fullName: "Dana Driver", email: "dana.driver@example.com" },
+      escort: { id: "escort-id", fullName: "Eli Escort", email: "eli.escort@example.com" },
     });
     expect(apiFetch).toHaveBeenCalledWith("/api/v1/lm/route-plan-reviews/orders/order-1/confirm", expect.objectContaining({
       method: "POST", headers: expect.objectContaining({ Authorization: "Bearer test-token" }),

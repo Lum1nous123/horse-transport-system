@@ -53,6 +53,9 @@ class ExecutionStaffingServiceTest {
 		lenient().when(userRepository.findAllByRoleAndStatusOrderByIdAsc(
 				UserRole.ESCORT, UserStatus.ACTIVE)).thenReturn(List.of(
 						user(ESCORT_ONE_ID, UserRole.ESCORT), user(ESCORT_TWO_ID, UserRole.ESCORT)));
+		lenient().when(userRepository.findAllById(any())).thenReturn(List.of(
+				user(DRIVER_ONE_ID, UserRole.DRIVER), user(DRIVER_TWO_ID, UserRole.DRIVER),
+				user(ESCORT_ONE_ID, UserRole.ESCORT), user(ESCORT_TWO_ID, UserRole.ESCORT)));
 		lenient().when(roadVehicleExecutionRepository.countByDriverIdAndStatusIn(any(), any())).thenReturn(0L);
 		lenient().when(roadVehicleExecutionRepository.countByEscortIdAndStatusIn(any(), any())).thenReturn(0L);
 		lenient().when(airLegExecutionRepository.countByEscortIdAndStatusIn(any(), any())).thenReturn(0L);
@@ -96,6 +99,13 @@ class ExecutionStaffingServiceTest {
 		assertThat(response.roadVehicleExecutions())
 				.extracting(ExecutionStaffingResponse.RoadVehicleExecutionResponse::escortId)
 				.containsExactlyInAnyOrder(ESCORT_ONE_ID, ESCORT_TWO_ID);
+		assertThat(response.roadVehicleExecutions())
+				.allSatisfy(execution -> {
+					assertThat(execution.driverFullName()).startsWith("User ");
+					assertThat(execution.driverEmail()).endsWith("@test.local");
+					assertThat(execution.escortFullName()).startsWith("User ");
+					assertThat(execution.escortEmail()).endsWith("@test.local");
+				});
 		assertThat(response.airLegExecutions()).isEmpty();
 	}
 
@@ -109,6 +119,7 @@ class ExecutionStaffingServiceTest {
 		assertThat(response.roadVehicleExecutions()).isEmpty();
 		assertThat(response.airLegExecutions()).hasSize(1);
 		assertThat(response.airLegExecutions().get(0).escortId()).isEqualTo(ESCORT_ONE_ID);
+		assertThat(response.airLegExecutions().get(0).escortEmail()).isEqualTo(ESCORT_ONE_ID + "@test.local");
 	}
 
 	@Test

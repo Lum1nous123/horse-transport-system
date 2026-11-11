@@ -43,7 +43,9 @@ describe("LM review decisions", () => {
     expect(screen.getByText(/Saved decision response from this session/)).toBeVisible();
     expect(screen.getByRole("button", { name: "Refresh" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "View details" }));
-    expect(screen.getByText("Staff ID: driver-id")).toBeVisible();
+    expect(screen.getByText("Dana Driver")).toBeVisible();
+    expect(screen.getByText("Username / email: dana.driver@example.com")).toBeVisible();
+    expect(screen.queryByText(/Staff ID:/)).not.toBeInTheDocument();
     expect(screen.getByText(/Order Horse IDs: order-horse-1/)).toBeVisible();
   });
 
