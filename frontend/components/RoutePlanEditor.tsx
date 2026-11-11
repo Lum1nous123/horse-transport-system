@@ -70,6 +70,7 @@ export default function RoutePlanEditor({ orderId, service }: Props) {
   const [confirmSubmit, setConfirmSubmit] = useState(false);
   const [roadLegId, setRoadLegId] = useState<string | null>(null);
   const [roadSetupDirty, setRoadSetupDirty] = useState(false);
+  const [showAdditionalDetails, setShowAdditionalDetails] = useState(false);
 
   const dirty = showForm && JSON.stringify(form) !== JSON.stringify(initialForm);
   const selectedIssues = useMemo(() => plan?.validationIssues.filter((issue) => !issue.legId || issue.legId === editingId) ?? [], [editingId, plan]);
@@ -97,10 +98,10 @@ export default function RoutePlanEditor({ orderId, service }: Props) {
 
   function canLeaveDraft() { return !dirty || window.confirm("Discard the unsaved changes to this leg?"); }
   function canLeaveRoadSetup() { return !roadSetupDirty || window.confirm("Discard unsaved ROAD setup changes?"); }
-  function beginAdd() { if (!canLeaveDraft() || !canLeaveRoadSetup()) return; setRoadLegId(null); setEditingId(null); setForm(emptyForm); setInitialForm(emptyForm); setShowForm(true); setFeedback(""); }
-  function beginEdit(leg: RoutePlanLeg) { if (!canLeaveDraft() || !canLeaveRoadSetup()) return; setRoadLegId(null); const next = formFor(leg); setEditingId(leg.id); setForm(next); setInitialForm(next); setShowForm(true); setFeedback(""); }
+  function beginAdd() { if (!canLeaveDraft() || !canLeaveRoadSetup()) return; setRoadLegId(null); setEditingId(null); setForm(emptyForm); setInitialForm(emptyForm); setShowAdditionalDetails(false); setShowForm(true); setFeedback(""); }
+  function beginEdit(leg: RoutePlanLeg) { if (!canLeaveDraft() || !canLeaveRoadSetup()) return; setRoadLegId(null); const next = formFor(leg); setEditingId(leg.id); setForm(next); setInitialForm(next); setShowAdditionalDetails(Boolean(next.equipmentDetails || next.notes)); setShowForm(true); setFeedback(""); }
   function toggleRoadSetup(leg: RoutePlanLeg) { if (roadLegId !== leg.id && !canLeaveRoadSetup()) return; if (!canLeaveDraft()) return; closeForm(); setRoadSetupDirty(false); setRoadLegId((current) => current === leg.id ? null : leg.id); }
-  function closeForm() { setShowForm(false); setEditingId(null); setForm(emptyForm); setInitialForm(emptyForm); }
+  function closeForm() { setShowForm(false); setEditingId(null); setForm(emptyForm); setInitialForm(emptyForm); setShowAdditionalDetails(false); }
   function update<K extends keyof LegForm>(key: K, value: LegForm[K]) { setForm((current) => ({ ...current, [key]: value })); }
   function inputFromForm(): RouteLegInput {
     return {
@@ -141,11 +142,11 @@ export default function RoutePlanEditor({ orderId, service }: Props) {
   return (
     <section className="route-plan-shell" aria-labelledby="route-plan-title">
       <header className="route-plan-heading">
-        <div><span>ROUTE PLAN</span><div><h2 id="route-plan-title">Ordered journey legs</h2><span className={`route-plan-status is-${plan.status.toLowerCase()}`}>{statusLabel(plan.status)}</span></div><p>Build the journey in travel order. Saved server validation remains authoritative.</p></div>
+        <div><span>ROUTE PLAN</span><div><h2 id="route-plan-title">Ordered journey legs</h2><span className={`route-plan-status is-${plan.status.toLowerCase()}`}>{statusLabel(plan.status)}</span></div><p>Build each leg in travel order.</p></div>
         {!plan.readOnly && <button className="customer-primary-button" type="button" onClick={beginAdd} disabled={busy}>+ Add leg</button>}
       </header>
 
-      {plan.readOnly && <div className="route-plan-lock" role="status"><span aria-hidden="true">&#128274;</span><div><strong>This Route Plan is read-only</strong><p>{plan.status === "APPROVED" ? "The approved result is permanently locked." : "Changes are locked while Logistics Manager review is pending."}</p></div></div>}
+      {plan.readOnly && <div className="route-plan-lock" role="status"><span aria-hidden="true">&#128274;</span><div><strong>Route Plan locked</strong><p>{plan.status === "APPROVED" ? "Approved plans cannot be changed." : "Waiting for Logistics Manager review."}</p></div></div>}
       {error && <div className="customer-alert route-plan-alert" role="alert"><span>{error}</span><button type="button" onClick={() => void readBack()}>Refresh saved plan</button></div>}
       {feedback && <p className="customer-feedback" role="status">{feedback}</p>}
 
@@ -162,19 +163,18 @@ export default function RoutePlanEditor({ orderId, service }: Props) {
             <div className="route-plan-empty"><span aria-hidden="true">&#8644;</span><h3>No journey leg yet</h3><p>Add the first leg to build the journey and validate the plan.</p>{!plan.readOnly && <button className="customer-primary-button" type="button" onClick={beginAdd}>Add first leg</button>}</div>
           ) : (
             <table className="route-plan-table">
-              <thead><tr><th scope="col">#</th><th scope="col">Type</th><th scope="col">Route</th><th scope="col">Departure</th><th scope="col">Arrival</th><th scope="col">AIR details</th>{!plan.readOnly && <th scope="col"><span className="sr-only">Actions</span></th>}</tr></thead>
+              <thead><tr><th scope="col">#</th><th scope="col">Type</th><th scope="col">Route</th><th scope="col">Schedule</th><th scope="col">Setup / details</th>{!plan.readOnly && <th scope="col"><span className="sr-only">Actions</span></th>}</tr></thead>
               <tbody>{plan.legs.map((leg, index) => (
                 <Fragment key={leg.id}>
                 <tr className={editingId === leg.id || roadLegId === leg.id ? "is-selected" : undefined}>
                   <td data-label="Sequence"><span className="route-plan-sequence">{leg.sequenceNo}</span></td>
                   <td data-label="Type"><span className={`route-leg-type is-${leg.legType.toLowerCase()}`}>{leg.legType}</span></td>
                   <td data-label="Route"><strong>{leg.origin}</strong><span aria-hidden="true">&#8594;</span><strong>{leg.destination}</strong></td>
-                  <td data-label="Departure"><span>{formatDateTime(leg.plannedDepartureAt)}</span></td>
-                  <td data-label="Arrival"><span>{formatDateTime(leg.plannedArrivalAt)}</span></td>
-                  <td data-label={leg.legType === "AIR" ? "AIR details" : "ROAD setup"}>{leg.legType === "AIR" ? <><span>{leg.airProviderName || "Not provided"}</span><small>{leg.airReference || "No reference"}{leg.airCapacityHorses ? ` · ${leg.airCapacityHorses} horses` : ""}</small></> : <button className="road-setup-trigger" type="button" aria-expanded={roadLegId === leg.id} onClick={() => toggleRoadSetup(leg)}>{roadLegId === leg.id ? "Close setup" : plan.readOnly ? "View ROAD" : "Configure ROAD"}</button>}</td>
+                  <td data-label="Schedule"><div className="route-plan-schedule"><span><small>Depart</small>{formatDateTime(leg.plannedDepartureAt)}</span><span><small>Arrive</small>{formatDateTime(leg.plannedArrivalAt)}</span></div></td>
+                  <td data-label="Setup / details">{leg.legType === "AIR" ? <><span>{leg.airProviderName || "Not provided"}</span><small>{leg.airReference || "No reference"}{leg.airCapacityHorses ? ` · ${leg.airCapacityHorses} horses` : ""}</small></> : <button className="road-setup-trigger" type="button" aria-expanded={roadLegId === leg.id} onClick={() => toggleRoadSetup(leg)}>{roadLegId === leg.id ? "Close setup" : plan.readOnly ? "View ROAD" : "Configure ROAD"}</button>}</td>
                   {!plan.readOnly && <td data-label="Actions"><div className="route-plan-row-actions"><button type="button" title="Move leg up" disabled={busy || index === 0} onClick={() => void moveLeg(leg, "UP")}>&#8593;</button><button type="button" title="Move leg down" disabled={busy || index === plan.legs.length - 1} onClick={() => void moveLeg(leg, "DOWN")}>&#8595;</button><button type="button" onClick={() => beginEdit(leg)}>Edit</button><button className="is-danger" type="button" onClick={() => setPendingDelete(leg)}>Delete</button></div></td>}
                 </tr>
-                {roadLegId === leg.id && <tr className="road-setup-row"><td colSpan={plan.readOnly ? 6 : 7}><RoadLegSetup orderId={orderId} leg={leg} service={service} readOnly={plan.readOnly} onDirtyChange={setRoadSetupDirty} onClose={() => { setRoadSetupDirty(false); setRoadLegId(null); }} /></td></tr>}
+                {roadLegId === leg.id && <tr className="road-setup-row"><td colSpan={plan.readOnly ? 5 : 6}><RoadLegSetup orderId={orderId} leg={leg} service={service} readOnly={plan.readOnly} onDirtyChange={setRoadSetupDirty} onClose={() => { setRoadSetupDirty(false); setRoadLegId(null); }} /></td></tr>}
                 </Fragment>
               ))}</tbody>
             </table>
@@ -191,8 +191,8 @@ export default function RoutePlanEditor({ orderId, service }: Props) {
               <label>Destination<input required value={form.destination} onChange={(event) => update("destination", event.target.value)} /></label>
               <div className="route-plan-form-row"><label>Departure<input required type="datetime-local" value={form.plannedDepartureAt} onChange={(event) => update("plannedDepartureAt", event.target.value)} /></label><label>Arrival<input required type="datetime-local" value={form.plannedArrivalAt} onChange={(event) => update("plannedArrivalAt", event.target.value)} /></label></div>
               {form.legType === "AIR" && <div className="route-plan-air-fields"><span>AIR DETAILS</span><label>Provider<input required value={form.airProviderName} onChange={(event) => update("airProviderName", event.target.value)} /></label><label>Flight / booking reference<input required value={form.airReference} onChange={(event) => update("airReference", event.target.value)} /></label><label>Horse capacity<input required min="1" type="number" value={form.airCapacityHorses} onChange={(event) => update("airCapacityHorses", event.target.value)} /></label></div>}
-              <label>Equipment details<textarea rows={2} value={form.equipmentDetails} onChange={(event) => update("equipmentDetails", event.target.value)} /></label>
-              <label>Notes <span>(optional)</span><textarea rows={3} value={form.notes} onChange={(event) => update("notes", event.target.value)} /></label>
+              <button className="route-plan-additional-toggle" type="button" aria-expanded={showAdditionalDetails} onClick={() => setShowAdditionalDetails((current) => !current)}><span>Additional details</span><span aria-hidden="true">{showAdditionalDetails ? "−" : "+"}</span></button>
+              {showAdditionalDetails && <div className="route-plan-additional-fields"><label>Equipment details <span>(optional)</span><textarea rows={2} value={form.equipmentDetails} onChange={(event) => update("equipmentDetails", event.target.value)} /></label><label>Notes <span>(optional)</span><textarea rows={3} value={form.notes} onChange={(event) => update("notes", event.target.value)} /></label></div>}
               <div className="route-plan-form-actions"><button className="customer-secondary-button" type="button" onClick={closeForm}>Cancel</button><button className="customer-primary-button" type="submit" disabled={busy}>{busy ? "Saving..." : "Save leg"}</button></div>
             </form>
           </aside>
@@ -200,7 +200,7 @@ export default function RoutePlanEditor({ orderId, service }: Props) {
       </div>
 
       <footer className="route-plan-footer">
-        <div><strong>Revision {plan.revision}</strong><span>{plan.updatedAt ? `Last saved ${formatDateTime(plan.updatedAt)}` : "Not saved yet"}</span></div>
+        <div><span>{plan.updatedAt ? `Last saved ${formatDateTime(plan.updatedAt)}` : "Not saved yet"}</span></div>
         {!plan.readOnly && <div><button className="customer-secondary-button" type="button" disabled={busy} onClick={() => void validatePlan()}>{busy ? "Working..." : "Validate plan"}</button><button className="customer-primary-button" type="button" disabled={busy || plan.legs.length === 0} onClick={() => setConfirmSubmit(true)}>{plan.status === "RETURNED" ? "Resubmit for review" : "Submit for review"}</button></div>}
       </footer>
 

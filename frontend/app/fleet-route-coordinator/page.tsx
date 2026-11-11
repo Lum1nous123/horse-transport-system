@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import FleetRouteCoordinatorWorkspaceFrame from "@/components/FleetRouteCoordinatorWorkspaceFrame";
-import { FleetPlanningIllustration, FleetSummaryIllustration } from "@/components/FleetRouteArtwork";
+import { FleetPlanningIllustration } from "@/components/FleetRouteArtwork";
 import TransportSpecialistIcon from "@/components/TransportSpecialistIcon";
 import {
   getFleetRouteCoordinatorService,
@@ -11,6 +11,8 @@ import {
   type RoutePlanStatus,
 } from "@/lib/fleet-route-coordinator/service";
 import { useFleetRouteCoordinatorAccess } from "@/lib/fleet-route-coordinator/use-coordinator-access";
+
+type QueueFilter = "ALL" | "NOT_STARTED" | "DRAFT" | "RETURNED";
 
 function formatDateTime(value: string) {
   const date = new Date(value);
@@ -38,6 +40,8 @@ export default function FleetRouteCoordinatorPage() {
   const [orders, setOrders] = useState<AssignedCoordinatorOrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [filter, setFilter] = useState<QueueFilter>("ALL");
+  const [query, setQuery] = useState("");
 
   const loadQueue = useCallback(async () => {
     setLoading(true);
@@ -60,10 +64,19 @@ export default function FleetRouteCoordinatorPage() {
   }, [accessState, loadQueue]);
 
   const counts = useMemo(() => ({
+    all: orders.length,
     notStarted: orders.filter((order) => order.routePlanStatus === "NOT_STARTED").length,
     draft: orders.filter((order) => order.routePlanStatus === "DRAFT").length,
     returned: orders.filter((order) => order.routePlanStatus === "RETURNED").length,
   }), [orders]);
+  const visibleOrders = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    const priority: Record<RoutePlanStatus, number> = { RETURNED: 0, DRAFT: 1, NOT_STARTED: 2, PENDING_LM_REVIEW: 3, APPROVED: 4 };
+    return orders
+      .filter((order) => filter === "ALL" || order.routePlanStatus === filter)
+      .filter((order) => !normalizedQuery || [order.orderCode, order.origin, order.destination].some((value) => value.toLowerCase().includes(normalizedQuery)))
+      .sort((left, right) => priority[left.routePlanStatus] - priority[right.routePlanStatus] || new Date(left.requestedDepartureAt).getTime() - new Date(right.requestedDepartureAt).getTime());
+  }, [filter, orders, query]);
 
   if (accessState === "checking") {
     return <main className="customer-page assignment-access-state"><p role="status">Checking Fleet &amp; Route Coordinator access...</p></main>;
@@ -85,9 +98,8 @@ export default function FleetRouteCoordinatorPage() {
     <FleetRouteCoordinatorWorkspaceFrame preview={preview} previewCoordinatorId={previewCoordinatorId} previewCoordinatorName={previewCoordinatorName}>
       <header className="frc-page-heading">
         <div className="frc-hero-copy">
-          <span className="frc-page-context">Fleet operations</span>
           <h1>Route planning queue</h1>
-          <p>Review the Orders assigned to you and move each transport into route planning.</p>
+          <p>Prioritize assigned Orders and continue route planning.</p>
           <span className="frc-hero-accent" aria-hidden="true" />
         </div>
         <FleetPlanningIllustration />
@@ -107,45 +119,46 @@ export default function FleetRouteCoordinatorPage() {
           <div><h2>No Orders need route planning</h2><p>New assigned Orders will appear after their Remaining Balance is confirmed as paid.</p></div>
         </section>
       ) : !error && (
-        <>
-          <dl className="frc-queue-summary" aria-label="Actionable planning Order summary">
-            <div><span className="frc-summary-icon is-new"><FleetSummaryIllustration kind="new" /></span><span><dt>Not started</dt><small>Ready for a first plan</small></span><dd>{counts.notStarted}</dd></div>
-            <div><span className="frc-summary-icon is-draft"><FleetSummaryIllustration kind="draft" /></span><span><dt>Draft plans</dt><small>Work already in progress</small></span><dd>{counts.draft}</dd></div>
-            <div className="is-returned"><span className="frc-summary-icon is-returned"><FleetSummaryIllustration kind="returned" /></span><span><dt>Returned by LM</dt><small>Changes need attention</small></span><dd>{counts.returned}</dd></div>
-          </dl>
-
-          <section className="frc-queue-panel" aria-labelledby="frc-queue-title">
+        <section className="frc-queue-panel" aria-labelledby="frc-queue-title">
             <div className="frc-queue-panel-heading">
-              <div className="frc-panel-title"><TransportSpecialistIcon name="truck" /><div><h2 id="frc-queue-title">Assigned Orders</h2><p>Actionable work only — locked plans stay out of this queue.</p></div></div>
-              <span><b>{orders.length}</b> {orders.length === 1 ? "Order" : "Orders"}</span>
+              <div className="frc-panel-title"><TransportSpecialistIcon name="truck" /><div><h2 id="frc-queue-title">Assigned Orders</h2><p>Returned work appears first, followed by drafts and new plans.</p></div></div>
+              <span><b>{visibleOrders.length}</b>{visibleOrders.length !== orders.length ? ` / ${orders.length}` : ""} {orders.length === 1 ? "Order" : "Orders"}</span>
             </div>
-            <div className="frc-table-wrap">
+            <div className="frc-queue-toolbar">
+              <div className="frc-queue-filters" role="group" aria-label="Filter planning Orders by status">
+                {([
+                  ["ALL", "All", counts.all],
+                  ["NOT_STARTED", "Not started", counts.notStarted],
+                  ["DRAFT", "Draft", counts.draft],
+                  ["RETURNED", "Returned", counts.returned],
+                ] as const).map(([value, label, count]) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => setFilter(value)}><span>{label}</span><b>{count}</b></button>)}
+              </div>
+              <label className="frc-queue-search"><span className="sr-only">Search assigned Orders</span><input type="search" autoComplete="off" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search order or route" /></label>
+            </div>
+            {visibleOrders.length === 0 ? <div className="frc-filter-empty"><h3>No matching Orders</h3><p>Try another search or status filter.</p><button className="customer-secondary-button" type="button" onClick={() => { setFilter("ALL"); setQuery(""); }}>Clear filters</button></div> : <div className="frc-table-wrap">
               <table className="frc-planning-table">
-                <thead><tr><th scope="col">Order</th><th scope="col">Route</th><th scope="col">Departure</th><th scope="col">Horses</th><th scope="col">Mode</th><th scope="col">Plan status</th><th scope="col">Updated</th><th scope="col"><span className="sr-only">Action</span></th></tr></thead>
+                <thead><tr><th scope="col">Order</th><th scope="col">Route</th><th scope="col">Departure</th><th scope="col">Horses</th><th scope="col">Mode</th><th scope="col">Plan status</th><th scope="col"><span className="sr-only">Action</span></th></tr></thead>
                 <tbody>
-                  {orders.map((order) => {
+                  {visibleOrders.map((order) => {
                     const previewSuffix = preview ? `?preview=1&coordinatorId=${encodeURIComponent(previewCoordinatorId)}` : "";
                     const departure = formatDateTime(order.requestedDepartureAt);
                     const updated = order.routePlanUpdatedAt ? formatDateTime(order.routePlanUpdatedAt) : null;
                     return (
                       <tr key={order.id}>
-                        <td data-label="Order"><strong>{order.orderCode}</strong><small>Transport Order</small></td>
+                        <td data-label="Order"><strong>{order.orderCode}</strong></td>
                         <td data-label="Route"><div className="frc-route-cell"><span aria-hidden="true"><i /><i /></span><strong><b>{order.origin}</b><b>{order.destination}</b></strong></div></td>
                         <td data-label="Departure"><time dateTime={order.requestedDepartureAt}><strong>{departure.date}</strong><small>{departure.time}</small></time></td>
                         <td data-label="Horses"><strong className="frc-number-cell">{order.horseCount}</strong></td>
                         <td data-label="Mode"><span className="frc-mode-pill">{order.transportMode}</span></td>
-                        <td data-label="Plan status"><span className={`frc-plan-status is-${order.routePlanStatus.toLowerCase()}`}>{planStatusLabel(order.routePlanStatus)}</span>{order.returnReason && <small>{order.returnReason}</small>}</td>
-                        <td data-label="Updated">{updated ? <time dateTime={order.routePlanUpdatedAt ?? undefined}><strong>{updated.date}</strong><small>{updated.time}</small></time> : <span className="frc-muted-value">Not started</span>}</td>
+                        <td data-label="Plan status"><span className={`frc-plan-status is-${order.routePlanStatus.toLowerCase()}`}>{planStatusLabel(order.routePlanStatus)}</span>{order.returnReason ? <small>{order.returnReason}</small> : updated ? <small>Updated {updated.date} · {updated.time}</small> : null}</td>
                         <td data-label="Action"><Link className="frc-open-order" href={`/fleet-route-coordinator/orders/${order.id}${previewSuffix}`}><span>{actionLabel(order.routePlanStatus)}</span><span aria-hidden="true">→</span></Link></td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
-            </div>
-            <p className="frc-queue-note"><span aria-hidden="true">i</span> Plans awaiting Logistics Manager review and approved plans are read-only and do not appear here.</p>
+            </div>}
           </section>
-        </>
       )}
     </FleetRouteCoordinatorWorkspaceFrame>
   );

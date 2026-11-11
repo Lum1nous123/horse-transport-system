@@ -60,6 +60,7 @@ export default function RoadLegSetup({ orderId, leg, service, readOnly, onClose,
   const [tab, setTab] = useState<"allocations" | "checkpoints">("allocations");
   const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>([]);
   const [horseAssignments, setHorseAssignments] = useState<Record<string, string>>({});
+  const [vehicleQuery, setVehicleQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -105,6 +106,15 @@ export default function RoadLegSetup({ orderId, leg, service, readOnly, onClose,
 
   const assignedCount = setup?.horses.filter((horse) => Boolean(horseAssignments[horse.orderHorseId])).length ?? 0;
   const capacityUse = useMemo(() => Object.fromEntries(selectedVehicleIds.map((vehicleId) => [vehicleId, Object.values(horseAssignments).filter((assigned) => assigned === vehicleId).length])), [horseAssignments, selectedVehicleIds]);
+  const visibleCandidates = useMemo(() => {
+    if (!setup) return [];
+    const query = vehicleQuery.trim().toLowerCase();
+    return setup.candidates
+      .map((candidate, index) => ({ candidate, index }))
+      .filter(({ candidate }) => !query || [candidate.plateNumber, candidate.vehicleName, candidate.vehicleType].some((value) => value.toLowerCase().includes(query)))
+      .sort((left, right) => Number(right.candidate.selectable) - Number(left.candidate.selectable) || left.index - right.index)
+      .map(({ candidate }) => candidate);
+  }, [setup, vehicleQuery]);
 
   function safeClose() { if (!dirty || window.confirm("Discard unsaved ROAD setup changes?")) onClose(); }
   function switchTab(next: "allocations" | "checkpoints") {
@@ -185,10 +195,11 @@ export default function RoadLegSetup({ orderId, leg, service, readOnly, onClose,
         <div className="road-allocation-grid">
           <section aria-labelledby={`road-vehicles-${leg.id}`}>
             <div className="road-section-heading"><h4 id={`road-vehicles-${leg.id}`}>Vehicle candidates</h4><span>{setup.candidates.filter((candidate) => candidate.selectable).length} available</span></div>
+            {setup.candidates.length > 0 && <label className="road-vehicle-search"><span className="sr-only">Search Vehicle candidates</span><input type="search" autoComplete="off" value={vehicleQuery} onChange={(event) => setVehicleQuery(event.target.value)} placeholder="Search plate, name or type" /></label>}
             {setup.candidates.length === 0 ? <div className="road-simple-empty"><strong>No Vehicle candidates</strong><p>Refresh when candidate results are available.</p></div> : (
-              <div className="road-table-scroll"><table className="road-setup-table"><thead><tr><th scope="col">Select</th><th scope="col">Vehicle</th><th scope="col">Capacity</th><th scope="col">Status</th></tr></thead><tbody>{setup.candidates.map((candidate) => {
+              visibleCandidates.length === 0 ? <div className="road-simple-empty road-filter-empty"><strong>No matching Vehicles</strong><p>Try another plate, name or type.</p><button type="button" onClick={() => setVehicleQuery("")}>Clear search</button></div> : <div className="road-table-scroll road-vehicle-scroll"><table className="road-setup-table road-vehicle-table"><thead><tr><th scope="col">Select</th><th scope="col">Vehicle</th><th scope="col">Capacity</th><th scope="col">Status</th></tr></thead><tbody>{visibleCandidates.map((candidate) => {
                 const checked = selectedVehicleIds.includes(candidate.id);
-                return <tr key={candidate.id} className={!candidate.selectable ? "is-unavailable" : checked ? "is-selected" : undefined}><td><input aria-label={`Select ${candidate.plateNumber}`} type="checkbox" checked={checked} disabled={setup.readOnly || readOnly || busy || !candidate.selectable} onChange={() => toggleVehicle(candidate.id)} /></td><td><strong>{candidate.plateNumber}</strong><small>{candidate.vehicleName} · {candidate.vehicleType}</small></td><td>{candidate.horseCapacity} horses</td><td><span className={candidate.selectable ? "road-status is-available" : "road-status is-unavailable"}>{candidate.selectable ? "Available" : "Unavailable"}</span>{candidate.unavailableReason && <small>{candidate.unavailableReason}</small>}</td></tr>;
+                return <tr key={candidate.id} className={!candidate.selectable ? "is-unavailable" : checked ? "is-selected" : undefined}><td><input aria-label={`Select ${candidate.plateNumber}`} type="checkbox" checked={checked} disabled={setup.readOnly || readOnly || busy || !candidate.selectable} onChange={() => toggleVehicle(candidate.id)} /></td><td><strong>{candidate.plateNumber}</strong><small>{candidate.vehicleName} · {candidate.vehicleType}</small></td><td>{candidate.horseCapacity} horses</td><td><span className={candidate.selectable ? "road-status is-available" : "road-status is-unavailable"}>{candidate.selectable ? "Available" : "Unavailable"}</span>{candidate.unavailableReason && <small className="road-unavailable-reason" title={candidate.unavailableReason}>{candidate.unavailableReason}</small>}</td></tr>;
               })}</tbody></table></div>
             )}
           </section>
@@ -196,10 +207,11 @@ export default function RoadLegSetup({ orderId, leg, service, readOnly, onClose,
           <section aria-labelledby={`road-horses-${leg.id}`}>
             <div className="road-section-heading"><h4 id={`road-horses-${leg.id}`}>Horses</h4><span className={assignedCount === setup.horses.length && setup.horses.length > 0 ? "is-complete" : ""}>{assignedCount}/{setup.horses.length} allocated</span></div>
             {setup.horses.length === 0 ? <div className="road-simple-empty"><strong>No Horses found</strong><p>The Order Horse list is unavailable.</p></div> : (
-              <div className="road-table-scroll"><table className="road-setup-table road-horse-table"><thead><tr><th scope="col">Horse</th><th scope="col">Vehicle</th><th scope="col">Capacity</th></tr></thead><tbody>{setup.horses.map((horse) => {
+              <div className="road-table-scroll road-horse-scroll"><table className="road-setup-table road-horse-table"><thead><tr><th scope="col">Horse</th><th scope="col">Vehicle</th><th scope="col">Capacity</th></tr></thead><tbody>{setup.horses.map((horse) => {
                 const vehicleId = horseAssignments[horse.orderHorseId] ?? "";
                 const vehicle = setup.candidates.find((candidate) => candidate.id === vehicleId);
-                return <tr key={horse.orderHorseId}><td><strong>{horse.name}</strong><small>{horse.microchipId}{horse.travelNotes ? ` · ${horse.travelNotes}` : ""}</small></td><td><select aria-label={`Vehicle for ${horse.name}`} value={vehicleId} disabled={setup.readOnly || readOnly || busy} onChange={(event) => setHorseAssignments((current) => ({ ...current, [horse.orderHorseId]: event.target.value }))}><option value="">Select Vehicle</option>{setup.candidates.filter((candidate) => selectedVehicleIds.includes(candidate.id)).map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.plateNumber} · {candidate.vehicleName}</option>)}</select></td><td>{vehicle ? `${capacityUse[vehicle.id] ?? 0}/${vehicle.horseCapacity}` : "—"}</td></tr>;
+                const usedCapacity = vehicle ? capacityUse[vehicle.id] ?? 0 : 0;
+                return <tr key={horse.orderHorseId} className={vehicle ? undefined : "is-unassigned"}><td data-label="Horse"><div className="road-horse-identity"><span aria-hidden="true">H</span><div><strong>{horse.name}</strong><small>Microchip: {horse.microchipId}{horse.travelNotes ? ` · ${horse.travelNotes}` : ""}</small></div></div></td><td data-label="Vehicle"><select aria-label={`Vehicle for ${horse.name}`} value={vehicleId} disabled={setup.readOnly || readOnly || busy} onChange={(event) => setHorseAssignments((current) => ({ ...current, [horse.orderHorseId]: event.target.value }))}><option value="">Select Vehicle</option>{setup.candidates.filter((candidate) => selectedVehicleIds.includes(candidate.id)).map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.plateNumber} · {candidate.vehicleName}</option>)}</select></td><td data-label="Capacity"><span className={`road-capacity-badge${vehicle && usedCapacity > vehicle.horseCapacity ? " is-over" : ""}`}>{vehicle ? `${usedCapacity}/${vehicle.horseCapacity}` : "Unassigned"}</span></td></tr>;
               })}</tbody></table></div>
             )}
           </section>

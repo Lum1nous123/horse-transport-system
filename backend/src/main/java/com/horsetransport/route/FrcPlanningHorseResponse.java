@@ -4,5 +4,7 @@ import java.util.UUID;
 
 public record FrcPlanningHorseResponse(
 		UUID orderHorseId,
-		UUID horseId) {
+		UUID horseId,
+		String horseName,
+		String microchipId) {
 }

@@ -33,7 +33,7 @@ const orders: MockCoordinatorOrder[] = [
   },
   {
     id: "order-2074", orderCode: "ORD-2074", origin: "Lexington, United States", destination: "Brussels, Belgium",
-    requestedDepartureAt: "2026-10-28T09:00:00+07:00", horseCount: 4, transportMode: "COMBINED",
+    requestedDepartureAt: "2026-10-28T09:00:00+07:00", horseCount: 8, transportMode: "COMBINED",
     routePlanStatus: "DRAFT", routePlanUpdatedAt: "2026-10-10T15:26:00+07:00", returnReason: null,
     customerName: "Morgan Taylor", assignedTransportSpecialistName: "Daniel Kim",
     documentFinalConfirmedAt: "2026-10-08T16:30:00+07:00", remainingBalancePaidAt: "2026-10-09T10:05:00+07:00",
@@ -55,7 +55,7 @@ const planStore: Record<string, RoutePlanDetail> = {
     updatedAt: "2026-10-10T15:26:00+07:00", returnedReason: null, readOnly: false, validationIssues: [],
     legs: [
       { id: "leg-2074-1", sequenceNo: 1, legType: "ROAD", origin: "Lexington, United States", destination: "Chicago O'Hare Cargo Terminal", plannedDepartureAt: "2026-10-28T09:00:00-04:00", plannedArrivalAt: "2026-10-28T16:30:00-05:00", airProviderName: null, airReference: null, airCapacityHorses: null, equipmentDetails: "Climate-controlled horse van", notes: "Rest stop planned after four hours." },
-      { id: "leg-2074-2", sequenceNo: 2, legType: "AIR", origin: "Chicago O'Hare Cargo Terminal", destination: "Brussels Airport Cargo", plannedDepartureAt: "2026-10-29T01:15:00-05:00", plannedArrivalAt: "2026-10-29T15:10:00+01:00", airProviderName: "SkyEquine Cargo", airReference: "SE-4821", airCapacityHorses: 6, equipmentDetails: "Four IATA horse stalls", notes: "Vet handover before loading." },
+      { id: "leg-2074-2", sequenceNo: 2, legType: "AIR", origin: "Chicago O'Hare Cargo Terminal", destination: "Brussels Airport Cargo", plannedDepartureAt: "2026-10-29T01:15:00-05:00", plannedArrivalAt: "2026-10-29T15:10:00+01:00", airProviderName: "SkyEquine Cargo", airReference: "SE-4821", airCapacityHorses: 8, equipmentDetails: "Eight IATA horse stalls", notes: "Vet handover before loading." },
       { id: "leg-2074-3", sequenceNo: 3, legType: "ROAD", origin: "Brussels Airport Cargo", destination: "Brussels, Belgium", plannedDepartureAt: "2026-10-29T18:00:00+01:00", plannedArrivalAt: "2026-10-29T19:15:00+01:00", airProviderName: null, airReference: null, airCapacityHorses: null, equipmentDetails: "Local horse van", notes: null },
     ],
   },
@@ -74,6 +74,10 @@ const roadCandidates = [
   { id: "vehicle-trk-102", plateNumber: "TRK-102", vehicleName: "Stallion Express", vehicleType: "4-stall straight load", horseCapacity: 4, selectable: true, unavailableReason: null },
   { id: "vehicle-trk-103", plateNumber: "TRK-103", vehicleName: "Twin Star", vehicleType: "2-stall side load", horseCapacity: 2, selectable: true, unavailableReason: null },
   { id: "vehicle-trk-104", plateNumber: "TRK-104", vehicleName: "Heritage 3", vehicleType: "3-stall straight load", horseCapacity: 3, selectable: false, unavailableReason: "Overlapping booking during this leg." },
+  { id: "vehicle-trk-105", plateNumber: "TRK-105", vehicleName: "Bluegrass Runner", vehicleType: "3-stall horse van", horseCapacity: 3, selectable: true, unavailableReason: null },
+  { id: "vehicle-trk-106", plateNumber: "TRK-106", vehicleName: "Stable Link", vehicleType: "2-stall side load", horseCapacity: 2, selectable: true, unavailableReason: null },
+  { id: "vehicle-trk-107", plateNumber: "TRK-107", vehicleName: "Derby Transit", vehicleType: "4-stall straight load", horseCapacity: 4, selectable: false, unavailableReason: "Scheduled on another ROAD leg during this time window." },
+  { id: "vehicle-trk-108", plateNumber: "TRK-108", vehicleName: "Equine Shuttle", vehicleType: "3-stall horse van", horseCapacity: 3, selectable: true, unavailableReason: null },
 ];
 
 const order2074Horses = [
@@ -81,6 +85,10 @@ const order2074Horses = [
   { orderHorseId: "horse-2074-bella", name: "Bella", microchipId: "981020000420102", travelNotes: "Keep beside Apollo when possible." },
   { orderHorseId: "horse-2074-commander", name: "Commander", microchipId: "981020000420103", travelNotes: null },
   { orderHorseId: "horse-2074-dakota", name: "Dakota", microchipId: "981020000420104", travelNotes: "Quiet loading required." },
+  { orderHorseId: "horse-2074-eclipse", name: "Eclipse", microchipId: "981020000420105", travelNotes: null },
+  { orderHorseId: "horse-2074-freya", name: "Freya", microchipId: "981020000420106", travelNotes: "Load after Eclipse." },
+  { orderHorseId: "horse-2074-galileo", name: "Galileo", microchipId: "981020000420107", travelNotes: null },
+  { orderHorseId: "horse-2074-harper", name: "Harper", microchipId: "981020000420108", travelNotes: "Front-facing stall preferred." },
 ];
 
 const roadSetupStore: Record<string, RoadLegSetup> = {
@@ -89,7 +97,8 @@ const roadSetupStore: Record<string, RoadLegSetup> = {
     candidates: roadCandidates.map((candidate) => ({ ...candidate })), horses: order2074Horses.map((horse) => ({ ...horse })),
     allocations: [
       { vehicleId: "vehicle-trk-101", orderHorseIds: ["horse-2074-apollo", "horse-2074-bella"] },
-      { vehicleId: "vehicle-trk-102", orderHorseIds: ["horse-2074-commander", "horse-2074-dakota"] },
+      { vehicleId: "vehicle-trk-102", orderHorseIds: ["horse-2074-commander", "horse-2074-dakota", "horse-2074-eclipse", "horse-2074-freya"] },
+      { vehicleId: "vehicle-trk-103", orderHorseIds: ["horse-2074-galileo", "horse-2074-harper"] },
     ],
     checkpoints: [
       { id: "checkpoint-2074-1-a", sequenceNo: 1, name: "Bluegrass rest area", checkpointType: "REST_STOP", countryCode: "US", minimumRequiredStopMinutes: 30, plannedStopDurationMinutes: 45, notes: "Water and welfare check." },

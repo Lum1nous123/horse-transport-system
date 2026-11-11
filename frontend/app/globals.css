@@ -7747,21 +7747,22 @@ button.ts-workflow-step-header:focus-visible {
 .ts-workspace-page :is(a, button, input, textarea):focus-visible { outline: 3px solid #3689de; outline-offset: 2px; }
 
 .ts-workspace-page .ts-workspace-content {
-  width: min(calc(100% - 48px), 1030px);
-  padding: 16px 0 52px;
+  width: calc(100% - 48px);
+  max-width: none;
+  padding: 24px 0 64px;
 }
 
 .ts-workspace-page .customer-preview-banner {
-  min-height: 31px;
+  min-height: 38px;
   gap: 0;
   margin: 0 0 14px;
   border: 1px solid #add3ff;
   border-radius: 9px;
-  padding: 5px 15px;
+  padding: 8px 16px;
   background: rgb(219 236 255 / 82%);
   color: #223a61;
-  font-size: .7rem;
-  line-height: 1.35;
+  font-size: .8rem;
+  line-height: 1.45;
 }
 
 .ts-workspace-page .customer-preview-banner strong {
@@ -7779,7 +7780,7 @@ button.ts-workflow-step-header:focus-visible {
 /* Assigned Orders */
 .ts-workspace-page .ts-heading-row.ts-queue-heading {
   position: relative;
-  min-height: 105px;
+  min-height: 132px;
   align-items: center;
   margin: 0 0 14px;
   isolation: isolate;
@@ -7806,7 +7807,7 @@ button.ts-workflow-step-header:focus-visible {
 .ts-workspace-page .ts-queue-heading .customer-eyebrow {
   margin: 0 0 4px;
   color: #0a4ca0;
-  font-size: .72rem;
+  font-size: .78rem;
   font-weight: 820;
   letter-spacing: .09em;
 }
@@ -7814,18 +7815,18 @@ button.ts-workflow-step-header:focus-visible {
 .ts-workspace-page .ts-queue-heading h1 {
   color: var(--ts-navy);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: clamp(2rem, 3.25vw, 2.55rem);
+  font-size: clamp(2.15rem, 3.25vw, 2.85rem);
   font-weight: 770;
   line-height: 1.08;
   letter-spacing: -.045em;
 }
 
 .ts-workspace-page .ts-queue-heading .customer-intro {
-  max-width: 650px;
-  margin-top: 5px;
+  max-width: 760px;
+  margin-top: 8px;
   color: #263d62;
-  font-size: .79rem;
-  line-height: 1.4;
+  font-size: .95rem;
+  line-height: 1.55;
 }
 
 .ts-workspace-page .ts-hero-accent {
@@ -7840,22 +7841,22 @@ button.ts-workflow-step-header:focus-visible {
 .ts-workspace-page .ts-refresh-button {
   z-index: 1;
   flex: 0 0 auto;
-  min-height: 40px;
+  min-height: 44px;
   align-self: center;
   margin-left: auto;
   border-color: #d7e4f5;
   border-radius: 10px;
-  padding-inline: 16px;
+  padding-inline: 18px;
   background: rgb(255 255 255 / 92%);
   box-shadow: 0 5px 13px rgb(17 74 142 / 13%);
   color: #07479d;
-  font-size: .78rem;
+  font-size: .84rem;
   font-weight: 750;
 }
 
 .ts-workspace-page .ts-refresh-button:hover:not(:disabled) { border-color: #8cbbef; background: #f5faff; }
 .ts-workspace-page .ts-refresh-button svg { width: 18px; height: 18px; }
-.ts-workspace-page .ts-triage-dashboard { gap: 17px; }
+.ts-workspace-page .ts-triage-dashboard { gap: 22px; }
 .ts-workspace-page .ts-queue-summary {
   border-color: #c9ddf5;
   border-radius: 12px;
@@ -7863,93 +7864,96 @@ button.ts-workflow-step-header:focus-visible {
 }
 
 .ts-workspace-page .ts-queue-summary > div {
-  min-height: 53px;
+  min-height: 68px;
   border-color: #d9e5f5;
-  padding: 10px 21px;
+  padding: 14px 22px;
   background: rgb(255 255 255 / 89%);
 }
 
 .ts-workspace-page .ts-queue-summary > div.is-attention { background: #fff0f2; }
-.ts-workspace-page .ts-queue-summary dt { color: #102348; font-size: .82rem; font-weight: 760; }
+.ts-workspace-page .ts-queue-summary dt { color: #102348; font-size: .9rem; font-weight: 760; }
 .ts-workspace-page .ts-queue-summary dd {
-  min-width: 32px;
-  height: 32px;
+  min-width: 38px;
+  height: 38px;
   background: #e0eeff;
   color: #0d4c99;
-  font-size: 1rem;
+  font-size: 1.08rem;
 }
 .ts-workspace-page .ts-queue-summary .is-attention dd { background: #ffdae0; color: #b62035; }
 .ts-workspace-page .ts-attention-section,
 .ts-workspace-page .ts-completed-section { gap: 10px; }
 .ts-workspace-page .ts-dashboard-section-heading h2 {
   color: var(--ts-navy);
-  font-size: 1.48rem;
+  font-size: 1.6rem;
   font-weight: 760;
   letter-spacing: -.035em;
 }
-.ts-workspace-page .ts-dashboard-section-heading p { margin-top: 3px; color: #3b5073; font-size: .76rem; }
-.ts-workspace-page .ts-dashboard-section-heading > span { color: #485c80; font-size: .75rem; }
+.ts-workspace-page .ts-dashboard-section-heading p { margin-top: 5px; color: #3b5073; font-size: .88rem; line-height: 1.5; }
+.ts-workspace-page .ts-dashboard-section-heading > span { color: #485c80; font-size: .82rem; }
 .ts-workspace-page .ts-attention-card {
   border-color: #f3bdc9;
   border-radius: 11px;
   background: rgb(255 248 250 / 88%);
   box-shadow: 0 7px 18px rgb(36 70 127 / 10%);
 }
-.ts-workspace-page .ts-attention-card-topline { padding: 11px 24px 4px; }
-.ts-workspace-page .ts-attention-card .ts-order-code-line h3 { font-size: 1.48rem; font-weight: 780; letter-spacing: -.04em; }
-.ts-workspace-page .ts-attention-card .ts-state-badge { background: #deeeff; color: #103d82; font-size: .7rem; }
+.ts-workspace-page .ts-attention-card-topline { padding: 18px 28px 8px; }
+.ts-workspace-page .ts-attention-card .ts-order-code-line h3 { font-size: 1.58rem; font-weight: 780; letter-spacing: -.04em; }
+.ts-workspace-page .ts-attention-card .ts-state-badge { background: #deeeff; color: #103d82; font-size: .76rem; }
 .ts-workspace-page .ts-open-order-button {
-  min-width: 136px;
-  min-height: 36px;
+  min-width: 148px;
+  min-height: 42px;
   border-radius: 7px;
   background: linear-gradient(180deg, #1477da, #0754ba);
   box-shadow: 0 4px 9px rgb(4 74 166 / 23%);
-  font-size: .78rem;
+  font-size: .84rem;
   font-weight: 730;
 }
 .ts-workspace-page .ts-attention-card-body {
-  grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr);
-  padding: 0 24px 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, .72fr);
+  padding: 0 28px 20px;
 }
 .ts-workspace-page .ts-attention-route,
-.ts-workspace-page .ts-attention-progress { min-height: 72px; gap: 4px; }
+.ts-workspace-page .ts-attention-progress { min-height: 92px; gap: 6px; }
 .ts-workspace-page .ts-attention-route { border-color: #efcbd3; }
 .ts-workspace-page .ts-attention-route > span,
 .ts-workspace-page .ts-attention-progress > div > span,
 .ts-workspace-page .ts-attention-route small,
-.ts-workspace-page .ts-attention-progress small { color: #506583; font-size: .74rem; }
-.ts-workspace-page .ts-attention-route > strong { color: var(--ts-navy); font-size: .96rem; line-height: 1.25; }
-.ts-workspace-page .ts-attention-progress > div > strong { color: var(--ts-navy); font-size: .97rem; }
-.ts-workspace-page .ts-attention-progress progress { height: 7px; }
+.ts-workspace-page .ts-attention-progress small { color: #506583; font-size: .82rem; }
+.ts-workspace-page .ts-attention-route > strong { color: var(--ts-navy); font-size: 1.04rem; line-height: 1.4; }
+.ts-workspace-page .ts-attention-progress > div > strong { color: var(--ts-navy); font-size: 1.05rem; }
+.ts-workspace-page .ts-attention-progress progress { height: 9px; }
 .ts-workspace-page .ts-dashboard-empty {
-  min-height: 50px;
+  min-height: 66px;
   border-color: #c9dcf4;
   border-radius: 10px;
-  padding: 12px 22px;
+  padding: 16px 22px;
   box-shadow: 0 6px 17px rgb(23 67 129 / 9%);
-  font-size: .8rem;
+  font-size: .88rem;
 }
 .ts-workspace-page .ts-completed-table-wrap { border-color: #c9dcf4; box-shadow: 0 6px 17px rgb(23 67 129 / 9%); }
+.ts-workspace-page .ts-completed-table { font-size: .86rem; }
+.ts-workspace-page .ts-completed-table th { padding: 14px 16px; font-size: .74rem; }
+.ts-workspace-page .ts-completed-table td { padding: 17px 16px; }
 
 /* Order detail */
-.ts-workspace-page .assignment-breadcrumb { margin: 0 0 4px; font-size: .75rem; }
-.ts-workspace-page .assignment-breadcrumb a { min-height: 22px; }
-.ts-workspace-page .ts-detail-header { align-items: center; margin: 0 0 12px; }
+.ts-workspace-page .assignment-breadcrumb { margin: 0 0 8px; font-size: .82rem; }
+.ts-workspace-page .assignment-breadcrumb a { min-height: 28px; }
+.ts-workspace-page .ts-detail-header { align-items: center; margin: 0 0 18px; }
 .ts-workspace-page .ts-detail-header h1 {
   margin-top: 2px;
   color: var(--ts-navy);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 2rem;
+  font-size: clamp(2rem, 2.6vw, 2.55rem);
   font-weight: 780;
   letter-spacing: -.045em;
 }
-.ts-workspace-page .ts-detail-header p { margin-top: 2px; color: #22385c; font-size: .8rem; }
-.ts-workspace-page .ts-detail-header .ts-state-badge { padding: 2px 8px; font-size: .63rem; }
-.ts-workspace-page .assignment-back-link { min-height: 28px; color: #0758b7; font-size: .75rem; }
+.ts-workspace-page .ts-detail-header p { margin-top: 5px; color: #22385c; font-size: .94rem; line-height: 1.5; }
+.ts-workspace-page .ts-detail-header .ts-state-badge { padding: 5px 10px; font-size: .72rem; }
+.ts-workspace-page .assignment-back-link { min-height: 34px; color: #0758b7; font-size: .82rem; }
 .ts-workspace-page .ts-order-facts {
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 9px;
-  margin: 0 0 12px;
+  gap: 12px;
+  margin: 0 0 18px;
   border: 0;
 }
 .ts-workspace-page .ts-order-facts > div,
@@ -7957,33 +7961,33 @@ button.ts-workflow-step-header:focus-visible {
 .ts-workspace-page .ts-order-facts > div:nth-child(3) {
   display: grid;
   min-width: 0;
-  min-height: 51px;
-  grid-template-columns: 37px minmax(0, 1fr);
+  min-height: 72px;
+  grid-template-columns: 44px minmax(0, 1fr);
   grid-template-rows: auto auto;
   align-content: center;
-  column-gap: 9px;
+  column-gap: 12px;
   row-gap: 0;
   border: 1px solid #d7e5f7;
   border-radius: 10px;
-  padding: 6px 10px;
+  padding: 11px 14px;
   background: rgb(255 255 255 / 87%);
   box-shadow: 0 4px 11px rgb(23 67 129 / 9%);
 }
 .ts-workspace-page .ts-fact-icon {
   display: grid;
-  width: 35px;
-  height: 35px;
+  width: 42px;
+  height: 42px;
   grid-row: 1 / 3;
   place-items: center;
   border-radius: 9px;
   background: #e4f0ff;
   color: #1163c1;
 }
-.ts-workspace-page .ts-fact-icon svg { width: 19px; height: 19px; }
+.ts-workspace-page .ts-fact-icon svg { width: 21px; height: 21px; }
 .ts-workspace-page .ts-order-facts dt {
   min-width: 0;
   color: #4d6385;
-  font-size: .66rem;
+  font-size: .74rem;
   font-weight: 530;
   line-height: 1.15;
 }
@@ -7991,11 +7995,11 @@ button.ts-workflow-step-header:focus-visible {
   min-width: 0;
   overflow-wrap: anywhere;
   color: var(--ts-navy);
-  font-size: .74rem;
+  font-size: .86rem;
   font-weight: 760;
   line-height: 1.2;
 }
-.ts-workspace-page .ts-guided-workflow { gap: 9px; margin-top: 0; }
+.ts-workspace-page .ts-guided-workflow { gap: 12px; margin-top: 0; }
 .ts-workspace-page .ts-workflow-step {
   border-color: #cfdff3;
   border-radius: 10px;
@@ -8008,72 +8012,72 @@ button.ts-workflow-step-header:focus-visible {
 }
 .ts-workspace-page .ts-workflow-step.is-locked { background: rgb(248 251 255 / 82%); }
 .ts-workspace-page .ts-workflow-step-header {
-  min-height: 45px;
-  grid-template-columns: 31px minmax(0, 1fr) 18px;
-  gap: 10px;
-  padding: 7px 16px;
+  min-height: 58px;
+  grid-template-columns: 36px minmax(0, 1fr) 20px;
+  gap: 12px;
+  padding: 10px 20px;
   color: var(--ts-navy);
 }
 .ts-workspace-page .ts-workflow-number {
-  width: 27px;
-  height: 27px;
+  width: 32px;
+  height: 32px;
   border-color: #0c60bd;
   background: #0964c0;
   box-shadow: 0 2px 5px rgb(6 84 181 / 18%);
   color: #fff;
-  font-size: .75rem;
+  font-size: .8rem;
 }
 .ts-workspace-page .ts-workflow-step.is-current .ts-workflow-number { border-color: #0c60bd; background: #0964c0; }
 .ts-workspace-page .ts-workflow-step.is-complete .ts-workflow-number { border-color: #167450; background: #e6f5ed; color: #17603f; }
 .ts-workspace-page .ts-workflow-step.is-locked .ts-workflow-number { border-color: #cad6e5; background: #edf2f9; color: #7184a2; box-shadow: none; }
-.ts-workspace-page .ts-workflow-heading { gap: 1px; }
-.ts-workspace-page .ts-workflow-heading strong { font-size: .8rem; font-weight: 760; }
-.ts-workspace-page .ts-workflow-heading small { color: #475e81; font-size: .67rem; }
+.ts-workspace-page .ts-workflow-heading { gap: 3px; }
+.ts-workspace-page .ts-workflow-heading strong { font-size: .94rem; font-weight: 760; }
+.ts-workspace-page .ts-workflow-heading small { color: #475e81; font-size: .77rem; }
 .ts-workspace-page .ts-workflow-chevron,
 .ts-workspace-page .ts-workflow-lock { color: #0e5bb3; font-size: .98rem; }
-.ts-workspace-page .ts-workflow-step-body { border-top-color: #d9e6f7; padding: 11px 20px 12px; }
-.ts-workspace-page .ts-workflow-step-body h2 { margin-bottom: 2px; color: var(--ts-navy); font-size: .86rem; font-weight: 760; }
-.ts-workspace-page .ts-workflow-step-body p { color: #485e81; font-size: .7rem; line-height: 1.35; }
-.ts-workspace-page .ts-documents-step-body { gap: 7px; }
-.ts-workspace-page .ts-document-step-intro .ts-progress-summary { flex-basis: 170px; }
-.ts-workspace-page .ts-progress-summary strong { color: var(--ts-navy); font-size: .96rem; }
-.ts-workspace-page .ts-progress-summary span { font-size: .68rem; }
-.ts-workspace-page .ts-progress-summary progress { height: 6px; margin-top: 4px; }
+.ts-workspace-page .ts-workflow-step-body { border-top-color: #d9e6f7; padding: 18px 24px 20px; }
+.ts-workspace-page .ts-workflow-step-body h2 { margin-bottom: 5px; color: var(--ts-navy); font-size: 1rem; font-weight: 760; }
+.ts-workspace-page .ts-workflow-step-body p { color: #485e81; font-size: .82rem; line-height: 1.5; }
+.ts-workspace-page .ts-documents-step-body { gap: 14px; }
+.ts-workspace-page .ts-document-step-intro .ts-progress-summary { flex-basis: 220px; }
+.ts-workspace-page .ts-progress-summary strong { color: var(--ts-navy); font-size: 1.08rem; }
+.ts-workspace-page .ts-progress-summary span { font-size: .78rem; }
+.ts-workspace-page .ts-progress-summary progress { height: 8px; margin-top: 6px; }
 .ts-workspace-page .ts-horse-tabs { border-color: #c9daf1; }
-.ts-workspace-page .ts-horse-tabs button { min-width: 142px; min-height: 39px; padding: 4px 9px; }
-.ts-workspace-page .ts-horse-tabs button span { color: var(--ts-navy); font-size: .72rem; font-weight: 700; }
-.ts-workspace-page .ts-horse-tabs button small { color: #536b8c; font-size: .62rem; }
-.ts-workspace-page .ts-horse-heading { padding: 7px 0 6px; }
-.ts-workspace-page .ts-horse-heading h3 { color: var(--ts-navy); font-size: .83rem; font-weight: 760; }
+.ts-workspace-page .ts-horse-tabs button { min-width: 170px; min-height: 46px; padding: 7px 12px; }
+.ts-workspace-page .ts-horse-tabs button span { color: var(--ts-navy); font-size: .82rem; font-weight: 700; }
+.ts-workspace-page .ts-horse-tabs button small { color: #536b8c; font-size: .7rem; }
+.ts-workspace-page .ts-horse-heading { padding: 10px 0 9px; }
+.ts-workspace-page .ts-horse-heading h3 { color: var(--ts-navy); font-size: .94rem; font-weight: 760; }
 .ts-workspace-page .ts-horse-heading p,
-.ts-workspace-page .ts-horse-heading > span { font-size: .66rem; }
+.ts-workspace-page .ts-horse-heading > span { font-size: .76rem; }
 .ts-workspace-page .ts-document-table-wrap { border-color: #cdddf1; border-radius: 9px; }
-.ts-workspace-page .ts-document-table { color: #142648; font-size: .73rem; }
+.ts-workspace-page .ts-document-table { color: #142648; font-size: .84rem; }
 .ts-workspace-page .ts-document-table th {
   border-color: #d9e6f5;
-  padding: 6px 12px;
+  padding: 10px 14px;
   background: #e8f1ff;
   color: #3f5377;
-  font-size: .62rem;
+  font-size: .72rem;
 }
-.ts-workspace-page .ts-document-table td { border-color: #e0e9f5; padding: 7px 12px; }
+.ts-workspace-page .ts-document-table td { border-color: #e0e9f5; padding: 11px 14px; }
 .ts-workspace-page .ts-document-table tbody tr:hover:not(.ts-table-rejection-row) { background: #f7fbff; }
 .ts-workspace-page .ts-document-table td:first-child strong { font-weight: 720; }
 .ts-workspace-page .ts-table-file { gap: 1px; }
 .ts-workspace-page .ts-table-file > span,
 .ts-workspace-page .ts-table-file > small,
 .ts-workspace-page .ts-table-empty,
-.ts-workspace-page .ts-table-no-action { color: #53698a; font-size: .66rem; }
-.ts-workspace-page .ts-table-file > a { color: #075ebc; font-size: .7rem; }
-.ts-workspace-page .document-version-status { padding: 3px 8px; font-size: .62rem; font-weight: 730; }
+.ts-workspace-page .ts-table-no-action { color: #53698a; font-size: .76rem; }
+.ts-workspace-page .ts-table-file > a { color: #075ebc; font-size: .8rem; }
+.ts-workspace-page .document-version-status { padding: 4px 9px; font-size: .7rem; font-weight: 730; }
 .ts-workspace-page .document-version-status.pending_review { background: #e3f0ff; color: #154a8d; }
 .ts-workspace-page .ts-table-actions { gap: 6px; }
 .ts-workspace-page .ts-table-actions .customer-primary-button,
 .ts-workspace-page .ts-table-actions .customer-secondary-button {
-  min-height: 31px;
+  min-height: 38px;
   border-radius: 6px;
-  padding-inline: 11px;
-  font-size: .7rem;
+  padding-inline: 14px;
+  font-size: .78rem;
 }
 .ts-workspace-page .ts-table-actions .customer-primary-button { background: #0b68ca; }
 .ts-workspace-page .ts-table-actions .customer-secondary-button { border-color: #bcd3ef; color: #0e4289; }
