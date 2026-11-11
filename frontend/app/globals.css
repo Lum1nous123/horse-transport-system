@@ -3909,6 +3909,19 @@ button.ts-workflow-step-header:focus-visible {
 .customer-field input,.customer-field select,.customer-field textarea { width: 100%; min-height: 46px; border: 1px solid var(--color-border); border-radius: 6px; padding: 10px 12px; background: #fff; color: var(--color-ink); font-size: .9rem; font-weight: 400; }
 .customer-field textarea { min-height: 82px; resize: vertical; }
 .customer-field input:focus-visible,.customer-field select:focus-visible,.customer-field textarea:focus-visible { border-color: var(--color-primary); outline: 3px solid rgb(40 120 200 / 17%); outline-offset: 1px; }
+.customer-country-field { position: relative; }
+.customer-country-trigger { display: flex; width: 100%; min-height: 46px; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--color-border); border-radius: 6px; padding: 10px 12px; background: #fff; color: var(--color-ink); cursor: pointer; font: inherit; font-size: .9rem; font-weight: 400; text-align: left; }
+.customer-country-trigger > span:first-child { min-width: 0; overflow: hidden; align-items: center; text-overflow: ellipsis; white-space: nowrap; }
+.customer-country-trigger:focus-visible { border-color: var(--color-primary); outline: 3px solid rgb(40 120 200 / 17%); outline-offset: 1px; }
+.customer-country-placeholder { color: var(--color-muted); }
+.customer-country-chevron { flex: 0 0 auto; color: var(--color-muted); font-size: 1rem; }
+.customer-country-popover { position: absolute; z-index: 60; top: calc(100% - 10px); right: 0; left: 0; overflow: hidden; border: 1px solid var(--color-border); border-radius: 8px; background: #fff; box-shadow: 0 12px 30px rgb(12 31 45 / 18%); }
+.customer-country-popover input { min-height: 42px; border: 0; border-bottom: 1px solid var(--color-border); border-radius: 0; outline: 0; }
+.customer-country-list { max-height: 240px; overflow-y: auto; margin: 0; padding: 5px; list-style: none; }
+.customer-country-list li { display: grid; grid-template-columns: 24px minmax(0,1fr) auto; align-items: center; gap: 8px; border-radius: 5px; padding: 8px 9px; color: var(--color-ink); cursor: pointer; font-size: .86rem; font-weight: 400; }
+.customer-country-list li.is-active { background: #eef6fc; }
+.customer-country-list li[aria-selected="true"] { color: var(--color-primary); font-weight: 600; }
+.customer-country-list .customer-country-empty { display: block; padding: 14px 9px; color: var(--color-muted); cursor: default; text-align: center; }
 .customer-form-actions { justify-content: flex-end; margin-top: 8px; }
 .customer-form-error { margin: 0 0 12px; color: var(--color-error); font-size: .875rem; }
 .customer-dialog-backdrop { position: fixed; z-index: 50; inset: 0; display: grid; place-items: center; overflow: auto; padding: 24px; background: rgb(12 31 45 / 48%); }
