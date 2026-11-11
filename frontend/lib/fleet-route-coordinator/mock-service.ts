@@ -25,21 +25,21 @@ type MockCoordinatorOrder = Omit<
 
 const orders: MockCoordinatorOrder[] = [
   {
-    id: "order-2046", orderCode: "ORD-2046", origin: "Aachen, Germany", destination: "Doha, Qatar",
+    id: "order-2046", orderCode: "ORD-2046", origin: "Aachen, Germany", destination: "Doha, Qatar", originAddress: "Aachen", destinationAddress: "Doha",
     requestedDepartureAt: "2026-10-16T13:00:00+07:00", horseCount: 2, transportMode: "AIR",
     routePlanStatus: "NOT_STARTED", routePlanUpdatedAt: null, returnReason: null, customerName: "Casey Morgan",
     assignedTransportSpecialistName: "Brooke Mitchell", documentFinalConfirmedAt: "2026-10-09T11:20:00+07:00",
     remainingBalancePaidAt: "2026-10-10T09:14:00+07:00",
   },
   {
-    id: "order-2074", orderCode: "ORD-2074", origin: "Lexington, United States", destination: "Brussels, Belgium",
+    id: "order-2074", orderCode: "ORD-2074", origin: "Lexington, United States", destination: "Brussels, Belgium", originAddress: "Lexington", destinationAddress: "Brussels",
     requestedDepartureAt: "2026-10-28T09:00:00+07:00", horseCount: 8, transportMode: "COMBINED",
     routePlanStatus: "DRAFT", routePlanUpdatedAt: "2026-10-10T15:26:00+07:00", returnReason: null,
     customerName: "Morgan Taylor", assignedTransportSpecialistName: "Daniel Kim",
     documentFinalConfirmedAt: "2026-10-08T16:30:00+07:00", remainingBalancePaidAt: "2026-10-09T10:05:00+07:00",
   },
   {
-    id: "order-2093", orderCode: "ORD-2093", origin: "Wellington, New Zealand", destination: "Singapore, Singapore",
+    id: "order-2093", orderCode: "ORD-2093", origin: "Wellington, New Zealand", destination: "Singapore, Singapore", originAddress: "Wellington", destinationAddress: "Singapore",
     requestedDepartureAt: "2026-11-03T07:00:00+07:00", horseCount: 2, transportMode: "AIR",
     routePlanStatus: "RETURNED", routePlanUpdatedAt: "2026-10-10T17:42:00+07:00",
     returnReason: "Adjust the ROAD transfer window before resubmitting the plan.", customerName: "Avery Bennett",

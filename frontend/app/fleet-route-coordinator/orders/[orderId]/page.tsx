@@ -127,7 +127,7 @@ export default function FleetRouteCoordinatorOrderPage() {
 
           {order.routePlanStatus === "RETURNED" && order.returnReason && <section className="frc-return-reason" aria-labelledby="frc-return-title"><span aria-hidden="true">↩</span><div><h2 id="frc-return-title">Returned by Logistics Manager</h2><p>{order.returnReason}</p></div></section>}
 
-          <RoutePlanEditor orderId={order.id} service={service} />
+          <RoutePlanEditor orderId={order.id} orderOrigin={order.originAddress} orderDestination={order.destinationAddress} service={service} />
         </>
       )}
     </FleetRouteCoordinatorWorkspaceFrame>
