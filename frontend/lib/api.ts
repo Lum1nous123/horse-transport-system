@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE_URL = "http://localhost:8080";
+const DEFAULT_API_BASE_URL = "https://horse-transport-system.onrender.com";
 
 export const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_API_BASE_URL
@@ -10,10 +10,7 @@ export function apiUrl(path: string): string {
   return `${API_BASE_URL}${normalizedPath}`;
 }
 
-export function apiFetch(
-  path: string,
-  init?: RequestInit,
-): Promise<Response> {
+export function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   return fetch(apiUrl(path), init);
 }
 
