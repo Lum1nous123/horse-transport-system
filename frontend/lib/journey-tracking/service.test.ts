@@ -43,7 +43,7 @@ function airLeg() {
       startedAt: "2026-10-27T08:05:00",
       destinationArrivedAt: "2026-10-27T15:00:00",
       completedAt: "2026-10-27T15:30:00",
-      escort: null,
+      escort: { fullName: "Ari Escort", phone: "+1 555 0123" },
       finalWelfare: null,
       proofOfDelivery: null,
     },
@@ -140,7 +140,7 @@ describe("journey read service", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => payload }));
 
     await expect(readJourneyTracking("air-order", "token")).resolves.toMatchObject({
-      legs: [{ mode: "AIR", horses: ["Silver Star"] }],
+      legs: [{ mode: "AIR", horses: ["Silver Star"], escort: { name: "Ari Escort", phone: "+1 555 0123" } }],
     });
   });
 

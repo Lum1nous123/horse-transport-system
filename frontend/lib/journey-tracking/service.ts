@@ -175,6 +175,7 @@ function mapTracking(value: unknown): JourneyTracking {
       status,
       horses: mode === "ROAD" ? [...new Set(vehicles.flatMap((vehicle) => vehicle.horses))] : allHorseNames,
       vehicles,
+      escort: mode === "AIR" && air ? contact(air.escort) : null,
       events,
       welfareEvidence,
     };

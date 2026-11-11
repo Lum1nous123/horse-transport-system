@@ -25,6 +25,7 @@ export type JourneyLeg = {
   status: "UPCOMING" | "READY" | "IN_PROGRESS" | "COMPLETED";
   horses: string[];
   vehicles: JourneyVehicle[];
+  escort: { name: string; phone: string | null } | null;
   events: { id: string; label: string; occurredAt: string | null }[];
   welfareEvidence: { id: string; recordedAt: string; note: string | null; photoUrl: string | null }[];
 };

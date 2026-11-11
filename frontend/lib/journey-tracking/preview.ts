@@ -11,7 +11,7 @@ export const previewTracking: JourneyTracking = {
   legs: [
     {
       id: "road-outbound", sequenceNo: 1, mode: "ROAD", origin: "Lexington, United States", destination: "Chicago O'Hare Cargo Terminal",
-      status: "COMPLETED", horses: ["Apollo", "Bella", "Commander", "Dakota"], events: [], welfareEvidence: [],
+      status: "COMPLETED", horses: ["Apollo", "Bella", "Commander", "Dakota"], escort: null, events: [], welfareEvidence: [],
       vehicles: [{
         id: "vehicle-27", label: "TRK-101", status: "COMPLETED", horses: ["Apollo", "Bella"],
         driver: { name: "Daniel Foster", phone: "+31 6 1234 5678" },
@@ -33,14 +33,14 @@ export const previewTracking: JourneyTracking = {
     },
     {
       id: "air", sequenceNo: 2, mode: "AIR", origin: "Chicago O'Hare Cargo Terminal", destination: "Brussels Airport Cargo",
-      status: "IN_PROGRESS", horses: ["Apollo", "Bella", "Commander", "Dakota"], vehicles: [], welfareEvidence: [
+      status: "IN_PROGRESS", horses: ["Apollo", "Bella", "Commander", "Dakota"], vehicles: [], escort: { name: "Maya Chen", phone: null }, welfareEvidence: [
         { id: "air-welfare", recordedAt: "2026-10-23T15:10:00+07:00", note: "Air leg welfare check recorded", photoUrl: null },
       ],
       events: [{ id: "flight-start", label: "Flight leg started", occurredAt: "2026-10-23T14:35:00+07:00" }],
     },
     {
       id: "road-final", sequenceNo: 3, mode: "ROAD", origin: "Brussels Airport Cargo", destination: "Brussels, Belgium",
-      status: "UPCOMING", horses: ["Apollo", "Bella", "Commander", "Dakota"], events: [], welfareEvidence: [],
+      status: "UPCOMING", horses: ["Apollo", "Bella", "Commander", "Dakota"], escort: null, events: [], welfareEvidence: [],
       vehicles: [{
         id: "vehicle-final", label: "BE-210", status: "UPCOMING", horses: ["Apollo", "Bella", "Commander", "Dakota"],
         driver: { name: "Assigned driver", phone: null }, escort: { name: "Assigned escort", phone: null },

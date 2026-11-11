@@ -159,6 +159,18 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### AIR Escort visibility in journey tracking — verified (2026-11-12)
+
+- Customer and Logistics Manager journey tracking now display the AIR leg's
+  assigned Escort name and phone from the existing Backend tracking response.
+  ROAD contacts remain Vehicle-scoped; no Backend or schema change is required.
+- Updated the notification-failure regression test to open the existing bell
+  popover before checking its warning; journey data remains visible on failure.
+- Verification: all 332 Frontend tests, TypeScript, ESLint for affected files,
+  production build, and Git diff checks pass. No live Backend/browser E2E was run.
+- Local demo SQL, defense/study documents, guides, and ERD exports remain outside
+  this publication's scope.
+
 ### FRC and Logistics workflow polish — ready for review (2026-11-11)
 
 - Work is collected on `feat/workflow-ux-polish` in five focused commits:

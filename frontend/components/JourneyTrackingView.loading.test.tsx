@@ -1,4 +1,5 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import JourneyTrackingView from "./JourneyTrackingView";
 import { JourneyReadError } from "@/lib/journey-tracking/service";
@@ -49,6 +50,7 @@ describe("JourneyTrackingView loading", () => {
   afterEach(() => cleanup());
 
   it("renders journey data with a non-blocking warning when notifications fail", async () => {
+    const user = userEvent.setup();
     mocks.readTracking.mockResolvedValue(tracking);
     mocks.readNotifications.mockRejectedValue(new JourneyReadError("Notifications unavailable", 503));
 
@@ -57,8 +59,15 @@ describe("JourneyTrackingView loading", () => {
     expect(await screen.findByRole("heading", { name: "Journey tracking" })).toBeInTheDocument();
     expect(screen.getByText((_, element) => element?.tagName === "P"
       && element.textContent === "Hanoi → Da Nang")).toBeInTheDocument();
+    const notificationsButton = screen.getByRole("button", {
+      name: "Notifications, updates temporarily unavailable",
+    });
+    expect(notificationsButton).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("complementary", { name: "Order notifications" })).not.toBeInTheDocument();
+    await user.click(notificationsButton);
+    expect(notificationsButton).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("Latest updates are temporarily unavailable. Journey tracking is still available."))
-      .toHaveAttribute("role", "status");
+      .toBeVisible();
     expect(screen.queryByRole("heading", { name: "Journey unavailable" })).not.toBeInTheDocument();
   });
 
