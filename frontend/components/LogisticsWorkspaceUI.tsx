@@ -9,21 +9,14 @@ export function LogisticsNavigation({ section, preview = false }: {
   const suffix = preview ? "?preview=1" : "";
   const links = [
     { href: `/logistics/dashboard${suffix}`, label: "Dashboard", current: section === "dashboard" },
-    { href: `/logistics${suffix}`, label: "Orders & quotations", current: section === "orders" || section === "tracking" },
+    { href: `/logistics${suffix}`, label: "Orders & quotations", current: section === "orders" },
     { href: `/logistics/assignments${suffix}`, label: "Staff assignment", current: section === "assignments" },
     { href: `/logistics/route-reviews${suffix}`, label: "Route reviews", current: section === "reviews" },
+    { href: `/logistics/tracking${suffix}`, label: "Journey tracking", current: section === "tracking" },
   ];
   return <nav className="lm-primary-nav" aria-label="Logistics workspaces">{links.map((link) =>
     <Link key={link.label} href={link.href} aria-current={link.current ? "page" : undefined}>{link.label}</Link>
   )}</nav>;
-}
-
-export function LogisticsOrdersTabs({ active, preview = false }: { active: "submitted" | "journeys"; preview?: boolean }) {
-  const suffix = preview ? "?preview=1" : "";
-  return <nav className="lm-order-tabs" aria-label="Orders and quotations sections">
-    <Link href={`/logistics${suffix}`} aria-current={active === "submitted" ? "page" : undefined}>Submitted orders</Link>
-    <Link href={`/logistics/tracking${suffix}`} aria-current={active === "journeys" ? "page" : undefined}>Journeys</Link>
-  </nav>;
 }
 
 export function LogisticsStatusTabs<T extends string>({ label, tabs, value, onChange, panelId }: {

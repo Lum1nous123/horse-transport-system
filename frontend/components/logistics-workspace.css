@@ -101,8 +101,8 @@
 }
 @media (max-width: 760px) {
   .logistics-manager-page .customer-topbar { padding-inline: 14px; }
-  .logistics-manager-page .lm-primary-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: 4px; overflow: visible; }
-  .logistics-manager-page .lm-primary-nav a { padding: 9px 7px; font-size: .78rem; line-height: 1.4; text-align: center; white-space: normal; }
+  .logistics-manager-page .lm-primary-nav { display: flex; width: 100%; justify-content: flex-start; gap: 4px; overflow-x: auto; }
+  .logistics-manager-page .lm-primary-nav a { flex: 0 0 auto; padding: 9px 10px; font-size: .78rem; line-height: 1.4; text-align: center; white-space: nowrap; }
   .logistics-manager-page .lm-page-heading { align-items: flex-start; }
   .logistics-manager-page .lm-page-heading h1 { font-size: 1.4rem; }
   .logistics-manager-page .lm-page-heading p { font-size: .8rem; }
@@ -242,3 +242,12 @@
   .logistics-manager-page .customer-topbar { width: calc(100% - 24px); margin-top: 7px; border-radius: 12px; padding-inline: 10px; }
   .logistics-manager-page .logistics-content,.logistics-manager-page .assignment-content,.logistics-manager-page .journey-content { width: calc(100% - 28px); padding-top: 20px; }
 }
+
+/* Status filters are compact rounded chips, including the selected state. */
+.logistics-manager-page .lm-status-tabs,
+.logistics-manager-page .lm-queue-panel .lm-status-tabs { gap: 8px; padding: 10px 16px; }
+.logistics-manager-page .lm-status-tabs button,
+.logistics-manager-page .lm-queue-panel .lm-status-tabs button { min-height: 40px; border: 1px solid transparent; border-radius: 999px; padding: 0 14px; }
+.logistics-manager-page .lm-status-tabs button[aria-selected="true"],
+.logistics-manager-page .lm-queue-panel .lm-status-tabs button[aria-selected="true"] { border-color: #d9b59c; background: #f8ece2; color: #95421f; }
+.logistics-manager-page .lm-tab-count { border-radius: 999px; }

@@ -33,7 +33,9 @@ describe("Logistics Order Tracking page", () => {
 
     render(<LogisticsTrackingPage />);
     await userEvent.setup().click(await screen.findByRole("tab", { name: /Delivered 1/ }));
-    expect(screen.getByRole("link", { name: "Journeys" })).toHaveAttribute("href", "/logistics/tracking");
+    expect(screen.getByRole("link", { name: "Journey tracking" })).toHaveAttribute("href", "/logistics/tracking");
+    expect(screen.getByRole("link", { name: "Journey tracking" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Orders & quotations" })).not.toHaveAttribute("aria-current");
     expect(screen.getByRole("link", { name: /View tracking/ })).toHaveAttribute(
       "href", "/logistics/orders/094bef0e-7120-49dc-a1df-96dbcf3a7dae/tracking",
     );

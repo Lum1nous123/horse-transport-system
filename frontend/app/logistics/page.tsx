@@ -8,7 +8,7 @@ import { clearAccessToken, getAccessToken, getCurrentUser } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { selectLogisticsInboxOrders, type InboxMode, type InboxSort } from "@/lib/logistics-inbox-search";
 import BrandMark from "@/components/BrandMark";
-import { LogisticsNavigation, LogisticsOrdersTabs } from "@/components/LogisticsWorkspaceUI";
+import { LogisticsNavigation } from "@/components/LogisticsWorkspaceUI";
 import "./submitted-orders.css";
 
 type OrderStatus = "SUBMITTED" | "QUOTATION_SENT" | "REJECTED" | "CANCELLED";
@@ -474,7 +474,6 @@ export default function LogisticsPage() {
       </header>
       <div className="customer-content logistics-content">
         {preview && <div className="customer-preview-banner" role="status"><strong>Preview mode</strong><span>Sample data only. Changes stay in this tab and are not sent to the backend.</span></div>}
-        <LogisticsOrdersTabs active="submitted" preview={preview} />
         <div className="customer-heading-row logistics-heading"><div className="logistics-heading-copy"><span className="logistics-heading-icon" aria-hidden="true">✓</span><div><div className="logistics-heading-title"><h1>Submitted orders</h1><span className="customer-count">{orders.length} awaiting review</span></div><p className="customer-intro">Review incoming requests, verify transport details, and prepare quotations.</p></div></div></div>
         {feedback && <p className="customer-feedback" role="status">{feedback}</p>}
         {loadError && <div className="customer-alert" role="alert"><span>{loadError}</span><button type="button" onClick={() => void refreshInbox()}>Try again</button></div>}
