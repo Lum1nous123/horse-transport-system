@@ -159,6 +159,26 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### FRC and Logistics workflow polish — ready for review (2026-11-11)
+
+- Work is collected on `feat/workflow-ux-polish` in five focused commits:
+  searchable Customer country selection, hosted Backend default configuration,
+  FRC route validation/connection editing, execution-staff identity display,
+  and top-level Journey tracking navigation.
+- FRC validation now uses prominent result dialogs with expandable issue lists.
+  Route endpoints are derived from the Order, and an intermediate connection
+  can be inserted by splitting the selected leg while preserving continuity.
+- Locked LM Route Reviews display Driver/Escort full name and account email from
+  a batch-enriched execution-staffing response instead of showing staff UUIDs.
+  Journey tracking is a separate primary LM navigation destination, and status
+  filters use rounded selected states.
+- Verification: PO-completed manual demo and workflow smoke test; 23/23 targeted
+  Frontend tests, ESLint for changed Frontend files, TypeScript, 4/4 targeted
+  Backend staffing tests, and Git diff checks pass. A full Frontend test suite
+  and production build were intentionally not run for this review cycle.
+- `docs/backend-study/` remains local and is intentionally excluded from this
+  branch's commits.
+
 ### TS and FRC workspace visual refresh — merged in PR #150 (2026-11-11)
 
 - Transport Specialist queues and document-review screens, plus Fleet & Route Coordinator queues and route-plan screens, share the established white, burnt-orange, cream, and chestnut theme. Existing workflows, status meanings, APIs, data, and permissions are unchanged.

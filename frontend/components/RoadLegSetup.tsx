@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import ValidationResultDialog from "@/components/ValidationResultDialog";
 import {
   CoordinatorWorkspaceError,
   type FleetRouteCoordinatorService,
@@ -27,6 +28,13 @@ type CheckpointForm = {
   minimumRequiredStopMinutes: string;
   plannedStopDurationMinutes: string;
   notes: string;
+};
+
+type ValidationNotice = {
+  kind: "success" | "attention";
+  title: string;
+  message: string;
+  issueCount: number;
 };
 
 const emptyCheckpoint: CheckpointForm = {
@@ -69,6 +77,7 @@ export default function RoadLegSetup({ orderId, leg, service, readOnly, onClose,
   const [editingCheckpointId, setEditingCheckpointId] = useState<string | null>(null);
   const [checkpointForm, setCheckpointForm] = useState<CheckpointForm>(emptyCheckpoint);
   const [initialCheckpointForm, setInitialCheckpointForm] = useState<CheckpointForm>(emptyCheckpoint);
+  const [validationNotice, setValidationNotice] = useState<ValidationNotice | null>(null);
 
   const hydrateDraft = useCallback((saved: RoadLegSetupDetail) => {
     setSelectedVehicleIds(saved.allocations.map((allocation) => allocation.vehicleId));
@@ -169,7 +178,20 @@ export default function RoadLegSetup({ orderId, leg, service, readOnly, onClose,
   }
 
   async function moveCheckpoint(checkpoint: RoadCheckpoint, direction: "UP" | "DOWN") { await runMutation(() => service.moveRoadCheckpoint(orderId, leg.id, checkpoint.id, direction), `Checkpoint moved ${direction === "UP" ? "up" : "down"}.`); }
-  async function validateSetup() { await runMutation(() => service.validateRoadLegSetup(orderId, leg.id), "ROAD setup checked."); }
+  async function validateSetup() {
+    setBusy(true); setError(""); setFeedback(""); setValidationNotice(null);
+    try {
+      const result = await service.validateRoadLegSetup(orderId, leg.id);
+      setSetup(result);
+      hydrateDraft(result);
+      setValidationNotice(result.validationIssues.length === 0
+        ? { kind: "success", title: "ROAD leg is ready", message: "Vehicle allocation and checkpoints passed the saved ROAD setup check.", issueCount: 0 }
+        : { kind: "attention", title: "ROAD leg needs attention", message: "Review the highlighted items before checking this ROAD leg again.", issueCount: result.validationIssues.length });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The ROAD setup couldn't be checked.");
+      try { await readBack(); } catch { /* retain validation error */ }
+    } finally { setBusy(false); }
+  }
 
   if (loading) return <div className="road-setup road-setup-loading" role="status" aria-label="Loading ROAD setup"><span /><span /></div>;
   if (!setup) return <div className="road-setup road-setup-unavailable" role="alert"><strong>ROAD setup unavailable</strong><p>{error}</p><div><button className="customer-secondary-button" type="button" onClick={safeClose}>Close</button><button className="customer-primary-button" type="button" onClick={() => void load()}>Try again</button></div></div>;
@@ -189,7 +211,7 @@ export default function RoadLegSetup({ orderId, leg, service, readOnly, onClose,
       {setup.readOnly || readOnly ? <p className="road-setup-readonly" role="status">Saved ROAD setup · Read-only</p> : null}
       {error && <div className="road-setup-message is-error" role="alert"><span>{error}</span><button type="button" onClick={() => void readBack()}>Refresh</button></div>}
       {feedback && <p className="road-setup-message is-success" role="status">{feedback}</p>}
-      {setup.validationIssues.length > 0 && <ul className="road-setup-issues">{setup.validationIssues.map((issue, index) => <li key={`${issue.code}-${issue.targetId}-${index}`}><strong>{issue.code.replaceAll("_", " ")}</strong><span>{issue.message}</span></li>)}</ul>}
+      {setup.validationIssues.length > 0 && <section className="road-setup-validation" aria-labelledby={`road-validation-${leg.id}`}><div><span aria-hidden="true">!</span><div><h4 id={`road-validation-${leg.id}`}>Fix these ROAD leg issues</h4><p>Resolve each item before the final route check.</p></div><strong>{setup.validationIssues.length}</strong></div><ul className="road-setup-issues">{setup.validationIssues.map((issue, index) => <li key={`${issue.code}-${issue.targetId}-${index}`}><span aria-hidden="true">{index + 1}</span><div><strong>{issue.code.replaceAll("_", " ").toLowerCase().replace(/^./, (character) => character.toUpperCase())}</strong><p>{issue.message}</p></div></li>)}</ul></section>}
 
       {tab === "allocations" ? (
         <div className="road-allocation-grid">
@@ -225,7 +247,8 @@ export default function RoadLegSetup({ orderId, leg, service, readOnly, onClose,
         </section>
       )}
 
-      {!setup.readOnly && !readOnly && <footer className="road-setup-footer"><button className="customer-secondary-button" type="button" disabled={busy} onClick={() => void validateSetup()}>Validate ROAD setup</button>{tab === "allocations" && <button className="customer-primary-button" type="button" disabled={busy || !allocationDirty} onClick={() => void saveAllocations()}>{busy ? "Saving..." : "Save ROAD setup"}</button>}</footer>}
+      {!setup.readOnly && !readOnly && <footer className="road-setup-footer"><div><strong>{tab === "allocations" ? "Vehicle allocation" : "Checkpoint plan"}</strong><span>{dirty ? "Save or discard pending changes before checking." : "All changes are saved. You can check this ROAD leg."}</span></div><div><button className="customer-secondary-button" type="button" title={dirty ? "Save or discard pending changes before checking this ROAD leg." : undefined} disabled={busy || dirty} onClick={() => void validateSetup()}>{busy ? "Checking..." : "Check this ROAD leg"}</button>{tab === "allocations" && (allocationDirty ? <button className="customer-primary-button" type="button" disabled={busy} onClick={() => void saveAllocations()}>{busy ? "Saving..." : "Save allocations"}</button> : <span className="road-setup-saved-status" role="status"><span aria-hidden="true">&#10003;</span> Allocations saved</span>)}</div></footer>}
+      {validationNotice && <ValidationResultDialog kind={validationNotice.kind} eyebrow="ROAD setup check" title={validationNotice.title} message={validationNotice.message} issueCount={validationNotice.issueCount} issues={setup.validationIssues.map((issue) => ({ label: issue.code.replaceAll("_", " ").toLowerCase().replace(/^./, (character) => character.toUpperCase()), message: issue.message }))} onClose={() => setValidationNotice(null)} />}
     </div>
   );
 }

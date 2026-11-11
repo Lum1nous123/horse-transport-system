@@ -28,6 +28,8 @@ export type AssignedCoordinatorOrderSummary = {
 };
 
 export type AssignedCoordinatorOrderDetail = AssignedCoordinatorOrderSummary & {
+  originAddress: string;
+  destinationAddress: string;
   customerName: string;
   assignedAt: string;
   assignedTransportSpecialistName: string;

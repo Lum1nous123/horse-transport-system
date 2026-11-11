@@ -130,17 +130,27 @@ public class ExecutionStaffingService {
 						|| airExecutions.size() != airLegs.size())) {
 			throw new RoutePlanValidationException("Execution staff assignment is incomplete");
 		}
+		Set<UUID> staffIds = new HashSet<>();
+		roadExecutions.forEach(execution -> {
+			staffIds.add(execution.getDriverId());
+			staffIds.add(execution.getEscortId());
+		});
+		airExecutions.forEach(execution -> staffIds.add(execution.getEscortId()));
+		Map<UUID, UserAccount> staffById = userRepository.findAllById(staffIds).stream()
+				.collect(Collectors.toMap(UserAccount::getId, Function.identity()));
 
 		return new ExecutionStaffingResponse(
 				roadExecutions.stream()
 						.sorted(Comparator.comparing(execution ->
 								roadVehiclesById.get(execution.getRoadLegVehicleId()).getAssignedAt()))
 						.map(execution -> ExecutionStaffingResponse.RoadVehicleExecutionResponse.from(
-								execution, roadVehiclesById.get(execution.getRoadLegVehicleId())))
+								execution, roadVehiclesById.get(execution.getRoadLegVehicleId()),
+								staffById.get(execution.getDriverId()), staffById.get(execution.getEscortId())))
 						.toList(),
 				airExecutions.stream()
 						.sorted(Comparator.comparing(AirLegExecution::getAssignedAt))
-						.map(ExecutionStaffingResponse.AirLegExecutionResponse::from)
+						.map(execution -> ExecutionStaffingResponse.AirLegExecutionResponse.from(
+								execution, staffById.get(execution.getEscortId())))
 						.toList());
 	}
 

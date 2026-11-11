@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AssignmentWorkspaceFrame from "@/components/AssignmentWorkspaceFrame";
-import { LogisticsDateTime, LogisticsOrdersTabs, LogisticsStatusTabs } from "@/components/LogisticsWorkspaceUI";
+import { LogisticsDateTime, LogisticsStatusTabs } from "@/components/LogisticsWorkspaceUI";
 import { listLogisticsTrackingOrders, type TrackingOrderSummary } from "@/lib/logistics-tracking/service";
 import { useLogisticsAccess } from "@/lib/staff-assignment/use-logistics-access";
 
@@ -49,7 +49,6 @@ export default function LogisticsTrackingPage() {
 
   const count = (group: JourneyGroup) => loading || error || preview ? null : orders.filter((order) => belongsTo(order, group)).length;
   return <AssignmentWorkspaceFrame preview={preview} activeSection="tracking">
-    <LogisticsOrdersTabs active="journeys" preview={preview} />
     <header className="lm-page-heading"><div><h1>Journeys</h1><p>Orders with an approved Route Plan. Open a journey for vehicle progress and evidence.</p></div><button className="customer-secondary-button compact" type="button" disabled={loading || preview} onClick={() => void load()}>{loading && !preview ? "Refreshing…" : "Refresh"}</button></header>
     {preview ? <div className="customer-alert" role="alert">Journeys use authenticated Backend data and are unavailable in preview mode.</div> : <>
       {error && <div className="customer-alert" role="alert"><span>{error}{loaded && " Previously loaded journeys may be outdated."}</span><button type="button" disabled={loading} onClick={() => void load()}>Try again</button></div>}

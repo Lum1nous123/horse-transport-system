@@ -25,8 +25,8 @@ export function lockedFixture(): RouteReviewDetail {
   result.routePlanStatus = "APPROVED";
   result.orderStatus = "READY_TO_SHIP";
   result.lockedAt = "2026-11-06T10:00:00Z";
-  result.legs[0].roadVehicles[0].driver = { id: "driver-id" };
-  result.legs[0].roadVehicles[0].escort = { id: "escort-id" };
+  result.legs[0].roadVehicles[0].driver = { id: "driver-id", fullName: "Dana Driver", email: "dana.driver@example.com" };
+  result.legs[0].roadVehicles[0].escort = { id: "escort-id", fullName: "Eli Escort", email: "eli.escort@example.com" };
   return result;
 }
 
