@@ -20,7 +20,7 @@ type DocumentInboxItem = {
   originCountry: string | null;
   destinationAddress: string | null;
   destinationCountry: string | null;
-  requestedDepartureAt: string;
+  requestedDeliveryDate: string | null;
   transportMode: "ROAD" | "AIR" | "COMBINED";
   horseCount: number;
   documentCompletionDeadlineAt: string | null;
@@ -163,7 +163,7 @@ async function loadOrderDetail(item: DocumentInboxItem): Promise<AssignedSpecial
     origin: location(item.originAddress, item.originCountry),
     destination: location(item.destinationAddress, item.destinationCountry),
     transportMode: item.transportMode,
-    requestedDepartureAt: item.requestedDepartureAt,
+    requestedDeliveryDate: item.requestedDeliveryDate,
     horseCount: item.horseCount,
     assignedAt: item.createdAt,
     assignedTransportSpecialistName: currentUser.fullName,
@@ -201,7 +201,7 @@ function summaryFromInbox(
     origin: location(item.originAddress, item.originCountry),
     destination: location(item.destinationAddress, item.destinationCountry),
     transportMode: item.transportMode,
-    requestedDepartureAt: item.requestedDepartureAt,
+    requestedDeliveryDate: item.requestedDeliveryDate,
     horseCount: item.horseCount,
     assignedAt: item.createdAt,
     assignedTransportSpecialistName,

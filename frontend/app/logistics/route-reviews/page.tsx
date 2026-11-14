@@ -6,6 +6,7 @@ import AssignmentWorkspaceFrame from "@/components/AssignmentWorkspaceFrame";
 import { LogisticsDateTime } from "@/components/LogisticsWorkspaceUI";
 import { getLogisticsRouteReviewService, type RouteReviewSummary } from "@/lib/logistics-route-review/service";
 import { useLogisticsAccess } from "@/lib/staff-assignment/use-logistics-access";
+import { formatRequestedDeliveryDate } from "@/lib/requested-delivery-date";
 
 export default function RouteReviewQueuePage() {
   const { state: accessState, preview, message: accessMessage } = useLogisticsAccess();
@@ -61,11 +62,11 @@ export default function RouteReviewQueuePage() {
 
 function ReviewTable({ orders, preview }: { orders: RouteReviewSummary[]; preview: boolean }) {
   return <div className="lm-table-scroll"><table className="lm-management-table" aria-label="Pending route reviews">
-    <thead><tr><th scope="col">Order</th><th scope="col" className="lm-route-column">Route</th><th scope="col">Departure</th><th scope="col">FRC</th><th scope="col">Submitted</th><th scope="col">Action</th></tr></thead>
+    <thead><tr><th scope="col">Order</th><th scope="col" className="lm-route-column">Route</th><th scope="col">Desired delivery date</th><th scope="col">FRC</th><th scope="col">Submitted</th><th scope="col">Action</th></tr></thead>
     <tbody>{orders.map((order) => <tr key={order.orderId}>
       <td data-label="Order"><strong>{order.orderCode}</strong></td>
       <td data-label="Route" className="lm-route-cell"><span>{order.origin}</span><span className="lm-destination"><b aria-hidden="true">→</b> {order.destination}</span></td>
-      <td data-label="Departure"><LogisticsDateTime value={order.requestedDepartureAt} /></td>
+      <td data-label="Desired delivery date">{formatRequestedDeliveryDate(order.requestedDeliveryDate)}</td>
       <td data-label="FRC">{order.assignedFleetRouteCoordinatorName}</td>
       <td data-label="Submitted"><LogisticsDateTime value={order.submittedAt} /></td>
       <td data-label="Action"><Link className="customer-primary-button compact" href={`/logistics/route-reviews/${order.orderId}${preview ? "?preview=1" : ""}`} aria-label={`Review ${order.orderCode}`}>Review <span aria-hidden="true">→</span></Link></td>

@@ -7,6 +7,7 @@ import type { FormEvent } from "react";
 import { clearAccessToken, getAccessToken, getCurrentUser } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { selectLogisticsInboxOrders, type InboxMode, type InboxSort } from "@/lib/logistics-inbox-search";
+import { formatRequestedDeliveryDate } from "@/lib/requested-delivery-date";
 import BrandMark from "@/components/BrandMark";
 import { LogisticsNavigation } from "@/components/LogisticsWorkspaceUI";
 import "./submitted-orders.css";
@@ -21,7 +22,7 @@ type InboxOrder = {
   destinationAddress: string | null;
   destinationCountry: string | null;
   transportMode: "ROAD" | "AIR" | "COMBINED" | null;
-  requestedDepartureAt: string | null;
+  requestedDeliveryDate: string | null;
   horseCount: number;
   createdAt: string;
 };
@@ -34,7 +35,7 @@ type OrderDetail = {
   destinationAddress: string | null;
   destinationCountry: string | null;
   transportMode: "ROAD" | "AIR" | "COMBINED" | null;
-  requestedDepartureAt: string | null;
+  requestedDeliveryDate: string | null;
   specialRequirements: string | null;
   recipientName: string | null;
   recipientPhone: string | null;
@@ -85,12 +86,12 @@ const previewOrders: InboxOrder[] = [
     id: demoOrderId, orderCode: "ORD-DEMO-2048", status: "SUBMITTED",
     originAddress: "Lexington, KY", originCountry: "United States",
     destinationAddress: "Brussels", destinationCountry: "Belgium", transportMode: "COMBINED",
-    requestedDepartureAt: "2026-10-18T09:00:00", horseCount: 2, createdAt: "2026-09-28T10:30:00",
+    requestedDeliveryDate: "2026-10-18", horseCount: 2, createdAt: "2026-09-28T10:30:00",
   },
   {
     id: "preview-order-lm-2", orderCode: "ORD-DEMO-2039", status: "SUBMITTED",
     originAddress: null, originCountry: "France", destinationAddress: "Amsterdam", destinationCountry: "Netherlands",
-    transportMode: "ROAD", requestedDepartureAt: "2026-10-22T08:00:00", horseCount: 1,
+    transportMode: "ROAD", requestedDeliveryDate: "2026-10-22", horseCount: 1,
     createdAt: "2026-09-27T15:15:00",
   },
 ];
@@ -99,14 +100,14 @@ const previewDetails: Record<string, OrderDetail> = {
     id: demoOrderId, orderCode: "ORD-DEMO-2048", status: "SUBMITTED",
     originAddress: "Lexington, KY", originCountry: "United States",
     destinationAddress: "Brussels", destinationCountry: "Belgium", transportMode: "COMBINED",
-    requestedDepartureAt: "2026-10-18T09:00:00", specialRequirements: "Please coordinate arrival with the receiving stable.",
+    requestedDeliveryDate: "2026-10-18", specialRequirements: "Please coordinate arrival with the receiving stable.",
     recipientName: "Morgan Taylor", recipientPhone: "+32 2 555 0124", recipientEmail: "morgan@example.com",
     horseIds: ["preview-horse-1", "preview-horse-2"],
   },
   "preview-order-lm-2": {
     id: "preview-order-lm-2", orderCode: "ORD-DEMO-2039", status: "SUBMITTED",
     originAddress: null, originCountry: "France", destinationAddress: "Amsterdam", destinationCountry: "Netherlands",
-    transportMode: "ROAD", requestedDepartureAt: "2026-10-22T08:00:00", specialRequirements: null,
+    transportMode: "ROAD", requestedDeliveryDate: "2026-10-22", specialRequirements: null,
     recipientName: "Jordan Lee", recipientPhone: "+31 20 555 0198", recipientEmail: null,
     horseIds: ["preview-horse-3"],
   },
@@ -484,10 +485,10 @@ export default function LogisticsPage() {
               <label className="logistics-search"><span className="sr-only">Search submitted orders</span><input type="search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search order or route" autoComplete="off" /></label>
               <div className="lm-inbox-controls">
                 <label>Mode<select value={modeFilter} onChange={(event) => setModeFilter(event.target.value as InboxMode)}><option value="ALL">All modes</option><option value="ROAD">ROAD</option><option value="AIR">AIR</option><option value="COMBINED">COMBINED</option></select></label>
-                <label>Sort by<select value={inboxSort} onChange={(event) => setInboxSort(event.target.value as InboxSort)}><option value="received-oldest">Received oldest first</option><option value="received-newest">Received newest first</option><option value="departure-earliest">Departure earliest</option></select></label>
+                <label>Sort by<select value={inboxSort} onChange={(event) => setInboxSort(event.target.value as InboxSort)}><option value="received-oldest">Received oldest first</option><option value="received-newest">Received newest first</option><option value="delivery-earliest">Desired delivery earliest</option></select></label>
               </div>
             </div>
-            {loading ? <p className="logistics-empty" role="status">Loading submitted orders…</p> : loadError && orders.length === 0 ? <p className="logistics-empty">Submitted orders are unavailable. Use “Try again” above.</p> : orders.length === 0 ? <div className="logistics-empty"><span className="logistics-empty-icon" aria-hidden="true">✓</span><h3>Inbox is clear</h3><p>New submitted transport requests will appear here.</p></div> : visibleOrders.length === 0 ? <div className="logistics-empty logistics-search-empty"><h3>No matching orders</h3><p>Try a different order code, route, or mode.</p><button className="customer-text-button" type="button" onClick={clearInboxFilters}>Clear filters</button></div> : <ul className="logistics-order-list">{visibleOrders.map((order) => <li key={order.id}><button className={`logistics-order-card${selectedId === order.id ? " is-selected" : ""}`} type="button" disabled={quoteBusyAction || rejectBusy} onClick={() => { setMobileDetail(true); void openOrder(order); requestAnimationFrame(() => detailHeading.current?.focus()); }} aria-current={selectedId === order.id ? "true" : undefined}><span className="logistics-order-card-top"><strong>{order.orderCode}</strong></span><span className="logistics-route">{location(order.originAddress, order.originCountry)} <span aria-hidden="true">→</span> {location(order.destinationAddress, order.destinationCountry)}</span><span className="lm-inbox-departure"><span>Departure</span> {inboxDate(order.requestedDepartureAt)}</span><span className="logistics-order-card-bottom"><span>{order.horseCount} {order.horseCount === 1 ? "horse" : "horses"} · {order.transportMode ?? "Mode not set"}</span><span>Received {inboxDate(order.createdAt)}</span></span></button></li>)}</ul>}
+            {loading ? <p className="logistics-empty" role="status">Loading submitted orders…</p> : loadError && orders.length === 0 ? <p className="logistics-empty">Submitted orders are unavailable. Use “Try again” above.</p> : orders.length === 0 ? <div className="logistics-empty"><span className="logistics-empty-icon" aria-hidden="true">✓</span><h3>Inbox is clear</h3><p>New submitted transport requests will appear here.</p></div> : visibleOrders.length === 0 ? <div className="logistics-empty logistics-search-empty"><h3>No matching orders</h3><p>Try a different order code, route, or mode.</p><button className="customer-text-button" type="button" onClick={clearInboxFilters}>Clear filters</button></div> : <ul className="logistics-order-list">{visibleOrders.map((order) => <li key={order.id}><button className={`logistics-order-card${selectedId === order.id ? " is-selected" : ""}`} type="button" disabled={quoteBusyAction || rejectBusy} onClick={() => { setMobileDetail(true); void openOrder(order); requestAnimationFrame(() => detailHeading.current?.focus()); }} aria-current={selectedId === order.id ? "true" : undefined}><span className="logistics-order-card-top"><strong>{order.orderCode}</strong></span><span className="logistics-route">{location(order.originAddress, order.originCountry)} <span aria-hidden="true">→</span> {location(order.destinationAddress, order.destinationCountry)}</span><span className="lm-inbox-departure"><span>Desired delivery date</span> {formatRequestedDeliveryDate(order.requestedDeliveryDate)}</span><span className="logistics-order-card-bottom"><span>{order.horseCount} {order.horseCount === 1 ? "horse" : "horses"} · {order.transportMode ?? "Mode not set"}</span><span>Received {inboxDate(order.createdAt)}</span></span></button></li>)}</ul>}
             {!loading && orders.length > 0 && <p className="logistics-inbox-footer">Showing {visibleOrders.length} of {orders.length} loaded {orders.length === 1 ? "order" : "orders"}</p>}
           </section>
 
@@ -496,7 +497,7 @@ export default function LogisticsPage() {
             {selectedId && orders.some((order) => order.id === selectedId) && !visibleOrders.some((order) => order.id === selectedId) && <div className="lm-filter-notice" role="status">The open order is outside your current filters. Your quotation edits are preserved. <button className="customer-text-button" type="button" onClick={clearInboxFilters}>Clear filters</button></div>}
             {!selectedId ? <div className="logistics-select-prompt"><span aria-hidden="true">↖</span><h2>Select an order</h2><p>Choose a submitted request to review its journey and delivery details.</p></div> : detailBusy ? <div className="logistics-select-prompt" role="status"><p>Loading order details…</p></div> : !orderDetail ? <div className="logistics-select-prompt"><p>Order details are unavailable. Refresh the inbox and try again.</p></div> : <>
               <div className="logistics-detail-heading"><div className="logistics-detail-title"><div><h2>{orderDetail.orderCode}</h2><span className="order-status status-submitted">Submitted</span></div><p><LogisticsIcon name="location" />{location(orderDetail.originAddress, orderDetail.originCountry)} <span aria-hidden="true">→</span> {location(orderDetail.destinationAddress, orderDetail.destinationCountry)}</p></div><div className="logistics-header-actions"><button className="customer-secondary-button compact reject-trigger" type="button" onClick={() => { setRejectOrder(orderDetail); setRejectError(""); setRejectionReason(""); }}>Reject order</button>{!quotation && !quoteError && <button className="customer-primary-button compact" type="button" disabled={quoteBusy || quoteBusyAction} onClick={() => void createQuotation()}>{quoteBusy ? "Checking quotation…" : quoteBusyAction ? "Preparing…" : "Prepare quotation"}</button>}</div></div>
-              <section className="logistics-summary" aria-labelledby="transport-summary-heading"><h3 id="transport-summary-heading">Transport summary</h3><dl><div><dt><LogisticsIcon name="mode" />Transport mode</dt><dd>{orderDetail.transportMode ?? "Not provided"}</dd></div><div><dt><LogisticsIcon name="calendar" />Requested departure</dt><dd>{orderDetail.requestedDepartureAt ? new Date(orderDetail.requestedDepartureAt).toLocaleString() : "Not provided"}</dd></div><div><dt><LogisticsIcon name="horses" />Horses</dt><dd>{orderDetail.horseIds.length} {orderDetail.horseIds.length === 1 ? "horse" : "horses"}</dd></div></dl></section>
+              <section className="logistics-summary" aria-labelledby="transport-summary-heading"><h3 id="transport-summary-heading">Transport summary</h3><dl><div><dt><LogisticsIcon name="mode" />Transport mode</dt><dd>{orderDetail.transportMode ?? "Not provided"}</dd></div><div><dt><LogisticsIcon name="calendar" />Desired delivery date</dt><dd>{formatRequestedDeliveryDate(orderDetail.requestedDeliveryDate)}</dd></div><div><dt><LogisticsIcon name="horses" />Horses</dt><dd>{orderDetail.horseIds.length} {orderDetail.horseIds.length === 1 ? "horse" : "horses"}</dd></div></dl></section>
               <div className={`logistics-detail-grid${orderDetail.specialRequirements ? " has-requirements" : ""}`}>
                 <section className="logistics-info-section"><h3><LogisticsIcon name="contact" />Delivery contact</h3><dl><div><dt>Name</dt><dd>{orderDetail.recipientName || "Not provided"}</dd></div><div><dt>Phone</dt><dd>{orderDetail.recipientPhone ? <a href={`tel:${orderDetail.recipientPhone}`}>{orderDetail.recipientPhone}</a> : "Not provided"}</dd></div><div><dt>Email</dt><dd>{orderDetail.recipientEmail ? <a href={`mailto:${orderDetail.recipientEmail}`}>{orderDetail.recipientEmail}</a> : "Not provided"}</dd></div></dl></section>
                 {orderDetail.specialRequirements && <section className="logistics-info-section logistics-requirements"><h3><LogisticsIcon name="note" />Special requirements</h3><p>{orderDetail.specialRequirements}</p></section>}

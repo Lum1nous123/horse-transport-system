@@ -146,7 +146,8 @@ public class JourneyTrackingService {
 
 		return new JourneyTrackingResponse(order.getId(), order.getOrderCode(), order.getStatus(),
 				order.getOriginAddress(), order.getOriginCountry(), order.getDestinationAddress(),
-				order.getDestinationCountry(), order.getRequestedDepartureAt(), order.getDeliveredAt(),
+				order.getDestinationCountry(), order.getRequestedDepartureAt(),
+				order.getRequestedDeliveryDate(), order.getDeliveredAt(),
 				plan.getId(), plan.getStatus(), plan.getApprovedAt(), orderHorses(data), legResponses);
 	}
 

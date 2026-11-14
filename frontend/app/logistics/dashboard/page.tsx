@@ -9,6 +9,7 @@ import { getLogisticsRouteReviewService, type RouteReviewQueues } from "@/lib/lo
 import { listLogisticsTrackingOrders, type TrackingOrderSummary } from "@/lib/logistics-tracking/service";
 import { apiFetch } from "@/lib/api";
 import { clearAccessToken, getAccessToken } from "@/lib/auth";
+import { compareRequestedDeliveryDates, formatRequestedDeliveryDate, isUpcomingRequestedDeliveryDate, localTodayDate } from "@/lib/requested-delivery-date";
 import "./dashboard.css";
 
 type SubmittedOrder = {
@@ -18,7 +19,7 @@ type SubmittedOrder = {
   originCountry: string | null;
   destinationAddress: string | null;
   destinationCountry: string | null;
-  requestedDepartureAt: string | null;
+  requestedDeliveryDate: string | null;
   createdAt: string;
 };
 
@@ -26,13 +27,13 @@ type DashboardSource = "submitted" | "assignments" | "reviews" | "journeys";
 type DashboardErrors = Partial<Record<DashboardSource, string>>;
 
 const previewSubmitted: SubmittedOrder[] = [
-  { id: "preview-order-lm-1", orderCode: "ORD-2048", originAddress: "Lexington, KY", originCountry: "United States", destinationAddress: "Brussels", destinationCountry: "Belgium", requestedDepartureAt: "2026-11-21T09:00:00-04:00", createdAt: "2026-11-09T10:30:00+07:00" },
-  { id: "preview-order-lm-2", orderCode: "ORD-2039", originAddress: null, originCountry: "France", destinationAddress: "Amsterdam", destinationCountry: "Netherlands", requestedDepartureAt: "2026-11-25T08:00:00+01:00", createdAt: "2026-11-08T15:15:00+07:00" },
+  { id: "preview-order-lm-1", orderCode: "ORD-2048", originAddress: "Lexington, KY", originCountry: "United States", destinationAddress: "Brussels", destinationCountry: "Belgium", requestedDeliveryDate: "2026-11-21", createdAt: "2026-11-09T10:30:00+07:00" },
+  { id: "preview-order-lm-2", orderCode: "ORD-2039", originAddress: null, originCountry: "France", destinationAddress: "Amsterdam", destinationCountry: "Netherlands", requestedDeliveryDate: "2026-11-25", createdAt: "2026-11-08T15:15:00+07:00" },
 ];
 
 const previewJourneys: TrackingOrderSummary[] = [
-  { orderId: "preview-journey-1", orderCode: "ORD-2068", status: "IN_PROGRESS", originAddress: "Saumur", originCountry: "France", destinationAddress: "Amsterdam", destinationCountry: "Netherlands", transportMode: "ROAD", requestedDepartureAt: "2026-11-12T08:00:00+01:00", horseCount: 2, createdAt: "2026-11-01T09:00:00+01:00", deliveredAt: null },
-  { orderId: "preview-journey-2", orderCode: "ORD-2071", status: "READY_TO_SHIP", originAddress: "Lexington, KY", originCountry: "United States", destinationAddress: "Brussels", destinationCountry: "Belgium", transportMode: "COMBINED", requestedDepartureAt: "2026-11-14T09:00:00-04:00", horseCount: 4, createdAt: "2026-11-02T12:00:00-04:00", deliveredAt: null },
+  { orderId: "preview-journey-1", orderCode: "ORD-2068", status: "IN_PROGRESS", originAddress: "Saumur", originCountry: "France", destinationAddress: "Amsterdam", destinationCountry: "Netherlands", transportMode: "ROAD", requestedDeliveryDate: "2026-11-21", horseCount: 2, createdAt: "2026-11-01T09:00:00+01:00", deliveredAt: null },
+  { orderId: "preview-journey-2", orderCode: "ORD-2071", status: "READY_TO_SHIP", originAddress: "Lexington, KY", originCountry: "United States", destinationAddress: "Brussels", destinationCountry: "Belgium", transportMode: "COMBINED", requestedDeliveryDate: "2026-11-25", horseCount: 4, createdAt: "2026-11-02T12:00:00-04:00", deliveredAt: null },
 ];
 
 async function readSubmittedOrders(preview: boolean): Promise<SubmittedOrder[]> {
@@ -70,8 +71,7 @@ function DashboardIcon({ name }: { name: "inbox" | "staff" | "route" | "journey"
 }
 
 function dateLabel(value: string | null | undefined) {
-  if (!value || !Number.isFinite(Date.parse(value))) return "Date not provided";
-  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value));
+  return formatRequestedDeliveryDate(value);
 }
 
 function routeLabel(origin: string | null, originCountry: string | null, destination: string | null, destinationCountry: string | null) {
@@ -139,9 +139,14 @@ export default function LogisticsDashboardPage() {
   }, []);
 
   const activeJourneys = useMemo(() => (journeys ?? []).filter((order) => order.status === "READY_TO_SHIP" || order.status === "IN_PROGRESS"), [journeys]);
-  const upcomingDepartures = useMemo(() => currentTime === null ? [] : activeJourneys
-    .filter((order) => Date.parse(order.requestedDepartureAt) >= currentTime)
-    .toSorted((a, b) => Date.parse(a.requestedDepartureAt) - Date.parse(b.requestedDepartureAt)), [activeJourneys, currentTime]);
+  const upcomingDesiredDeliveries = useMemo(() => {
+    if (currentTime === null) return [];
+    const today = localTodayDate(new Date(currentTime));
+    return activeJourneys
+      .filter((order) => isUpcomingRequestedDeliveryDate(order.requestedDeliveryDate, today))
+      .toSorted((a, b) => compareRequestedDeliveryDates(
+        a.requestedDeliveryDate, b.requestedDeliveryDate, a.orderId, b.orderId));
+  }, [activeJourneys, currentTime]);
 
   if (accessState !== "allowed") return <main className="customer-page"><div className="customer-content assignment-access-state"><p className="customer-loading" role={accessState === "checking" ? "status" : "alert"}>{accessState === "checking" ? "Checking Logistics Manager access…" : accessMessage}</p>{accessState !== "checking" && <Link className="customer-secondary-button" href="/login">Return to sign in</Link>}</div></main>;
 
@@ -201,7 +206,7 @@ export default function LogisticsDashboardPage() {
           const rowContent = <><span className="lm-dashboard-journey-code">{order.orderCode}<span className={`lm-dashboard-status is-${order.status.toLowerCase()}`}>{statusLabel(order.status)}</span></span>
             <span className="lm-dashboard-journey-route">{route.from}<b aria-hidden="true">→</b>{route.to}</span>
             <span className="lm-dashboard-journey-meta">{order.transportMode} <i aria-hidden="true">·</i> {order.horseCount} {order.horseCount === 1 ? "horse" : "horses"}</span>
-            <span className="lm-dashboard-journey-date"><DashboardIcon name="calendar" />{dateLabel(order.requestedDepartureAt)}</span></>;
+            <span className="lm-dashboard-journey-date"><DashboardIcon name="calendar" />{dateLabel(order.requestedDeliveryDate)}</span></>;
           return preview ? <article key={order.orderId} className="lm-dashboard-journey-row">{rowContent}</article> : <Link key={order.orderId} href={`/logistics/orders/${order.orderId}/tracking`} className="lm-dashboard-journey-row">
             {rowContent}
           </Link>;
@@ -209,9 +214,9 @@ export default function LogisticsDashboardPage() {
       </section>
 
       <section className="lm-dashboard-panel lm-dashboard-departures" aria-labelledby="departures-title">
-        <div className="lm-dashboard-panel-heading"><div><h2 id="departures-title">Upcoming departures</h2><p>From ready-to-ship or active journeys.</p></div><span className="lm-dashboard-panel-count">{journeys === null ? "—" : upcomingDepartures.length}</span></div>
-        {journeys === null ? <p className="lm-dashboard-state">Departure data is unavailable.</p> : upcomingDepartures.length === 0 ? <p className="lm-dashboard-state">No upcoming departures in the current tracking list.</p> : <ul className="lm-dashboard-departure-list">{upcomingDepartures.slice(0, 5).map((order) => <li key={order.orderId}>{preview ? <div className="lm-dashboard-departure-item"><span><strong>{order.orderCode}</strong><small>{order.originAddress || order.originCountry || "Origin not provided"}</small></span><time dateTime={order.requestedDepartureAt}>{dateLabel(order.requestedDepartureAt)}</time></div> : <Link href={`/logistics/orders/${order.orderId}/tracking`}><span><strong>{order.orderCode}</strong><small>{order.originAddress || order.originCountry || "Origin not provided"}</small></span><time dateTime={order.requestedDepartureAt}>{dateLabel(order.requestedDepartureAt)}</time></Link>}</li>)}</ul>}
-        <p className="lm-dashboard-footnote">Departure dates are planned dates; they are not live location updates.</p>
+        <div className="lm-dashboard-panel-heading"><div><h2 id="departures-title">Upcoming desired deliveries</h2><p>From ready-to-ship or active journeys.</p></div><span className="lm-dashboard-panel-count">{journeys === null ? "—" : upcomingDesiredDeliveries.length}</span></div>
+        {journeys === null ? <p className="lm-dashboard-state">Desired delivery data is unavailable.</p> : upcomingDesiredDeliveries.length === 0 ? <p className="lm-dashboard-state">No upcoming desired deliveries in the current tracking list.</p> : <ul className="lm-dashboard-departure-list">{upcomingDesiredDeliveries.slice(0, 5).map((order) => <li key={order.orderId}>{preview ? <div className="lm-dashboard-departure-item"><span><strong>{order.orderCode}</strong><small>{order.originAddress || order.originCountry || "Origin not provided"}</small></span><time dateTime={order.requestedDeliveryDate ?? undefined}>{dateLabel(order.requestedDeliveryDate)}</time></div> : <Link href={`/logistics/orders/${order.orderId}/tracking`}><span><strong>{order.orderCode}</strong><small>{order.originAddress || order.originCountry || "Origin not provided"}</small></span><time dateTime={order.requestedDeliveryDate ?? undefined}>{dateLabel(order.requestedDeliveryDate)}</time></Link>}</li>)}</ul>}
+        <p className="lm-dashboard-footnote">Desired delivery dates are Customer preferences, not planned arrival times.</p>
       </section>
     </div>
   </AssignmentWorkspaceFrame>;

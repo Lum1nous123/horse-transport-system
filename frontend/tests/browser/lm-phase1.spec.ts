@@ -49,7 +49,7 @@ test("journey tabs use API response statuses with no production preview data", a
   await page.addInitScript(() => sessionStorage.setItem("horse-transport-token", "browser-test-token"));
   const base = {
     originAddress: "Test origin", originCountry: "VN", destinationAddress: "Test destination", destinationCountry: "VN",
-    requestedDepartureAt: "2026-11-10T09:00:00Z", horseCount: 2, transportMode: "ROAD", createdAt: "2026-11-01T09:00:00Z", deliveredAt: null,
+    requestedDeliveryDate: "2026-11-10", horseCount: 2, transportMode: "ROAD", createdAt: "2026-11-01T09:00:00Z", deliveredAt: null,
   };
   await page.route("**/api/v1/**", async (route) => {
     const path = new URL(route.request().url()).pathname;

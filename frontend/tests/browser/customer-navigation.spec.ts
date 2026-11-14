@@ -8,9 +8,9 @@ const horses = [
 ];
 
 const orders = [
-  { id: "order-1", orderCode: "ORD-REAL-001", originCountry: "France", destinationCountry: "Belgium", requestedDepartureAt: "2026-11-10T09:00:00", transportMode: "ROAD", recipientName: "Taylor", recipientPhone: "+32 1", horseIds: ["horse-1"], status: "DRAFT" },
-  { id: "order-2", orderCode: "ORD-REAL-002", originCountry: "Germany", destinationCountry: "Netherlands", requestedDepartureAt: "2026-12-01T10:00:00", transportMode: "AIR", recipientName: "Morgan", recipientPhone: "+31 2", horseIds: ["horse-2"], status: "SUBMITTED" },
-  { id: "order-3", orderCode: "ORD-REAL-003", originCountry: "Ireland", destinationCountry: "France", requestedDepartureAt: "2026-12-15T08:00:00", transportMode: "ROAD", recipientName: "Alex", recipientPhone: "+33 3", horseIds: ["horse-1"], status: "REJECTED", rejectionReason: "The delivery contact details are incomplete." },
+  { id: "order-1", orderCode: "ORD-REAL-001", originCountry: "France", destinationCountry: "Belgium", requestedDeliveryDate: "2026-11-10", transportMode: "ROAD", recipientName: "Taylor", recipientPhone: "+32 1", horseIds: ["horse-1"], status: "DRAFT" },
+  { id: "order-2", orderCode: "ORD-REAL-002", originCountry: "Germany", destinationCountry: "Netherlands", requestedDeliveryDate: "2026-12-01", transportMode: "AIR", recipientName: "Morgan", recipientPhone: "+31 2", horseIds: ["horse-2"], status: "SUBMITTED" },
+  { id: "order-3", orderCode: "ORD-REAL-003", originCountry: "Ireland", destinationCountry: "France", requestedDeliveryDate: "2026-12-15", transportMode: "ROAD", recipientName: "Alex", recipientPhone: "+33 3", horseIds: ["horse-1"], status: "REJECTED", rejectionReason: "The delivery contact details are incomplete." },
 ];
 
 test.beforeEach(async ({ page }) => {
@@ -117,3 +117,24 @@ test("Customer sees why a transport request was rejected and starts a separate n
   await expect(page).toHaveURL(/\/customer$/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false);
 });
+
+for (const timezoneId of ["Pacific/Honolulu", "Asia/Bangkok"]) {
+  test.describe(`desired delivery date in ${timezoneId}`, () => {
+    test.use({ timezoneId });
+
+    test("sends the selected calendar date without a timezone conversion", async ({ page }) => {
+      await page.goto("/customer");
+      await page.getByRole("button", { name: "Drafts 1" }).click();
+      await page.getByRole("button", { name: "Edit draft" }).click();
+      const dialog = page.getByRole("dialog", { name: "Edit transport request" });
+      const date = dialog.getByLabel("Desired delivery date *");
+      await expect(date).toHaveAttribute("type", "date");
+      await date.fill("2026-11-25");
+      const updateRequest = page.waitForRequest((request) => new URL(request.url()).pathname === "/api/v1/orders/order-1" && request.method() === "PUT");
+      await dialog.getByRole("button", { name: "Save draft" }).click();
+      const payload = (await updateRequest).postDataJSON();
+      expect(payload.requestedDeliveryDate).toBe("2026-11-25");
+      expect(payload).not.toHaveProperty("requestedDepartureAt");
+    });
+  });
+}

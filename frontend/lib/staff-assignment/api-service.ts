@@ -21,7 +21,7 @@ type AssignmentInboxItem = {
   originCountry: string | null;
   destinationAddress: string | null;
   destinationCountry: string | null;
-  requestedDepartureAt: string;
+  requestedDeliveryDate: string | null;
   transportMode: "ROAD" | "AIR" | "COMBINED";
   horseCount: number;
 };
@@ -96,7 +96,7 @@ function summary(item: AssignmentInboxItem, assignmentStatus: "NEEDS_ASSIGNMENT"
     orderCode: item.orderCode,
     origin: location(item.originAddress, item.originCountry),
     destination: location(item.destinationAddress, item.destinationCountry),
-    requestedDepartureAt: item.requestedDepartureAt,
+    requestedDeliveryDate: item.requestedDeliveryDate,
     horseCount: item.horseCount,
     transportMode: item.transportMode,
     assignmentStatus,

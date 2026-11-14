@@ -216,7 +216,8 @@ Table transport_orders {
   origin_country varchar(100)
   destination_address varchar(255)
   destination_country varchar(100)
-  requested_departure_at timestamp
+  requested_departure_at timestamp // legacy; retained for existing Orders, not written by new Customer requests
+  requested_delivery_date date // Customer's desired delivery date; nullable for DRAFT and legacy Orders
   transport_mode transport_mode
   special_requirements text
 
@@ -250,16 +251,18 @@ Table transport_orders {
     customer_id
     status
     requested_departure_at
+    requested_delivery_date
     document_completion_deadline_at
   }
 }
 
 // Transactional invariants:
-// - Customer editing is allowed only in DRAFT; origin, destination, departure,
-//   transport mode, selected Horses, and recipient name/phone are checked at
-//   Submit. LM rejection is only from SUBMITTED and requires a reason.
-// - Customer cancellation is only from DRAFT, SUBMITTED, or QUOTATION_SENT.
-//   DELIVERED, REJECTED, and CANCELLED are terminal.
+// - Customer editing is allowed only in DRAFT or REJECTED; origin, destination,
+//   requested delivery date, transport mode, selected Horses, and recipient
+//   name/phone are checked at Submit. LM rejection is only from SUBMITTED
+//   and requires a reason.
+// - Customer cancellation is allowed before approval, including REJECTED.
+//   DELIVERED and CANCELLED are terminal.
 // - Deposit PAID atomically approves the Order and generates its checklist once.
 //   Remaining Balance PAID unlocks Route Planning.
 // - Deadline cancellation/refund and every audited status transition are atomic.

@@ -14,6 +14,7 @@ import {
   type SpecialistDocument,
 } from "@/lib/transport-specialist-workspace/service";
 import { useTransportSpecialistAccess } from "@/lib/transport-specialist-workspace/use-specialist-access";
+import { formatRequestedDeliveryDate } from "@/lib/requested-delivery-date";
 
 const documentLabels: Record<DocumentType, string> = {
   HORSE_PASSPORT_OR_IDENTIFICATION: "Horse Passport / Identification",
@@ -254,7 +255,7 @@ export default function AssignedOrderDetailPage() {
           )}
 
           <dl className="ts-order-facts">
-            <div><span className="ts-fact-icon"><TransportSpecialistIcon name="calendar" /></span><dt>Requested departure</dt><dd>{formatDateTime(order.requestedDepartureAt)}</dd></div>
+            <div><span className="ts-fact-icon"><TransportSpecialistIcon name="calendar" /></span><dt>Desired delivery date</dt><dd>{formatRequestedDeliveryDate(order.requestedDeliveryDate)}</dd></div>
             <div><span className="ts-fact-icon"><TransportSpecialistIcon name={order.transportMode === "AIR" ? "plane" : order.transportMode === "ROAD" ? "truck" : "route"} /></span><dt>Transport mode</dt><dd>{order.transportMode}</dd></div>
             <div><span className="ts-fact-icon"><TransportSpecialistIcon name="horse" /></span><dt>Horses</dt><dd>{order.horseCount}</dd></div>
             <div><span className="ts-fact-icon"><TransportSpecialistIcon name="user" /></span><dt>Fleet &amp; Route Coordinator</dt><dd>{order.assignedFleetRouteCoordinatorName}</dd></div>

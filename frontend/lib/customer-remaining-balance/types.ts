@@ -30,7 +30,7 @@ export type CustomerRemainingBalanceResult = {
     destination: string;
     horseCount: number;
     transportMode: "ROAD" | "AIR" | "COMBINED";
-    departureAt: string;
+    desiredDeliveryDate: string | null;
   };
   eligibility: {
     status: RemainingBalanceEligibility;

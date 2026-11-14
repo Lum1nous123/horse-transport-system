@@ -10,9 +10,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }) }));
 vi.mock("@/lib/staff-assignment/use-logistics-access", () => ({ useLogisticsAccess: () => mocks.access }));
 vi.mock("@/lib/staff-assignment/service", () => ({ getStaffAssignmentService: () => mocks }));
-const order = (id: string, departure: string, destination: string): AssignmentOrderSummary => ({
+const order = (id: string, desiredDeliveryDate: string, destination: string): AssignmentOrderSummary => ({
   id, orderCode: "ORD-" + id, origin: "Long origin address", destination,
-  requestedDepartureAt: departure, transportMode: "COMBINED", horseCount: 5, assignmentStatus: "NEEDS_ASSIGNMENT",
+  requestedDeliveryDate: desiredDeliveryDate, transportMode: "COMBINED", horseCount: 5, assignmentStatus: "NEEDS_ASSIGNMENT",
 });
 
 describe("LM assignment management table", () => {
@@ -20,8 +20,8 @@ describe("LM assignment management table", () => {
     vi.resetAllMocks();
     mocks.access = { state: "allowed", preview: false, message: "" };
     mocks.listOrders.mockResolvedValue({
-      needsAssignment: [order("late", "2026-11-10T09:00:00Z", "Airport"), order("early", "2026-11-08T09:00:00Z", "Stable")],
-      assigned: [{ ...order("saved", "2026-11-09T09:00:00Z", "Paris"), assignmentStatus: "ASSIGNED" }],
+      needsAssignment: [order("late", "2026-11-10", "Airport"), order("early", "2026-11-08", "Stable")],
+      assigned: [{ ...order("saved", "2026-11-09", "Paris"), assignmentStatus: "ASSIGNED" }],
     });
   });
 
@@ -31,18 +31,18 @@ describe("LM assignment management table", () => {
     expect(screen.getAllByRole("table")).toHaveLength(1);
     expect(screen.getByRole("tab", { name: "Needs assignment 2" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tab", { name: "Assigned 1" })).toHaveAttribute("aria-selected", "false");
-    expect(within(table).getAllByRole("columnheader").map((node) => node.textContent)).toEqual(["Order", "Route", "Departure", "Horses / Mode", "Action"]);
+    expect(within(table).getAllByRole("columnheader").map((node) => node.textContent)).toEqual(["Order", "Route", "Desired delivery date", "Horses / Mode", "Action"]);
     const rows = within(table).getAllByRole("row").slice(1);
     expect(rows[0]).toHaveTextContent("ORD-early");
     expect(within(rows[0]).getByRole("link", { name: /Assign staff/ })).toHaveClass("customer-primary-button");
     expect(within(table).queryByText("Needs assignment")).not.toBeInTheDocument();
   });
 
-  it("searches by route, sorts departure and switches to saved-pair actions without another API call", async () => {
+  it("searches by route, sorts desired delivery date and switches to saved-pair actions without another API call", async () => {
     render(<Page />);
     await screen.findByRole("table");
     const user = userEvent.setup();
-    await user.selectOptions(screen.getByRole("combobox", { name: "Departure" }), "latest");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Desired delivery date" }), "latest");
     expect(screen.getAllByRole("row")[1]).toHaveTextContent("ORD-late");
     await user.type(screen.getByRole("searchbox", { name: "Search assignment orders" }), "Stable");
     expect(screen.queryByText("ORD-late")).not.toBeInTheDocument();

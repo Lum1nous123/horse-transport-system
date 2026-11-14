@@ -1,5 +1,6 @@
 package com.horsetransport.route;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -16,6 +17,7 @@ public record FrcPlanningQueueItemResponse(
 		String destinationAddress,
 		String destinationCountry,
 		LocalDateTime requestedDepartureAt,
+		LocalDate requestedDeliveryDate,
 		TransportMode transportMode,
 		int horseCount,
 		UUID routePlanId,
@@ -32,6 +34,7 @@ public record FrcPlanningQueueItemResponse(
 				order.getDestinationAddress(),
 				order.getDestinationCountry(),
 				order.getRequestedDepartureAt(),
+				order.getRequestedDeliveryDate(),
 				order.getTransportMode(),
 				order.getHorses().size(),
 				routePlan == null ? null : routePlan.getId(),

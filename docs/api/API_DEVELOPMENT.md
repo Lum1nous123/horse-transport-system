@@ -28,3 +28,18 @@ Use `API_BASE_URL`, `apiUrl`, or `apiFetch` from the helper instead of hardcodin
 `localhost` on each developer machine refers to that developer's own machine. Each developer must run or otherwise expose the backend and frontend on their own machine at the configured URLs.
 
 The frontend must call the Spring Boot REST API. It must not call Supabase directly.
+
+## Customer Desired Delivery Date
+
+Order create and update requests accept `requestedDeliveryDate` as a date-only
+`YYYY-MM-DD` string (for example, `"2026-11-25"`) or `null`. A DRAFT may omit it. Submit and resubmit require
+it; a legacy `requestedDepartureAt` value does not satisfy that requirement.
+No past-date restriction is applied. The desired date informs FRC planning and
+does not validate or block a Route Plan.
+
+Order detail, inbox, assignment, Transport Specialist, FRC planning, and
+tracking responses include `requestedDeliveryDate`, which is `null` for legacy
+Orders without one. Responses still include legacy `requestedDepartureAt` in
+this transition. New Customer requests do not write that legacy field. RouteLeg
+`plannedDepartureAt` and `plannedArrivalAt`, execution schedules, and actual
+delivery time retain their existing meanings.

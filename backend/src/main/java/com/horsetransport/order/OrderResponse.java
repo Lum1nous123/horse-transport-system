@@ -1,5 +1,6 @@
 package com.horsetransport.order;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -12,6 +13,7 @@ public record OrderResponse(
 		String destinationAddress,
 		String destinationCountry,
 		LocalDateTime requestedDepartureAt,
+		LocalDate requestedDeliveryDate,
 		TransportMode transportMode,
 		String specialRequirements,
 		String recipientName,
@@ -30,6 +32,7 @@ public record OrderResponse(
 		return new OrderResponse(
 				order.getId(), order.getOrderCode(), order.getOriginAddress(), order.getOriginCountry(),
 				order.getDestinationAddress(), order.getDestinationCountry(), order.getRequestedDepartureAt(),
+				order.getRequestedDeliveryDate(),
 				order.getTransportMode(), order.getSpecialRequirements(), order.getRecipientName(),
 				order.getRecipientPhone(), order.getRecipientEmail(),
 				order.getHorses().stream().map(TransportOrderHorse::getHorseId).toList(),

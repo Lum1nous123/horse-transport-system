@@ -29,12 +29,12 @@ describe("filterLogisticsInboxOrders", () => {
     expect(orders.map((order) => order.orderCode)).toEqual(["ORD-2048", "ORD-2039"]);
   });
 
-  it.each(["received-oldest", "received-newest", "departure-earliest"] as const)("keeps missing and invalid dates last for %s", (sort) => {
+  it.each(["received-oldest", "received-newest", "delivery-earliest"] as const)("keeps missing and invalid dates last for %s", (sort) => {
     const rows = [
       { ...orders[0], orderCode: "MISSING" },
-      { ...orders[0], orderCode: "NEW", createdAt: "2026-11-02", requestedDepartureAt: "2026-11-02" },
-      { ...orders[0], orderCode: "INVALID", createdAt: "invalid", requestedDepartureAt: "invalid" },
-      { ...orders[0], orderCode: "OLD", createdAt: "2026-11-01", requestedDepartureAt: "2026-11-01" },
+      { ...orders[0], orderCode: "NEW", createdAt: "2026-11-02", requestedDeliveryDate: "2026-11-02" },
+      { ...orders[0], orderCode: "INVALID", createdAt: "invalid", requestedDeliveryDate: "invalid" },
+      { ...orders[0], orderCode: "OLD", createdAt: "2026-11-01", requestedDeliveryDate: "2026-11-01" },
     ];
     expect(selectLogisticsInboxOrders(rows, "", "ALL", sort).map((order) => order.orderCode))
       .toEqual([...(sort === "received-newest" ? ["NEW", "OLD"] : ["OLD", "NEW"]), "INVALID", "MISSING"]);

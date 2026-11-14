@@ -159,6 +159,28 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### Customer desired delivery date — local implementation (2026-11-15)
+
+- The Customer's requested departure input has been replaced with a date-only
+  desired delivery date. FR-002, the ERD, API documentation, backend contracts,
+  and Customer/LM/TS/FRC displays now reflect the approved advisory meaning.
+  RouteLeg planned times, actual delivery time, and existing Route Plan gates
+  retain their separate meanings.
+- Local Flyway V9 adds nullable `transport_orders.requested_delivery_date`.
+  The legacy departure column and response field remain. Existing Orders are
+  not backfilled from departure; Submit/resubmit requires the new date, while
+  DRAFT may omit it. No Supabase mutation, push, or deployment was performed.
+- Focused backend tests, the non-Docker backend suite, all 337 frontend unit
+  tests, TypeScript, production build, and four desktop/mobile browser checks
+  across Bangkok and Honolulu timezones pass. Full backend testing still needs
+  a Docker-capable PostgreSQL environment for three integration tests. Full
+  frontend lint is affected by the pre-existing untracked
+  `frontend/scripts/capture-screen-flow.cjs`; lint passes when that file is
+  excluded. FR-002 DOCX XML was verified, but visual render was unavailable
+  because the installed Word automation stalled and LibreOffice is absent.
+- Deployment sequence remains migration/backend first, then frontend. Older
+  frontend clients must refresh before creating or submitting an Order.
+
 ### FRC and Logistics workflow polish — ready for review (2026-11-11)
 
 - Work is collected on `feat/workflow-ux-polish` in five focused commits:

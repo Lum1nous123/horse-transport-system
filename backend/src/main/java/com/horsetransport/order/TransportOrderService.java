@@ -210,8 +210,8 @@ public class TransportOrderService {
 			missing.add("origin");
 		if (isBlank(order.getDestinationAddress()) && isBlank(order.getDestinationCountry()))
 			missing.add("destination");
-		if (order.getRequestedDepartureAt() == null)
-			missing.add("requestedDepartureAt");
+		if (order.getRequestedDeliveryDate() == null)
+			missing.add("requestedDeliveryDate");
 		if (order.getTransportMode() == null)
 			missing.add("transportMode");
 		if (order.getHorses().isEmpty())

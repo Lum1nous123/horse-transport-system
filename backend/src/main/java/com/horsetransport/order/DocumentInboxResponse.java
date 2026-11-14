@@ -1,5 +1,6 @@
 package com.horsetransport.order;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -12,6 +13,7 @@ public record DocumentInboxResponse(
 		String destinationAddress,
 		String destinationCountry,
 		LocalDateTime requestedDepartureAt,
+		LocalDate requestedDeliveryDate,
 		TransportMode transportMode,
 		int horseCount,
 		LocalDateTime documentCompletionDeadlineAt,
@@ -23,7 +25,8 @@ public record DocumentInboxResponse(
 	static DocumentInboxResponse from(TransportOrder order) {
 		return new DocumentInboxResponse(order.getId(), order.getOrderCode(), order.getStatus(),
 				order.getOriginAddress(), order.getOriginCountry(), order.getDestinationAddress(),
-				order.getDestinationCountry(), order.getRequestedDepartureAt(), order.getTransportMode(),
+				order.getDestinationCountry(), order.getRequestedDepartureAt(),
+				order.getRequestedDeliveryDate(), order.getTransportMode(),
 				order.getHorses().size(),
 				order.getDocumentCompletionDeadlineAt(), order.getDocumentDeadlineSetAt(),
 				order.getDocumentsFinalConfirmedAt(), order.getDocumentsLockedAt(), order.getCreatedAt());

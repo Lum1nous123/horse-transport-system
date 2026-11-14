@@ -1,5 +1,6 @@
 package com.horsetransport.order;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -50,6 +51,9 @@ public class TransportOrder {
 
 	@Column(name = "requested_departure_at")
 	private LocalDateTime requestedDepartureAt;
+
+	@Column(name = "requested_delivery_date")
+	private LocalDate requestedDeliveryDate;
 
 	@Enumerated(EnumType.STRING)
 	@JdbcTypeCode(SqlTypes.NAMED_ENUM)
@@ -150,7 +154,7 @@ public class TransportOrder {
 		originCountry = normalize(request.originCountry());
 		destinationAddress = normalize(request.destinationAddress());
 		destinationCountry = normalize(request.destinationCountry());
-		requestedDepartureAt = request.requestedDepartureAt();
+		requestedDeliveryDate = request.requestedDeliveryDate();
 		transportMode = request.transportMode();
 		specialRequirements = normalize(request.specialRequirements());
 		recipientName = normalize(request.recipientName());
@@ -280,6 +284,7 @@ public class TransportOrder {
 	public String getDestinationAddress() { return destinationAddress; }
 	public String getDestinationCountry() { return destinationCountry; }
 	public LocalDateTime getRequestedDepartureAt() { return requestedDepartureAt; }
+	public LocalDate getRequestedDeliveryDate() { return requestedDeliveryDate; }
 	public TransportMode getTransportMode() { return transportMode; }
 	public String getSpecialRequirements() { return specialRequirements; }
 	public String getRecipientName() { return recipientName; }

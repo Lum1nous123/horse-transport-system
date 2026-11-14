@@ -4,7 +4,7 @@ import type { AssignmentOrderDetail } from "@/lib/staff-assignment/types";
 export function reviewFixture(): RouteReviewDetail {
   return {
     orderId: "order-1", orderCode: "ORD-1", origin: "Origin", destination: "Destination",
-    requestedDepartureAt: "2026-11-07T09:00:00Z", horseCount: 1, transportMode: "ROAD",
+    requestedDeliveryDate: "2026-11-07", horseCount: 1, transportMode: "ROAD",
     routePlanStatus: "PENDING_LM_REVIEW", submittedAt: "2026-11-06T09:00:00Z",
     reviewedAt: null, assignedFleetRouteCoordinatorName: "Real FRC", orderStatus: "APPROVED",
     lockedAt: null, returnReason: null, validations: [],
@@ -33,7 +33,7 @@ export function lockedFixture(): RouteReviewDetail {
 export function assignmentFixture(): AssignmentOrderDetail {
   return {
     id: "order-1", orderCode: "ORD-1", origin: "Origin", destination: "Destination",
-    requestedDepartureAt: "2026-11-07T09:00:00Z", horseCount: 1, transportMode: "ROAD",
+    requestedDeliveryDate: "2026-11-07", horseCount: 1, transportMode: "ROAD",
     assignmentStatus: "NEEDS_ASSIGNMENT", customerName: "", assignedPair: null,
     candidates: {
       transportSpecialists: [{ id: "ts-1", fullName: "Real TS", email: "ts@example.com", role: "TRANSPORT_SPECIALIST", activeOrderCount: 1 }],

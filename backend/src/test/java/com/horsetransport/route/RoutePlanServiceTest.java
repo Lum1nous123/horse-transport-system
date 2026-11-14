@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Constructor;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +25,8 @@ import com.horsetransport.security.CurrentUserProvider;
 import com.horsetransport.user.UserRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -166,6 +169,29 @@ class RoutePlanServiceTest {
 		assertThat(review.getValue().getRoutePlanId()).isEqualTo(plan.getId());
 		assertThat(review.getValue().getSubmissionNo()).isEqualTo(1);
 		assertThat(review.getValue().getDecision()).isEqualTo(RoutePlanReviewDecision.PENDING);
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"2026-10-11", "2026-10-13"})
+	void desiredDeliveryDateDoesNotBlockValidRoutePlan(String desiredDate) {
+		TransportOrder order = order(ORDER_HORSE_ID, SECOND_ORDER_HORSE_ID);
+		ReflectionTestUtils.setField(order, "requestedDeliveryDate", LocalDate.parse(desiredDate));
+		when(orderRepository.findAssignedFrcRoutePlanOrder(ORDER_ID, FRC_ID)).thenReturn(Optional.of(order));
+		RoutePlan plan = routePlan();
+		RouteLeg leg = roadLeg(plan.getId(), 1, "Stable A", "Destination Stable");
+		RoadLegVehicle vehicle = new RoadLegVehicle(leg.getId(), VEHICLE_ID);
+		when(routePlanRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(plan));
+		when(routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(plan.getId())).thenReturn(List.of(leg));
+		when(roadLegVehicleRepository.findAllByRouteLegId(leg.getId())).thenReturn(List.of(vehicle));
+		when(vehicleRepository.findAllById(List.of(VEHICLE_ID)))
+				.thenReturn(List.of(vehicle(VEHICLE_ID, 2, VehicleStatus.AVAILABLE)));
+		when(roadLegVehicleHorseRepository.findAllByRouteLegId(leg.getId()))
+				.thenReturn(List.of(new RoadLegVehicleHorse(leg.getId(), vehicle.getId(), ORDER_HORSE_ID),
+						new RoadLegVehicleHorse(leg.getId(), vehicle.getId(), SECOND_ORDER_HORSE_ID)));
+		when(routePlanReviewRepository.maxSubmissionNo(plan.getId())).thenReturn(0);
+		when(routePlanRepository.save(plan)).thenReturn(plan);
+
+		assertThat(service.submitPlan(ORDER_ID).status()).isEqualTo(RoutePlanStatus.PENDING_LM_REVIEW);
 	}
 
 	@Test

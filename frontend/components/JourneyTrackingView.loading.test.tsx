@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import JourneyTrackingView from "./JourneyTrackingView";
 import { JourneyReadError } from "@/lib/journey-tracking/service";
@@ -57,6 +57,7 @@ describe("JourneyTrackingView loading", () => {
     expect(await screen.findByRole("heading", { name: "Journey tracking" })).toBeInTheDocument();
     expect(screen.getByText((_, element) => element?.tagName === "P"
       && element.textContent === "Hanoi → Da Nang")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Notifications, updates temporarily unavailable" }));
     expect(screen.getByText("Latest updates are temporarily unavailable. Journey tracking is still available."))
       .toHaveAttribute("role", "status");
     expect(screen.queryByRole("heading", { name: "Journey unavailable" })).not.toBeInTheDocument();

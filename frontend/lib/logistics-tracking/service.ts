@@ -10,7 +10,7 @@ export type TrackingOrderSummary = {
   destinationAddress: string;
   destinationCountry: string | null;
   transportMode: "ROAD" | "AIR" | "COMBINED";
-  requestedDepartureAt: string;
+  requestedDeliveryDate: string | null;
   horseCount: number;
   createdAt: string;
   deliveredAt: string | null;

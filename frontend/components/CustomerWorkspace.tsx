@@ -16,6 +16,7 @@ import { hideCustomerTermsOnLogin, isCustomerTermsLoginHidden } from "@/lib/cust
 import DocumentWorkspace from "@/app/customer/DocumentWorkspace";
 import styles from "@/components/customer-workspace/customer-workspace.module.css";
 import CountryCombobox from "@/components/CountryCombobox";
+import { formatRequestedDeliveryDate } from "@/lib/requested-delivery-date";
 
 export type CustomerWorkspaceView = "dashboard" | "requests" | "horses";
 
@@ -37,7 +38,7 @@ type Order = {
   originCountry?: string | null;
   destinationAddress?: string | null;
   destinationCountry?: string | null;
-  requestedDepartureAt?: string | null;
+  requestedDeliveryDate?: string | null;
   transportMode?: "ROAD" | "AIR" | "COMBINED" | null;
   specialRequirements?: string | null;
   recipientName?: string | null;
@@ -126,7 +127,7 @@ function SummaryWatermark({ kind }: { kind: "horse" | "folder" | "horseClock" | 
 
 const emptyOrder: OrderFields = {
   originAddress: "", originCountry: "", destinationAddress: "", destinationCountry: "",
-  requestedDepartureAt: "", transportMode: null, specialRequirements: "", recipientName: "",
+  requestedDeliveryDate: "", transportMode: null, specialRequirements: "", recipientName: "",
   recipientPhone: "", recipientEmail: "", horseIds: [],
 };
 
@@ -142,25 +143,25 @@ const previewHorses: Horse[] = [
 const previewOrders: Order[] = [
   {
     id: "order-2068", orderCode: "ORD-2068", originAddress: "Lexington, United States",
-    destinationAddress: "Brussels, Belgium", requestedDepartureAt: "2026-10-22T08:15:00+07:00",
+    destinationAddress: "Brussels, Belgium", requestedDeliveryDate: "2026-10-22",
     transportMode: "COMBINED", recipientName: "Taylor Morgan", recipientPhone: "+32 2 555 2068",
     recipientEmail: null, horseIds: ["preview-horse-5", "preview-horse-6", "preview-horse-3", "preview-horse-4"], status: "IN_PROGRESS",
   },
   {
     id: "preview-balance-order", orderCode: "ORD-2061", originAddress: "Saumur, France",
-    destinationAddress: "Amsterdam, Netherlands", requestedDepartureAt: "2026-10-22T08:30:00+07:00",
+    destinationAddress: "Amsterdam, Netherlands", requestedDeliveryDate: "2026-10-22",
     transportMode: "ROAD", recipientName: "Camille Laurent", recipientPhone: "+31 20 555 2061",
     recipientEmail: null, horseIds: ["preview-horse-1"], status: "READY_TO_SHIP",
   },
   {
     id: "preview-deadline-cancel", orderCode: "ORD-2058", originAddress: "Lexington, United States",
-    destinationAddress: "Brussels, Belgium", requestedDepartureAt: "2026-10-19T09:00:00+07:00",
+    destinationAddress: "Brussels, Belgium", requestedDeliveryDate: "2026-10-19",
     transportMode: "COMBINED", recipientName: "Morgan Taylor", recipientPhone: "+32 2 555 2058",
     recipientEmail: null, horseIds: ["preview-horse-1", "preview-horse-2"], status: "CANCELLED",
   },
   {
     id: "preview-order-1", orderCode: "ORD-DEMO-1042", originAddress: "Lexington, KY",
-    destinationAddress: "Nashville, TN", requestedDepartureAt: "2026-10-08T09:00:00",
+    destinationAddress: "Nashville, TN", requestedDeliveryDate: "2026-10-08",
     transportMode: "ROAD", recipientName: "Jordan Lee", recipientPhone: "+1 555 010 2048",
     recipientEmail: null, horseIds: ["preview-horse-1"], status: "DRAFT",
   },
@@ -424,7 +425,7 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
     setOrderFields({
       originAddress: order.originAddress ?? "", originCountry: order.originCountry ?? "",
       destinationAddress: order.destinationAddress ?? "", destinationCountry: order.destinationCountry ?? "",
-      requestedDepartureAt: order.requestedDepartureAt ? order.requestedDepartureAt.slice(0, 16) : "",
+      requestedDeliveryDate: order.requestedDeliveryDate ?? "",
       transportMode: order.transportMode ?? null, specialRequirements: order.specialRequirements ?? "",
       recipientName: order.recipientName ?? "", recipientPhone: order.recipientPhone ?? "",
       recipientEmail: order.recipientEmail ?? "", horseIds: [...order.horseIds],
@@ -440,7 +441,7 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
     const missing = [
       [!orderFields.originAddress?.trim() && !orderFields.originCountry?.trim(), "origin"],
       [!orderFields.destinationAddress?.trim() && !orderFields.destinationCountry?.trim(), "destination"],
-      [!orderFields.requestedDepartureAt, "departure date and time"],
+      [!orderFields.requestedDeliveryDate, "desired delivery date"],
       [!orderFields.transportMode, "transport mode"],
       [orderFields.horseIds.length === 0, "at least one horse"],
       [!orderFields.recipientName?.trim(), "recipient name"],
@@ -458,7 +459,7 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
       originCountry: orderFields.originCountry?.trim() || null,
       destinationAddress: orderFields.destinationAddress?.trim() || null,
       destinationCountry: orderFields.destinationCountry?.trim() || null,
-      requestedDepartureAt: orderFields.requestedDepartureAt ? `${orderFields.requestedDepartureAt}:00` : null,
+      requestedDeliveryDate: orderFields.requestedDeliveryDate || null,
       specialRequirements: orderFields.specialRequirements?.trim() || null,
       recipientName: orderFields.recipientName?.trim() || null,
       recipientPhone: orderFields.recipientPhone?.trim() || null,
@@ -676,7 +677,7 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
             {orders.length === 0 ? <div className="customer-empty customer-dashboard-empty"><Image className="customer-empty-art" src="/images/customer-transport-illustration.svg" width={900} height={300} alt="" unoptimized /><div><h3>Start with a transport request</h3><p>Your saved and submitted requests will appear here.</p></div><button className="customer-primary-button" type="button" onClick={startNewOrder}><CustomerIcon name="plus" />Create request</button></div> : visibleOrders.length === 0 ? <div className="customer-empty customer-filter-empty"><span className="customer-empty-icon"><CustomerIcon name="search" /></span><div><h3>No matching requests</h3><p>Try a different search term or status.</p></div><button className="customer-secondary-button compact" type="button" onClick={() => { setOrderQuery(""); setOrderStatus(""); if (!groupedOrders.length) setOrderGroup("all"); }}>Clear filters</button></div> : <div className="customer-order-list">
               {visibleOrders.map((order) => <article className={`customer-order-row customer-dashboard-order${order.status === "REJECTED" ? " customer-order-rejected" : ""}`} key={order.id}>
                 <div className="order-route-icon" aria-hidden="true"><CustomerIcon name="route" /></div>
-                <div className="customer-order-main"><div className="customer-order-title"><h3>{order.orderCode}</h3><span className={`order-status status-${order.status.toLowerCase()}`}>{order.status.replaceAll("_", " ")}</span></div><p>{[order.originAddress || order.originCountry || "Origin pending", order.destinationAddress || order.destinationCountry || "Destination pending"].join("  →  ")}</p><div className="customer-order-meta"><span>{order.horseIds.length} {order.horseIds.length === 1 ? "horse" : "horses"}</span>{order.transportMode && <span>{order.transportMode}</span>}<span><CustomerIcon name="calendar" />{order.requestedDepartureAt ? new Date(order.requestedDepartureAt).toLocaleString() : "Departure not set"}</span></div></div>
+                <div className="customer-order-main"><div className="customer-order-title"><h3>{order.orderCode}</h3><span className={`order-status status-${order.status.toLowerCase()}`}>{order.status.replaceAll("_", " ")}</span></div><p>{[order.originAddress || order.originCountry || "Origin pending", order.destinationAddress || order.destinationCountry || "Destination pending"].join("  →  ")}</p><div className="customer-order-meta"><span>{order.horseIds.length} {order.horseIds.length === 1 ? "horse" : "horses"}</span>{order.transportMode && <span>{order.transportMode}</span>}<span><CustomerIcon name="calendar" />{formatRequestedDeliveryDate(order.requestedDeliveryDate)}</span></div></div>
                 <CustomerOrderActions orderCode={order.orderCode} actions={actionsFor(order)} />
                 {order.status === "REJECTED" && <RejectedOrderNotice reason={order.rejectionReason} />}
               </article>)}
@@ -712,7 +713,7 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
               <div className={styles.orderMain}>
                 <div className={styles.orderTitle}><h3>{order.orderCode}</h3><span className={`order-status status-${order.status.toLowerCase()}`}>{order.status.replaceAll("_", " ")}</span></div>
                 <p>{order.originAddress || order.originCountry || "Origin pending"} <b aria-hidden="true">→</b> {order.destinationAddress || order.destinationCountry || "Destination pending"}</p>
-                <div className={styles.orderMeta}><span>{order.horseIds.length} {order.horseIds.length === 1 ? "horse" : "horses"}</span>{order.transportMode && <span>{order.transportMode}</span>}<span><CustomerIcon name="calendar" />{order.requestedDepartureAt ? new Date(order.requestedDepartureAt).toLocaleString() : "Departure not set"}</span></div>
+                <div className={styles.orderMeta}><span>{order.horseIds.length} {order.horseIds.length === 1 ? "horse" : "horses"}</span>{order.transportMode && <span>{order.transportMode}</span>}<span><CustomerIcon name="calendar" />{formatRequestedDeliveryDate(order.requestedDeliveryDate)}</span></div>
               </div>
               <div className={styles.orderActions}><CustomerOrderActions orderCode={order.orderCode} actions={actionsFor(order)} /></div>
               {order.status === "REJECTED" && <RejectedOrderNotice reason={order.rejectionReason} />}
@@ -748,7 +749,7 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
           <section className="customer-dialog" role="dialog" aria-modal="true" aria-labelledby="order-form-title">
             <div className="customer-dialog-header"><div><p className="customer-eyebrow">{editingRejectedOrder ? "REJECTED ORDER" : editingOrder ? "DRAFT ORDER" : "NEW REQUEST"}</p><h2 id="order-form-title">{editingOrder ? "Edit transport request" : "Plan a transport"}</h2><p>{editingRejectedOrder ? "Update the rejected request and resubmit the same Order for review." : "Save details as a draft. Submitted requests are editable again if the Logistics Manager rejects them."}</p></div><button type="button" className="customer-dialog-close" aria-label="Close form" disabled={orderBusy} onClick={() => setOrderFormOpen(false)}>×</button></div>
             <form id="order-form" className="customer-form order-form" onSubmit={requestSubmit}>
-              <fieldset className="customer-fieldset"><legend>Journey details</legend><p className="field-hint">* Required to submit. Enter an address or a country for each location.</p><div className="customer-field-grid"><Field label="Origin address" value={orderFields.originAddress ?? ""} onChange={(value) => updateField("originAddress", value)} maxLength={255} /><CountryCombobox label="Origin country" value={orderFields.originCountry ?? ""} onChange={(value) => updateField("originCountry", value)} /><Field label="Destination address" value={orderFields.destinationAddress ?? ""} onChange={(value) => updateField("destinationAddress", value)} maxLength={255} /><CountryCombobox label="Destination country" value={orderFields.destinationCountry ?? ""} onChange={(value) => updateField("destinationCountry", value)} /><Field label="Requested departure *" type="datetime-local" value={orderFields.requestedDepartureAt ?? ""} onChange={(value) => updateField("requestedDepartureAt", value)} /><label className="customer-field"><span>Transport mode <b aria-hidden="true">*</b></span><select value={orderFields.transportMode ?? ""} onChange={(event) => updateField("transportMode", (event.target.value || null) as OrderFields["transportMode"])}><option value="">Choose a mode</option><option value="ROAD">Road</option><option value="AIR">Air</option><option value="COMBINED">Combined</option></select></label></div></fieldset>
+              <fieldset className="customer-fieldset"><legend>Journey details</legend><p className="field-hint">* Required to submit. Enter an address or a country for each location.</p><div className="customer-field-grid"><Field label="Origin address" value={orderFields.originAddress ?? ""} onChange={(value) => updateField("originAddress", value)} maxLength={255} /><CountryCombobox label="Origin country" value={orderFields.originCountry ?? ""} onChange={(value) => updateField("originCountry", value)} /><Field label="Destination address" value={orderFields.destinationAddress ?? ""} onChange={(value) => updateField("destinationAddress", value)} maxLength={255} /><CountryCombobox label="Destination country" value={orderFields.destinationCountry ?? ""} onChange={(value) => updateField("destinationCountry", value)} /><Field label="Desired delivery date *" type="date" value={orderFields.requestedDeliveryDate ?? ""} onChange={(value) => updateField("requestedDeliveryDate", value)} /><label className="customer-field"><span>Transport mode <b aria-hidden="true">*</b></span><select value={orderFields.transportMode ?? ""} onChange={(event) => updateField("transportMode", (event.target.value || null) as OrderFields["transportMode"])}><option value="">Choose a mode</option><option value="ROAD">Road</option><option value="AIR">Air</option><option value="COMBINED">Combined</option></select></label></div></fieldset>
               <fieldset className="customer-fieldset"><legend>Horses</legend>{horses.length ? <div className="horse-choice-list">{horses.map((horse) => <label className="horse-choice" key={horse.id}><input type="checkbox" checked={orderFields.horseIds.includes(horse.id)} onChange={(event) => updateField("horseIds", event.target.checked ? [...orderFields.horseIds, horse.id] : orderFields.horseIds.filter((id) => id !== horse.id))} /><span><strong>{horse.name}</strong><small>{horse.microchipId}</small></span></label>)}</div> : <p className="field-hint">Add a horse profile before submitting this request.</p>}</fieldset>
               <fieldset className="customer-fieldset"><legend>Recipient / delivery contact</legend><div className="customer-field-grid"><Field label="Recipient name *" value={orderFields.recipientName ?? ""} onChange={(value) => updateField("recipientName", value)} maxLength={150} /><Field label="Phone *" type="tel" value={orderFields.recipientPhone ?? ""} onChange={(value) => updateField("recipientPhone", value)} maxLength={30} /><Field label="Email" type="email" value={orderFields.recipientEmail ?? ""} onChange={(value) => updateField("recipientEmail", value)} maxLength={150} optional /></div></fieldset>
               <label className="customer-field"><span>Special requirements <em>Optional</em></span><textarea rows={3} value={orderFields.specialRequirements ?? ""} onChange={(event) => updateField("specialRequirements", event.target.value)} /></label>

@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AssignmentWorkspaceFrame from "@/components/AssignmentWorkspaceFrame";
-import { LogisticsDateTime, LogisticsStatusTabs } from "@/components/LogisticsWorkspaceUI";
+import { LogisticsStatusTabs } from "@/components/LogisticsWorkspaceUI";
 import { listLogisticsTrackingOrders, type TrackingOrderSummary } from "@/lib/logistics-tracking/service";
 import { useLogisticsAccess } from "@/lib/staff-assignment/use-logistics-access";
+import { formatRequestedDeliveryDate } from "@/lib/requested-delivery-date";
 
 type JourneyGroup = "active" | "delivered" | "other";
 const belongsTo = (order: TrackingOrderSummary, group: JourneyGroup) => group === "active"
@@ -67,11 +68,11 @@ export default function LogisticsTrackingPage() {
           {loading ? <p className="lm-list-state" role="status">Loading journeys…</p> : !loaded ? <p className="lm-list-state">Journeys are unavailable. Retry the request above.</p> : filtered.length === 0
             ? <div className="lm-list-state"><h2>{query || mode || status ? "No matching journeys" : tab === "active" ? "No active journeys" : tab === "delivered" ? "No delivered journeys" : "No other trackable orders"}</h2><p>{query || mode || status ? "Try a different search or clear the filters." : "Only orders returned by the tracking service appear here."}</p>{(query || mode || status) && <button className="customer-text-button" type="button" onClick={() => { setQuery(""); setMode(""); setStatus(""); }}>Clear filters</button>}</div>
             : <div className="lm-table-scroll"><table className="lm-management-table" aria-label="Trackable journeys">
-              <thead><tr><th scope="col">Order / Status</th><th scope="col" className="lm-route-column">Route</th><th scope="col">Departure</th><th scope="col">Horses / Mode</th><th scope="col">Action</th></tr></thead>
+              <thead><tr><th scope="col">Order / Status</th><th scope="col" className="lm-route-column">Route</th><th scope="col">Desired delivery date</th><th scope="col">Horses / Mode</th><th scope="col">Action</th></tr></thead>
               <tbody>{filtered.map((order) => <tr key={order.orderId}>
                 <td data-label="Order / Status"><strong>{order.orderCode}</strong><span className={`lm-order-status is-${order.status.toLowerCase()}`}>{order.status.replaceAll("_", " ")}</span></td>
                 <td data-label="Route" className="lm-route-cell"><span>{order.originAddress || order.originCountry || "Not provided"}</span><span className="lm-destination"><b aria-hidden="true">→</b> {order.destinationAddress || order.destinationCountry || "Not provided"}</span></td>
-                <td data-label="Departure"><LogisticsDateTime value={order.requestedDepartureAt} /></td>
+                <td data-label="Desired delivery date">{formatRequestedDeliveryDate(order.requestedDeliveryDate)}</td>
                 <td data-label="Horses / Mode"><span>{order.horseCount} {order.horseCount === 1 ? "horse" : "horses"}</span><small>{order.transportMode}</small></td>
                 <td data-label="Action"><Link className="lm-row-link" href={`/logistics/orders/${order.orderId}/tracking`} aria-label={`View tracking for ${order.orderCode}`}>View tracking <span aria-hidden="true">→</span></Link></td>
               </tr>)}</tbody>

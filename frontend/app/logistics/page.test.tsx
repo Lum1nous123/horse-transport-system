@@ -14,7 +14,7 @@ vi.mock("@/lib/api", () => ({ apiFetch: vi.fn() }));
 
 const order = { id: "order-1", orderCode: "ORD-1", status: "SUBMITTED", originAddress: "Origin",
   originCountry: null, destinationAddress: "Destination", destinationCountry: null,
-  transportMode: "ROAD", requestedDepartureAt: "2026-11-07T09:00:00Z", horseCount: 1,
+  transportMode: "ROAD", requestedDeliveryDate: "2026-11-07", horseCount: 1,
   createdAt: "2026-11-06T09:00:00Z", horseIds: ["horse-1"], specialRequirements: "Exact customer note",
   recipientName: "Real recipient", recipientPhone: "123", recipientEmail: null };
 const draft = { id: "quote-1", orderId: "order-1", status: "DRAFT", totalAmount: null,
@@ -69,7 +69,7 @@ describe("LM quotation read recovery", () => {
     expect(screen.getByText("Showing 0 of 1 loaded order")).toBeVisible();
     await user.click(screen.getAllByRole("button", { name: "Clear filters" })[0]);
     expect(screen.getByRole("button", { name: /ORD-1/ })).toHaveAttribute("aria-current", "true");
-    await user.selectOptions(screen.getByLabelText("Sort by"), "departure-earliest");
+    await user.selectOptions(screen.getByLabelText("Sort by"), "delivery-earliest");
     expect(screen.getByRole("textbox", { name: /Notes/ })).toHaveValue("Unsaved quotation note");
     expect(vi.mocked(apiFetch).mock.calls.every(([, init]) => !init?.method)).toBe(true);
   });

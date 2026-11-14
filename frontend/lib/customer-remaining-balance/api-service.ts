@@ -16,7 +16,7 @@ type OrderResponse = {
   originCountry: string | null;
   destinationAddress: string | null;
   destinationCountry: string | null;
-  requestedDepartureAt: string;
+  requestedDeliveryDate: string | null;
   transportMode: "ROAD" | "AIR" | "COMBINED";
   horseIds: string[];
   approvedAt: string | null;
@@ -95,7 +95,7 @@ async function getResult(orderId: string): Promise<CustomerRemainingBalanceResul
       destination: location(order.destinationAddress, order.destinationCountry),
       horseCount: order.horseIds.length,
       transportMode: order.transportMode,
-      departureAt: order.requestedDepartureAt,
+      desiredDeliveryDate: order.requestedDeliveryDate,
     },
     eligibility: {
       status: eligible ? "ELIGIBLE" : "INELIGIBLE",

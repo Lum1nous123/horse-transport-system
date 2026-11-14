@@ -26,21 +26,21 @@ type MockCoordinatorOrder = Omit<
 const orders: MockCoordinatorOrder[] = [
   {
     id: "order-2046", orderCode: "ORD-2046", origin: "Aachen, Germany", destination: "Doha, Qatar", originAddress: "Aachen", destinationAddress: "Doha",
-    requestedDepartureAt: "2026-10-16T13:00:00+07:00", horseCount: 2, transportMode: "AIR",
+    requestedDeliveryDate: "2026-10-16", horseCount: 2, transportMode: "AIR",
     routePlanStatus: "NOT_STARTED", routePlanUpdatedAt: null, returnReason: null, customerName: "Casey Morgan",
     assignedTransportSpecialistName: "Brooke Mitchell", documentFinalConfirmedAt: "2026-10-09T11:20:00+07:00",
     remainingBalancePaidAt: "2026-10-10T09:14:00+07:00",
   },
   {
     id: "order-2074", orderCode: "ORD-2074", origin: "Lexington, United States", destination: "Brussels, Belgium", originAddress: "Lexington", destinationAddress: "Brussels",
-    requestedDepartureAt: "2026-10-28T09:00:00+07:00", horseCount: 8, transportMode: "COMBINED",
+    requestedDeliveryDate: "2026-10-28", horseCount: 8, transportMode: "COMBINED",
     routePlanStatus: "DRAFT", routePlanUpdatedAt: "2026-10-10T15:26:00+07:00", returnReason: null,
     customerName: "Morgan Taylor", assignedTransportSpecialistName: "Daniel Kim",
     documentFinalConfirmedAt: "2026-10-08T16:30:00+07:00", remainingBalancePaidAt: "2026-10-09T10:05:00+07:00",
   },
   {
     id: "order-2093", orderCode: "ORD-2093", origin: "Wellington, New Zealand", destination: "Singapore, Singapore", originAddress: "Wellington", destinationAddress: "Singapore",
-    requestedDepartureAt: "2026-11-03T07:00:00+07:00", horseCount: 2, transportMode: "AIR",
+    requestedDeliveryDate: "2026-11-03", horseCount: 2, transportMode: "AIR",
     routePlanStatus: "RETURNED", routePlanUpdatedAt: "2026-10-10T17:42:00+07:00",
     returnReason: "Adjust the ROAD transfer window before resubmitting the plan.", customerName: "Avery Bennett",
     assignedTransportSpecialistName: "Emily Ross", documentFinalConfirmedAt: "2026-10-07T14:12:00+07:00",
@@ -160,7 +160,7 @@ function detailFor(order: MockCoordinatorOrder, statusOverride?: RoutePlanStatus
   };
 }
 
-function summaryFor(order: MockCoordinatorOrder): AssignedCoordinatorOrderSummary { return { id: order.id, orderCode: order.orderCode, origin: order.origin, destination: order.destination, requestedDepartureAt: order.requestedDepartureAt, horseCount: order.horseCount, transportMode: order.transportMode, routePlanStatus: order.routePlanStatus, routePlanUpdatedAt: order.routePlanUpdatedAt, returnReason: order.returnReason }; }
+function summaryFor(order: MockCoordinatorOrder): AssignedCoordinatorOrderSummary { return { id: order.id, orderCode: order.orderCode, origin: order.origin, destination: order.destination, requestedDeliveryDate: order.requestedDeliveryDate, horseCount: order.horseCount, transportMode: order.transportMode, routePlanStatus: order.routePlanStatus, routePlanUpdatedAt: order.routePlanUpdatedAt, returnReason: order.returnReason }; }
 function planFor(orderId: string) { assignedOrder(orderId); const plan = planStore[orderId]; if (!plan) throw new CoordinatorWorkspaceError("The Route Plan is no longer available.", "NOT_FOUND"); const override = scenario() === "readonly" ? "PENDING_LM_REVIEW" : scenario() === "approved" ? "APPROVED" : undefined; return clonePlan(override ? { ...plan, status: override, readOnly: true } : plan); }
 function assertEditable(orderId: string) { const plan = planFor(orderId); if (scenario() === "locked" || plan.readOnly || !["NOT_STARTED", "DRAFT", "RETURNED"].includes(plan.status)) throw new CoordinatorWorkspaceError("This Route Plan is locked because its saved state changed. Refresh to see the latest result.", "LOCKED"); return planStore[orderId]; }
 function persist(orderId: string, changes: Partial<RoutePlanDetail>) { const current = planStore[orderId]; const now = new Date().toISOString(); const next = { ...current, ...changes, id: current.id ?? `plan-${orderId.replace("order-", "")}`, revision: current.revision + 1, updatedAt: now }; planStore[orderId] = next; const order = orders.find((candidate) => candidate.id === orderId)!; order.routePlanStatus = next.status; order.routePlanUpdatedAt = now; order.returnReason = next.returnedReason; return clonePlan(next); }

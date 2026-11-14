@@ -1,5 +1,6 @@
 package com.horsetransport.route;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -17,6 +18,7 @@ public record FrcPlanningContextResponse(
 		String destinationAddress,
 		String destinationCountry,
 		LocalDateTime requestedDepartureAt,
+		LocalDate requestedDeliveryDate,
 		TransportMode transportMode,
 		String specialRequirements,
 		String recipientName,
@@ -37,6 +39,7 @@ public record FrcPlanningContextResponse(
 				order.getDestinationAddress(),
 				order.getDestinationCountry(),
 				order.getRequestedDepartureAt(),
+				order.getRequestedDeliveryDate(),
 				order.getTransportMode(),
 				order.getSpecialRequirements(),
 				order.getRecipientName(),

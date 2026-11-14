@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import CustomerWorkspace from "./CustomerWorkspace";
@@ -29,9 +29,9 @@ const horses = [
 ];
 
 const orders = [
-  { id: "order-1", orderCode: "ORD-001", originCountry: "France", destinationCountry: "Belgium", requestedDepartureAt: "2026-11-10T09:00:00", transportMode: "ROAD", recipientName: "Taylor", recipientPhone: "+32 1", horseIds: ["horse-1"], status: "DRAFT" },
-  { id: "order-2", orderCode: "ORD-002", originCountry: "Germany", destinationCountry: "Netherlands", requestedDepartureAt: "2026-12-01T10:00:00", transportMode: "AIR", recipientName: "Morgan", recipientPhone: "+31 2", horseIds: ["horse-2"], status: "SUBMITTED" },
-  { id: "order-3", orderCode: "ORD-003", originCountry: "Ireland", destinationCountry: "France", requestedDepartureAt: "2026-12-15T08:00:00", transportMode: "ROAD", recipientName: "Alex", recipientPhone: "+33 3", horseIds: ["horse-1"], status: "REJECTED", rejectionReason: "The delivery contact details are incomplete." },
+  { id: "order-1", orderCode: "ORD-001", originCountry: "France", destinationCountry: "Belgium", requestedDeliveryDate: "2026-11-10", transportMode: "ROAD", recipientName: "Taylor", recipientPhone: "+32 1", horseIds: ["horse-1"], status: "DRAFT" },
+  { id: "order-2", orderCode: "ORD-002", originCountry: "Germany", destinationCountry: "Netherlands", requestedDeliveryDate: "2026-12-01", transportMode: "AIR", recipientName: "Morgan", recipientPhone: "+31 2", horseIds: ["horse-2"], status: "SUBMITTED" },
+  { id: "order-3", orderCode: "ORD-003", originCountry: "Ireland", destinationCountry: "France", requestedDeliveryDate: "2026-12-15", transportMode: "ROAD", recipientName: "Alex", recipientPhone: "+33 3", horseIds: ["horse-1"], status: "REJECTED", rejectionReason: "The delivery contact details are incomplete." },
 ];
 
 function jsonResponse(body: unknown, status = 200) {
@@ -183,6 +183,41 @@ describe("Customer dedicated workspaces", () => {
       "/api/v1/orders/order-3/submit",
       expect.objectContaining({ method: "POST" }),
     ));
+  });
+
+  it("saves an incomplete draft without a desired delivery date", async () => {
+    const user = userEvent.setup();
+    render(<CustomerWorkspace />);
+    await user.click(await screen.findByRole("button", { name: "New transport request" }));
+    const dialog = screen.getByRole("dialog", { name: "Plan a transport" });
+    expect(within(dialog).getByLabelText("Desired delivery date *")).toHaveAttribute("type", "date");
+    await user.click(within(dialog).getByRole("button", { name: "Save draft" }));
+
+    await waitFor(() => expect(mocks.apiFetch).toHaveBeenCalledWith("/api/v1/orders",
+      expect.objectContaining({ method: "POST", body: expect.stringContaining('"requestedDeliveryDate":null') })));
+    const write = mocks.apiFetch.mock.calls.find(([path, init]) => path === "/api/v1/orders" && init?.method === "POST");
+    expect(JSON.parse(String(write?.[1]?.body))).not.toHaveProperty("requestedDepartureAt");
+  });
+
+  it("requires a desired delivery date for Submit and sends its calendar date unchanged", async () => {
+    const user = userEvent.setup();
+    render(<CustomerWorkspace />);
+    await user.click(await screen.findByRole("button", { name: "Drafts 1" }));
+    await user.click(screen.getByRole("button", { name: "Edit draft" }));
+    const dialog = screen.getByRole("dialog", { name: "Edit transport request" });
+    const date = within(dialog).getByLabelText("Desired delivery date *");
+    fireEvent.change(date, { target: { value: "" } });
+    await user.click(within(dialog).getByRole("button", { name: "Review & submit" }));
+    expect(within(dialog).getByRole("alert")).toHaveTextContent("desired delivery date");
+    expect(mocks.apiFetch).not.toHaveBeenCalledWith("/api/v1/orders/order-1", expect.objectContaining({ method: "PUT" }));
+
+    fireEvent.change(date, { target: { value: "2026-11-25" } });
+    await user.click(within(dialog).getByRole("button", { name: "Review & submit" }));
+    await user.click(within(screen.getByRole("alertdialog", { name: "Submit this transport request?" })).getByRole("button", { name: "Submit order" }));
+    await waitFor(() => expect(mocks.apiFetch).toHaveBeenCalledWith("/api/v1/orders/order-1",
+      expect.objectContaining({ method: "PUT", body: expect.stringContaining('"requestedDeliveryDate":"2026-11-25"') })));
+    const write = mocks.apiFetch.mock.calls.find(([path, init]) => path === "/api/v1/orders/order-1" && init?.method === "PUT");
+    expect(JSON.parse(String(write?.[1]?.body))).not.toHaveProperty("requestedDepartureAt");
   });
 
   it("shows the same rejection guidance on the dedicated requests page", async () => {

@@ -1,6 +1,8 @@
 package com.horsetransport.order;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -8,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -15,6 +18,7 @@ import java.util.UUID;
 import com.horsetransport.common.api.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -52,10 +56,27 @@ class TransportOrderControllerTest {
 	}
 
 	@Test
+	void acceptsAndReturnsDesiredDeliveryDateWithoutTimeConversion() throws Exception {
+		TransportOrder order = new TransportOrder(UUID.randomUUID(), "ORD-date");
+		order.update(new UpdateOrderRequest(null, null, null, null, null,
+				LocalDate.of(2026, 11, 25), null, null, null, null, null, List.of()), List.of());
+		when(service.update(any(), any())).thenReturn(OrderResponse.from(order));
+
+		mockMvc.perform(put("/api/v1/orders/{id}", ORDER_ID)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"requestedDeliveryDate\":\"2026-11-25\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.requestedDeliveryDate").value("2026-11-25"));
+		ArgumentCaptor<UpdateOrderRequest> request = ArgumentCaptor.forClass(UpdateOrderRequest.class);
+		verify(service).update(any(), request.capture());
+		assertThat(request.getValue().requestedDeliveryDate()).isEqualTo(LocalDate.of(2026, 11, 25));
+	}
+
+	@Test
 	void exposesSubmittedOrderInbox() throws Exception {
 		OrderInboxResponse item = new OrderInboxResponse(ORDER_ID, "ORD-test", OrderStatus.SUBMITTED,
 				"Hanoi", null, "Da Nang", null, TransportMode.ROAD,
-				LocalDateTime.of(2026, 10, 1, 9, 0), 2, LocalDateTime.now());
+				LocalDateTime.of(2026, 10, 1, 9, 0), null, 2, LocalDateTime.now());
 		when(service.findLogisticsManagerInbox(OrderStatus.SUBMITTED)).thenReturn(List.of(item));
 
 		mockMvc.perform(get("/api/v1/orders/inbox").queryParam("status", "SUBMITTED"))
@@ -70,7 +91,7 @@ class TransportOrderControllerTest {
 		LocalDateTime deadline = LocalDateTime.of(2026, 10, 15, 17, 0);
 		LocalDateTime deadlineSetAt = LocalDateTime.of(2026, 10, 2, 10, 30);
 		DocumentInboxResponse item = new DocumentInboxResponse(ORDER_ID, "ORD-test", OrderStatus.APPROVED,
-				"Hanoi", null, "Da Nang", null, LocalDateTime.of(2026, 10, 20, 9, 0), TransportMode.ROAD, 2,
+				"Hanoi", null, "Da Nang", null, LocalDateTime.of(2026, 10, 20, 9, 0), null, TransportMode.ROAD, 2,
 				deadline, deadlineSetAt, deadlineSetAt.plusHours(1), deadlineSetAt.plusHours(1), LocalDateTime.now());
 		when(service.findTransportSpecialistDocumentInbox()).thenReturn(List.of(item));
 
@@ -148,7 +169,7 @@ class TransportOrderControllerTest {
 	}
 
 	private OrderResponse response(OrderStatus status) {
-		return new OrderResponse(ORDER_ID, "ORD-test", null, null, null, null, null, null,
+		return new OrderResponse(ORDER_ID, "ORD-test", null, null, null, null, null, null, null,
 				null, null, null, null, List.of(), null, null, null, null, status, LocalDateTime.now(), null);
 	}
 }

@@ -23,6 +23,7 @@ class MigrationFileSafetyTest {
 		Path v6 = migrations.resolve("V6__add_order_cancelled_notification_type.sql");
 		Path v7 = migrations.resolve("V7__add_document_correction_deadline.sql");
 		Path v8 = migrations.resolve("V8__track_document_correction_windows.sql");
+		Path v9 = migrations.resolve("V9__add_requested_delivery_date.sql");
 
 		try (var files = Files.list(migrations)) {
 			assertThat(files.map(path -> path.getFileName().toString()).sorted().toList())
@@ -33,7 +34,8 @@ class MigrationFileSafetyTest {
 							"V5__add_transport_order_code_sequence.sql",
 							"V6__add_order_cancelled_notification_type.sql",
 							"V7__add_document_correction_deadline.sql",
-							"V8__track_document_correction_windows.sql");
+							"V8__track_document_correction_windows.sql",
+							"V9__add_requested_delivery_date.sql");
 		}
 
 		assertThat(flywayChecksum(v1)).isEqualTo(-1027814250);
@@ -44,6 +46,12 @@ class MigrationFileSafetyTest {
 		assertThat(flywayChecksum(v6)).isEqualTo(-2077767481);
 		assertThat(flywayChecksum(v7)).isEqualTo(-808977492);
 		assertThat(flywayChecksum(v8)).isEqualTo(225419598);
+		assertThat(Files.readAllLines(v9)).containsExactly(
+				"ALTER TABLE transport_orders",
+				"    ADD COLUMN IF NOT EXISTS requested_delivery_date date;",
+				"",
+				"CREATE INDEX IF NOT EXISTS idx_transport_orders_requested_delivery_date",
+				"    ON transport_orders (requested_delivery_date);");
 	}
 
 	@Test

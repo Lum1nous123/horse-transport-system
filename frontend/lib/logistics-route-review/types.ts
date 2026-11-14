@@ -7,7 +7,7 @@ export type RouteReviewSummary = {
   orderCode: string;
   origin: string;
   destination: string;
-  requestedDepartureAt: string;
+  requestedDeliveryDate: string | null;
   horseCount: number;
   transportMode: "ROAD" | "AIR" | "COMBINED";
   routePlanStatus: RouteReviewStatus;

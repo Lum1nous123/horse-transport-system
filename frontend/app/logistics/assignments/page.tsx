@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AssignmentWorkspaceFrame from "@/components/AssignmentWorkspaceFrame";
-import { LogisticsDateTime, LogisticsStatusTabs } from "@/components/LogisticsWorkspaceUI";
+import { LogisticsStatusTabs } from "@/components/LogisticsWorkspaceUI";
 import { getStaffAssignmentService, type AssignmentOrderSummary } from "@/lib/staff-assignment/service";
 import { useLogisticsAccess } from "@/lib/staff-assignment/use-logistics-access";
+import { compareRequestedDeliveryDates, formatRequestedDeliveryDate } from "@/lib/requested-delivery-date";
 
 export default function StaffAssignmentQueuePage() {
   const { state: accessState, preview, message: accessMessage } = useLogisticsAccess();
@@ -38,11 +39,8 @@ export default function StaffAssignmentQueuePage() {
     const needle = query.trim().toLocaleLowerCase();
     return queues[tab].filter((order) => !needle || [order.orderCode, order.origin, order.destination].some((value) => value.toLocaleLowerCase().includes(needle)))
       .toSorted((a, b) => {
-        const aTime = Date.parse(a.requestedDepartureAt);
-        const bTime = Date.parse(b.requestedDepartureAt);
-        if (!Number.isFinite(aTime)) return Number.isFinite(bTime) ? 1 : a.orderCode.localeCompare(b.orderCode);
-        if (!Number.isFinite(bTime)) return -1;
-        return (sort === "earliest" ? aTime - bTime : bTime - aTime) || a.orderCode.localeCompare(b.orderCode);
+        return compareRequestedDeliveryDates(a.requestedDeliveryDate, b.requestedDeliveryDate,
+          a.id, b.id, sort === "latest");
       });
   }, [queues, query, sort, tab]);
 
@@ -65,17 +63,17 @@ export default function StaffAssignmentQueuePage() {
       ]} />
       <div className="lm-list-toolbar">
         <label className="lm-search"><span className="sr-only">Search assignment orders</span><input type="search" placeholder="Search order code or route" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
-        <label className="lm-filter"><span>Departure</span><select value={sort} onChange={(event) => setSort(event.target.value)}><option value="earliest">Earliest first</option><option value="latest">Latest first</option></select></label>
+        <label className="lm-filter"><span>Desired delivery date</span><select value={sort} onChange={(event) => setSort(event.target.value)}><option value="earliest">Earliest first</option><option value="latest">Latest first</option></select></label>
       </div>
       <div id="assignment-orders" role="tabpanel" aria-labelledby={`assignment-orders-tab-${tab}`} tabIndex={0}>
         {loading ? <p className="lm-list-state" role="status">Loading assignment orders…</p> : !loaded ? <p className="lm-list-state">Assignment orders are unavailable. Retry the request above.</p>
           : visible.length === 0 ? <div className="lm-list-state"><h2>{query ? "No matching orders" : tab === "needsAssignment" ? "No orders need assignment" : "No assigned orders"}</h2><p>{query ? "Try a different order code or route." : tab === "needsAssignment" ? "Eligible orders will appear here when staff assignment is required." : "Non-terminal orders with a saved TS/FRC pair appear here."}</p>{query && <button className="customer-text-button" type="button" onClick={() => setQuery("")}>Clear search</button>}</div>
           : <div className="lm-table-scroll"><table className="lm-management-table" aria-label={tab === "needsAssignment" ? "Orders needing staff assignment" : "Assigned orders"}>
-            <thead><tr><th scope="col">Order</th><th scope="col" className="lm-route-column">Route</th><th scope="col">Departure</th><th scope="col">Horses / Mode</th><th scope="col">Action</th></tr></thead>
+            <thead><tr><th scope="col">Order</th><th scope="col" className="lm-route-column">Route</th><th scope="col">Desired delivery date</th><th scope="col">Horses / Mode</th><th scope="col">Action</th></tr></thead>
             <tbody>{visible.map((order) => <tr key={order.id}>
               <td data-label="Order"><strong>{order.orderCode}</strong></td>
               <td data-label="Route" className="lm-route-cell"><span>{order.origin}</span><span className="lm-destination"><b aria-hidden="true">→</b> {order.destination}</span></td>
-              <td data-label="Departure"><LogisticsDateTime value={order.requestedDepartureAt} /></td>
+              <td data-label="Desired delivery date">{formatRequestedDeliveryDate(order.requestedDeliveryDate)}</td>
               <td data-label="Horses / Mode"><span>{order.horseCount} {order.horseCount === 1 ? "horse" : "horses"}</span><small>{order.transportMode}</small></td>
               <td data-label="Action"><Link className={tab === "needsAssignment" ? "customer-primary-button compact" : "lm-row-link"} href={`/logistics/assignments/${order.id}${suffix}`} aria-label={`${tab === "needsAssignment" ? "Assign staff" : "View assignment"} for ${order.orderCode}`}>{tab === "needsAssignment" ? "Assign staff" : "View assignment"} <span aria-hidden="true">→</span></Link></td>
             </tr>)}</tbody>
