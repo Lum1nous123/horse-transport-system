@@ -34,12 +34,16 @@ The frontend must call the Spring Boot REST API. It must not call Supabase direc
 Order create and update requests accept `requestedDeliveryDate` as a date-only
 `YYYY-MM-DD` string (for example, `"2026-11-25"`) or `null`. A DRAFT may omit it. Submit and resubmit require
 it; a legacy `requestedDepartureAt` value does not satisfy that requirement.
-No past-date restriction is applied. The desired date informs FRC planning and
-does not validate or block a Route Plan.
+No past-date restriction is applied. If present, the date constrains the final
+RouteLeg's planned arrival calendar date; FRC adjusts the final arrival time.
+This planned date does not promise actual delivery on that date.
 
 Order detail, inbox, assignment, Transport Specialist, FRC planning, and
 tracking responses include `requestedDeliveryDate`, which is `null` for legacy
 Orders without one. Responses still include legacy `requestedDepartureAt` in
 this transition. New Customer requests do not write that legacy field. RouteLeg
-`plannedDepartureAt` and `plannedArrivalAt`, execution schedules, and actual
+`plannedDepartureAt` and `plannedArrivalAt` remain offset-free `LocalDateTime`
+values. For an Order with a requested delivery date, validation requires the
+final RouteLeg planned arrival date to match it, and each later leg must depart
+strictly after the previous leg arrives. Actual execution schedules and actual
 delivery time retain their existing meanings.

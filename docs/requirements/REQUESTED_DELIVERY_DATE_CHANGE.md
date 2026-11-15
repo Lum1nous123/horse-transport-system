@@ -2,7 +2,32 @@
 
 Status: Approved by the project owner in the implementation request of 2026-11-14.
 This amendment supersedes the departure-input requirement in FR-002 and related
-Order summaries only. Other approved requirements remain unchanged.
+Order summaries. The separately approved FRC planning amendment dated
+2026-11-15 below further supersedes the advisory treatment of the final planned
+arrival date and adds the stated RouteLeg connection and time-order rules.
+
+## Superseding FRC planning amendment (approved 2026-11-15)
+
+The project owner approved a further rule for planned Route Plans. For an Order
+with a `requestedDeliveryDate`, the final RouteLeg's planned arrival calendar
+date must equal that Order date. The assigned FRC may set the final leg's arrival
+time; the date is sourced from the Order and is read-only in FRC planning.
+Route validation and submission are blocked when the saved final-leg arrival
+date differs. Orders without a desired date (including legacy Orders) retain the
+existing unrestricted final-arrival date behavior.
+
+This rule constrains the **planned** arrival date only. It does not guarantee or
+assert the actual delivery date, change actual `deliveredAt`, or create a late
+delivery cancellation/incident workflow. This amendment supersedes the advisory
+only statements below solely for the final planned RouteLeg arrival date.
+
+FRC may split a journey into any number of connected RouteLegs or keep it as a
+single leg. When a connection point is edited from either adjacent leg, the
+matching previous destination / next origin is updated to the same value.
+Each later RouteLeg must depart strictly after the previous RouteLeg arrives.
+
+The existing accepted behavior below remains in force for Customer date entry,
+Order lifecycle, and all other date uses, subject only to this amendment.
 
 ## Customer request
 
@@ -10,10 +35,11 @@ The Customer supplies a desired calendar date for the Horses to reach the Order'
 destination. The UI calls it **Desired delivery date**. It replaces the Customer's
 Requested departure input and has no time-of-day component.
 
-The date is a preference for the assigned FRC's planning, not a guaranteed arrival
-or a mandatory delivery deadline. An otherwise valid Route Plan may arrive before
-or after this preference. A difference does not itself block Submit/Confirm,
-cancel the Order, or create a late-delivery warning.
+The date is the assigned FRC's planned-delivery target, not a guarantee of actual
+arrival or a mandatory actual-delivery deadline. The final planned RouteLeg
+arrival date follows the superseding FRC planning amendment above. Actual delivery
+may still occur on another date; that difference does not cancel the Order or
+create a late-delivery warning.
 
 ## Acceptance criteria
 
@@ -31,9 +57,10 @@ cancel the Order, or create a late-delivery warning.
   last, and use a stable Order identity tie-breaker.
 - The LM dashboard's **Upcoming desired deliveries** includes today and later
   preferences from ready-to-ship/active journeys and excludes missing dates.
-- RouteLeg planned departure/arrival, actual execution timestamps, Vehicle/staff
-  overlap checks, welfare, PoD, and actual Order delivery timestamps retain their
-  existing meanings and behavior.
+- RouteLeg planned departures, non-final planned arrivals, actual execution
+  timestamps, Vehicle/staff overlap checks, welfare, PoD, and actual Order
+  delivery timestamps retain their existing meanings and behavior. The final
+  planned arrival date follows the superseding FRC planning amendment above.
 
 ## Data representation
 

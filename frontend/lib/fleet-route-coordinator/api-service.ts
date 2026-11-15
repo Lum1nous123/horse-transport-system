@@ -29,7 +29,9 @@ async function request<T>(path:string, init?:RequestInit):Promise<T> {
 }
 const root=(id:string)=>`/api/v1/frc/orders/${id}/route-plan`;
 const place=(a:string|null,c:string|null)=>[a,c].filter(Boolean).join(", ")||"Not provided";
-const local=(value:string)=>new Date(value).toISOString().slice(0,19);
+const local=(value:string)=>/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?$/.test(value)
+  ? value.length===16?`${value}:00`:value.slice(0,19)
+  : new Date(value).toISOString().slice(0,19);
 function mapPlan(plan:Plan, validation:Validation):RoutePlanDetail { return { id:plan.id,orderId:plan.transportOrderId,status:plan.status,revision:0,updatedAt:plan.updatedAt??plan.createdAt,returnedReason:null,readOnly:!["DRAFT","RETURNED"].includes(plan.status),legs:plan.legs,validationIssues:validation.issues.map(i=>({code:i.code,message:i.message,severity:"ERROR",legId:i.routeLegId,field:null})) }; }
 async function readPlan(id:string){const [p,v]=await Promise.all([request<Plan>(root(id)),request<Validation>(`${root(id)}/validation`)]);return mapPlan(p,v);}
 async function getPlan(id:string){try{return await readPlan(id);}catch(e){if(!(e instanceof HttpError)||e.apiCode!=="ROUTE_PLAN_NOT_FOUND")throw e;await request(root(id),{method:"POST"});return readPlan(id);}}

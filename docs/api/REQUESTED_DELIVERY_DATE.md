@@ -27,8 +27,19 @@ for the desired date, and does not overwrite stored legacy departure data.
 Frontend inputs use `type="date"` and send the exact calendar string. Displays
 format the calendar date without converting it to the browser timezone; absent
 values show **Not provided**. RouteLeg timestamps remain datetime values.
-The preference is advisory and has no effect on route validity, cancellation,
-Vehicle/Driver/Escort overlap eligibility, or actual `deliveredAt`.
+For Route Plans, the assigned FRC's final RouteLeg planned arrival date must match
+the Order's `requestedDeliveryDate` when present. The FRC can edit the arrival
+time; the UI takes the calendar date from the Order. FRC validation and Submit
+reject a mismatched final arrival date. Legacy Orders with a null date have no
+date match constraint. Each later RouteLeg must depart strictly after the
+previous RouteLeg arrives. This planned date does not guarantee actual arrival and
+has no effect on cancellation, Vehicle/Driver/Escort overlap eligibility, or
+actual `deliveredAt`.
+
+RouteLeg planned schedule values are `LocalDateTime` values without an offset.
+The FRC editor preserves the entered calendar date and wall-clock value in the
+API request so that final-arrival date validation is independent of browser
+timezone conversion.
 
 ## Rollout
 

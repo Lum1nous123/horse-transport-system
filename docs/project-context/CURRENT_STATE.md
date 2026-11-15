@@ -28,6 +28,7 @@ This file is a portable handoff and resume guide for a new Codex conversation or
 
 - Approved Functional Requirements: `docs/requirements/Functional_Requirements_Proposed.docx`
 - Approved desired-delivery-date amendment (supersedes Customer departure input): `docs/requirements/REQUESTED_DELIVERY_DATE_CHANGE.md`
+- Approved FRC route-planning amendment (final planned arrival date, connection synchronization, and strict leg chronology): `docs/requirements/REQUESTED_DELIVERY_DATE_CHANGE.md`
 - Confirmed Business Workflow Specification: `docs/requirements/Horse_Transport_System_Confirmed_Business_Workflow_Specification.docx`
 - Business Rules: `docs/business-rules/Business_Rules.docx`
 - Revised MVP ERD: `docs/erd/erd.dbml`
@@ -73,6 +74,11 @@ The Functional Requirements filename still contains `Proposed`, but the document
   each AIR RouteLeg. Eligibility excludes overlapping non-completed execution
   assignments; selection prefers the lowest active execution-assignment count
   and then a stable user-ID tie-breaker.
+- FRC may keep a journey as one RouteLeg or split it into connected legs. Editing
+  either side of a connection synchronizes the adjacent endpoint. When an Order
+  has a desired delivery date, the final planned arrival date must match it;
+  FRC may adjust its time. Each later leg departs strictly after the prior leg
+  arrives. These constraints apply to the planned Route Plan, not actual arrival.
 - `READY_TO_SHIP` is reached only after the locked Route Plan has every required
   ROAD/AIR execution assignment persisted successfully.
 - RouteLegs execute strictly in sequence. ROAD Vehicles within one leg progress independently.
@@ -188,6 +194,22 @@ These follow-ups do not change approved requirements and must not be used to inf
   integration. Container-based migration verification remains pending; Docker
   is not required for normal startup migrations against Supabase. Deploy
   migration/backend first, frontend second; refresh old clients before Submit.
+
+### FRC route planning — approved amendment implemented locally (2026-11-15)
+
+- The owner approved the final planned arrival date matching the Order's desired
+  delivery date when present. FRC can edit the final arrival time only; route
+  validation and submission reject a mismatch. Null dates on legacy Orders stay
+  unrestricted, and actual delivery timestamps are unaffected.
+- FRC can keep a direct leg or split it into multiple connected legs. Editing
+  either adjacent endpoint updates its matching connection. Later legs must
+  depart strictly after the preceding leg arrives.
+- The FRC Route Plan page now follows the approved visual mockup: vertical
+  journey timeline, editable leg cards, split-connection form, visible ROAD
+  welfare/checkpoint stops, and inline vehicle allocation. The final arrival
+  date is read-only with editable time; route-check issues use a soft red panel.
+- Frontend TypeScript check and backend compile passed. Tests were not run.
+- Implementation is local and unmerged.
   Confirm V9 success from deployment logs or `flyway_schema_history`.
 
 ### AIR Escort visibility in journey tracking — verified (2026-11-12)

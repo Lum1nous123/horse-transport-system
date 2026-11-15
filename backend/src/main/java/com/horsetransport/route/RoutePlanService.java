@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.time.LocalDate;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -777,6 +778,15 @@ private RoadAllocationDetailResponse toRoadAllocationDetail(RouteLeg leg) {
 					lastLeg.getId(),
 					lastLeg.getSequenceNo()));
 		}
+		LocalDate requestedDeliveryDate = order.getRequestedDeliveryDate();
+		if (requestedDeliveryDate != null
+				&& !requestedDeliveryDate.equals(lastLeg.getPlannedArrivalAt().toLocalDate())) {
+			issues.add(new RoutePlanValidationIssueResponse(
+					"FINAL_ARRIVAL_DATE_MISMATCH",
+					"Final route leg planned arrival date must match the Order's desired delivery date",
+					lastLeg.getId(),
+					lastLeg.getSequenceNo()));
+		}
 
 		for (int i = 0; i < legs.size() - 1; i++) {
 			RouteLeg current = legs.get(i);
@@ -790,7 +800,7 @@ private RoadAllocationDetailResponse toRoadAllocationDetail(RouteLeg leg) {
 						next.getSequenceNo()));
 			}
 
-			if (next.getPlannedDepartureAt().isBefore(current.getPlannedArrivalAt())) {
+			if (!next.getPlannedDepartureAt().isAfter(current.getPlannedArrivalAt())) {
 				issues.add(new RoutePlanValidationIssueResponse(
 						"BROKEN_TIME_ORDER",
 						"Each route leg must depart after the previous route leg arrives",
