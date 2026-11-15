@@ -25,7 +25,7 @@ describe("Logistics Order Tracking page", () => {
       destinationAddress: "Destination",
       destinationCountry: "VN",
       transportMode: "ROAD",
-      requestedDepartureAt: "2026-10-10T22:57:00",
+      requestedDeliveryDate: "2026-10-10",
       horseCount: 1,
       createdAt: "2026-09-30T22:58:00",
       deliveredAt: "2026-10-28T22:50:00",
@@ -44,7 +44,7 @@ describe("Logistics Order Tracking page", () => {
 
   it("groups actual statuses and combines route search, mode and status filters", async () => {
     const base = { originAddress: "Origin", originCountry: "VN", destinationAddress: "Airport", destinationCountry: "VN",
-      requestedDepartureAt: "2026-11-10T09:00:00Z", horseCount: 2, createdAt: "2026-11-01T09:00:00Z", deliveredAt: null };
+      requestedDeliveryDate: "2026-11-10", horseCount: 2, createdAt: "2026-11-01T09:00:00Z", deliveredAt: null };
     listOrders.mockResolvedValue([
       { ...base, orderId: "ready", orderCode: "ORD-ready", status: "READY_TO_SHIP", transportMode: "ROAD" },
       { ...base, orderId: "active", orderCode: "ORD-active", status: "IN_PROGRESS", transportMode: "AIR" },

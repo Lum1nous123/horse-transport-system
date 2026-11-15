@@ -2,6 +2,7 @@ import type { JourneyNotification, JourneyTracking } from "./types";
 
 // Development-only sample. Never returned by a production service path.
 export const previewTracking: JourneyTracking = {
+  requestedDeliveryDate: "2026-10-25",
   orderId: "order-2068",
   orderCode: "ORD-2068",
   orderStatus: "IN_PROGRESS",

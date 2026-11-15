@@ -50,7 +50,7 @@ export type AssignedSpecialistOrderSummary = {
   origin: string;
   destination: string;
   transportMode: "ROAD" | "AIR" | "COMBINED";
-  requestedDepartureAt: string;
+  requestedDeliveryDate: string | null;
   horseCount: number;
   assignedAt: string;
   assignedTransportSpecialistName: string;

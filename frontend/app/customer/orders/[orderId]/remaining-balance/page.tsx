@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDeliveryDate } from "@/lib/requested-delivery-date";
+
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -224,7 +226,7 @@ export default function CustomerRemainingBalancePage() {
                 <span className="balance-heading-label">Transport payment</span>
                 <h1>Complete your transport payment</h1>
                 <p>{result.order.origin} <span aria-hidden="true">-&gt;</span> {result.order.destination}</p>
-                <small>{result.order.orderCode} · {result.order.horseCount} {result.order.horseCount === 1 ? "horse" : "horses"} · {result.order.transportMode} · Departure {formatDateTime(result.order.departureAt)}</small>
+                <small>{result.order.orderCode} · {result.order.horseCount} {result.order.horseCount === 1 ? "horse" : "horses"} · {result.order.transportMode} · Desired delivery {formatDeliveryDate(result.order.requestedDeliveryDate)}</small>
               </div>
               <Link className="customer-secondary-button" href={backHref}>Back to My Orders</Link>
             </header>

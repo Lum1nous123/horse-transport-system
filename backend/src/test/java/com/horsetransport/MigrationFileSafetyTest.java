@@ -33,7 +33,8 @@ class MigrationFileSafetyTest {
 							"V5__add_transport_order_code_sequence.sql",
 							"V6__add_order_cancelled_notification_type.sql",
 							"V7__add_document_correction_deadline.sql",
-							"V8__track_document_correction_windows.sql");
+							"V8__track_document_correction_windows.sql",
+							"V9__add_requested_delivery_date.sql");
 		}
 
 		assertThat(flywayChecksum(v1)).isEqualTo(-1027814250);
@@ -44,6 +45,7 @@ class MigrationFileSafetyTest {
 		assertThat(flywayChecksum(v6)).isEqualTo(-2077767481);
 		assertThat(flywayChecksum(v7)).isEqualTo(-808977492);
 		assertThat(flywayChecksum(v8)).isEqualTo(225419598);
+		assertThat(flywayChecksum(migrations.resolve("V9__add_requested_delivery_date.sql"))).isEqualTo(-322458732);
 	}
 
 	@Test

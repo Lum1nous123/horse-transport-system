@@ -28,7 +28,7 @@ beforeEach(() => {
     const url = String(path);
     if (url.endsWith("/staff-assignments")) return Response.json([{ role: "FLEET_ROUTE_COORDINATOR", fullName: "Real FRC" }]);
     if (url === "/api/v1/orders/order-1") return Response.json({ id: "order-1", orderCode: "ORD-1", originAddress: "Origin",
-      destinationAddress: "Destination", requestedDepartureAt: "2026-11-07T09:00:00Z", horseIds: ["horse-id"],
+      destinationAddress: "Destination", requestedDeliveryDate: "2026-11-07", horseIds: ["horse-id"],
       transportMode: "ROAD", status: "APPROVED" });
     if (url.endsWith("/confirm") && init?.method === "POST") return Response.json(raw("APPROVED"));
     if (url.endsWith("/return") && init?.method === "POST") return Response.json(raw("RETURNED"));

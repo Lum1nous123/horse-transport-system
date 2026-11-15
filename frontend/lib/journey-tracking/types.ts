@@ -31,6 +31,7 @@ export type JourneyLeg = {
 };
 
 export type JourneyTracking = {
+  requestedDeliveryDate: string | null;
   orderId: string;
   orderCode: string;
   orderStatus: string;

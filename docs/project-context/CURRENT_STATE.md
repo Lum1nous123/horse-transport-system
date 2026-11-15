@@ -27,6 +27,7 @@ This file is a portable handoff and resume guide for a new Codex conversation or
 ## Authoritative Sources
 
 - Approved Functional Requirements: `docs/requirements/Functional_Requirements_Proposed.docx`
+- Approved desired-delivery-date amendment (supersedes Customer departure input): `docs/requirements/REQUESTED_DELIVERY_DATE_CHANGE.md`
 - Confirmed Business Workflow Specification: `docs/requirements/Horse_Transport_System_Confirmed_Business_Workflow_Specification.docx`
 - Business Rules: `docs/business-rules/Business_Rules.docx`
 - Revised MVP ERD: `docs/erd/erd.dbml`
@@ -158,6 +159,36 @@ These follow-ups do not change approved requirements and must not be used to inf
 - **Implementation agents:** implement only approved requirements and architecture, then verify the applicable Acceptance Criteria.
 
 ## Current Work
+
+### Desired delivery date — implemented locally (2026-11-14)
+
+- The owner approved replacing Customer requested departure with a date-only,
+  advisory desired delivery preference. See the approved amendment above and
+  `docs/api/REQUESTED_DELIVERY_DATE.md` for the contract and rollout steps.
+- Flyway V9 adds nullable `transport_orders.requested_delivery_date` (`date`),
+  mapped to `LocalDate` and JSON `YYYY-MM-DD`. DRAFT may omit it; Submit/resubmit
+  requires it. Existing departures are retained as legacy response data, never
+  overwritten by Customer edits or used to infer a desired delivery date.
+- Customer, LM, TS, FRC, payment summary and tracking views use the new date.
+  Missing dates show `Not provided`; affected date sorts put missing dates last
+  with stable Order identity ties and retain existing status priority. LM's
+  `Upcoming desired deliveries` includes today. Actual route/execution times,
+  overlap checks, delivery timestamps and document deadlines are unchanged.
+- Verification: 87 related Backend tests, all 345 Frontend unit tests and 16
+  desktop/mobile Playwright checks pass, including date-only entry in
+  America/Los_Angeles and legacy missing-date display. Production build,
+  TypeScript and full Frontend ESLint pass. Backend tests cover
+  DRAFT/Submit/resubmit, strict date JSON, legacy reads and route dates
+  before/after the preference.
+- Publication uses existing PR #154 (`Fix/Some-small-mistake`). Conflicts with
+  main were resolved while retaining AIR Escort visibility. The PR already
+  contained V9; its exact SQL is preserved (Flyway checksum -322458732) because
+  it may already have been deployed from that branch.
+- No Supabase connection or migration execution was performed during this
+  integration. Container-based migration verification remains pending; Docker
+  is not required for normal startup migrations against Supabase. Deploy
+  migration/backend first, frontend second; refresh old clients before Submit.
+  Confirm V9 success from deployment logs or `flyway_schema_history`.
 
 ### AIR Escort visibility in journey tracking — verified (2026-11-12)
 

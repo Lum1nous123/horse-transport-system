@@ -67,6 +67,7 @@ class TransportOrderServiceTest {
 		assertThat(response.orderCode()).isEqualTo("ORD-000001");
 		assertThat(response.horseIds()).isEmpty();
 		assertThat(response.originAddress()).isNull();
+		assertThat(response.requestedDeliveryDate()).isNull();
 	}
 
 	@Test
@@ -150,7 +151,7 @@ class TransportOrderServiceTest {
 
 		assertThatThrownBy(() -> service.submit(order.getId()))
 				.isInstanceOf(OrderSubmissionValidationException.class)
-				.hasMessageContaining("origin, destination, requestedDepartureAt, transportMode, horseIds, recipientName, recipientPhone");
+                .hasMessageContaining("origin, destination, requestedDeliveryDate, transportMode, horseIds, recipientName, recipientPhone");
 		assertThat(order.getStatus()).isEqualTo(OrderStatus.DRAFT);
 	}
 
@@ -464,6 +465,63 @@ class TransportOrderServiceTest {
 		assertThat(order.getRejectionReason()).isNull();
 	}
 
+	@Test
+	void newOrderStoresDesiredDateWithoutWritingLegacyDeparture() {
+		when(orderRepository.nextOrderCodeValue()).thenReturn(2L);
+		when(orderRepository.save(any(TransportOrder.class))).thenAnswer(invocation -> invocation.getArgument(0));
+		OrderResponse response = service.create(request(List.of()));
+		assertThat(response.requestedDeliveryDate()).isEqualTo(java.time.LocalDate.of(2026, 10, 1));
+		assertThat(response.requestedDepartureAt()).isNull();
+	}
+
+	@Test
+	void updatingLegacyDraftPreservesDepartureWithoutInferringDeliveryDate() {
+		TransportOrder order = order();
+		LocalDateTime legacy = LocalDateTime.of(2026, 10, 1, 9, 0);
+		ReflectionTestUtils.setField(order, "requestedDepartureAt", legacy);
+		when(orderRepository.findByIdAndCustomerId(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+		when(orderRepository.save(order)).thenReturn(order);
+		OrderResponse response = service.update(order.getId(), emptyRequest());
+		assertThat(response.requestedDepartureAt()).isEqualTo(legacy);
+		assertThat(response.requestedDeliveryDate()).isNull();
+	}
+
+	@Test
+	void legacyRejectedOrderCanResubmitAfterCustomerAddsDesiredDate() {
+		TransportOrder order = validOrder();
+		order.submit();
+		order.reject("Please update this request");
+		LocalDateTime legacy = LocalDateTime.of(2026, 10, 1, 9, 0);
+		ReflectionTestUtils.setField(order, "requestedDepartureAt", legacy);
+		ReflectionTestUtils.setField(order, "requestedDeliveryDate", null);
+		when(orderRepository.findByIdAndCustomerId(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+		when(horseRepository.findAllByIdInAndCustomerId(any(), any())).thenReturn(List.of(mock(Horse.class)));
+		when(orderRepository.save(order)).thenReturn(order);
+		when(orderRepository.findOwnedByIdForUpdate(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+
+		service.update(order.getId(), request(List.of(HORSE_ID)));
+		OrderResponse response = service.submit(order.getId());
+
+		assertThat(response.id()).isEqualTo(order.getId());
+		assertThat(response.status()).isEqualTo(OrderStatus.SUBMITTED);
+		assertThat(response.requestedDeliveryDate()).isEqualTo(java.time.LocalDate.of(2026, 10, 1));
+		assertThat(response.requestedDepartureAt()).isEqualTo(legacy);
+		assertThat(response.rejectionReason()).isNull();
+	}
+
+	@ParameterizedTest
+	@EnumSource(value = OrderStatus.class, names = {"DRAFT", "REJECTED"})
+	void legacyDepartureCannotSubstituteForDesiredDateAtSubmit(OrderStatus status) {
+		TransportOrder order = validOrder();
+		ReflectionTestUtils.setField(order, "status", status);
+		ReflectionTestUtils.setField(order, "requestedDeliveryDate", null);
+		ReflectionTestUtils.setField(order, "requestedDepartureAt", LocalDateTime.of(2026, 10, 1, 9, 0));
+		when(orderRepository.findOwnedByIdForUpdate(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+		assertThatThrownBy(() -> service.submit(order.getId()))
+				.isInstanceOf(OrderSubmissionValidationException.class).hasMessageContaining("requestedDeliveryDate");
+		assertThat(order.getStatus()).isEqualTo(status);
+	}
+
 	private TransportOrder validOrder() {
 		TransportOrder order = order();
 		order.update(request(List.of(HORSE_ID)), List.of(HORSE_ID));
@@ -481,13 +539,13 @@ class TransportOrderServiceTest {
 	}
 
 	private UpdateOrderRequest emptyRequest() {
-		return new UpdateOrderRequest(null, null, null, null, null, null,
+		return new UpdateOrderRequest(null, null, null, null, null, null, null,
 				null, null, null, null, null);
 	}
 
 	private UpdateOrderRequest request(List<UUID> horseIds) {
 		return new UpdateOrderRequest("Hanoi", null, "Da Nang", null,
-				LocalDateTime.of(2026, 10, 1, 9, 0), TransportMode.ROAD,
+				LocalDateTime.of(2026, 10, 1, 9, 0), java.time.LocalDate.of(2026, 10, 1), TransportMode.ROAD,
 				null, "Nguyen Van A", "0901234567", null, horseIds);
 	}
 }

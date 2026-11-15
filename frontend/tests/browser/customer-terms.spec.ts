@@ -5,7 +5,7 @@ const customerOrder = {
   orderCode: "ORD-TERMS-1",
   originCountry: "France",
   destinationCountry: "Belgium",
-  requestedDepartureAt: "2026-11-10T09:00:00",
+  requestedDeliveryDate: "2026-11-10",
   transportMode: "ROAD",
   recipientName: "Taylor Morgan",
   recipientPhone: "+32 2 555 0101",

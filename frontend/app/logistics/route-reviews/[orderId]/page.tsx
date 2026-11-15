@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDeliveryDate } from "@/lib/requested-delivery-date";
+
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -173,7 +175,7 @@ function ReviewDetail() {
 
           <section className="route-review-summary" aria-label="Route Plan summary">
             <div><ReviewIcon name="status" /><span>Status</span><strong className={`route-review-status is-${review.routePlanStatus.toLowerCase()}`}>{review.routePlanStatus === "PENDING_LM_REVIEW" ? "Pending review" : review.routePlanStatus === "APPROVED" ? "Locked" : "Returned"}</strong></div>
-            <div><ReviewIcon name="departure" /><span>Departure</span><strong>{formatDateTime(review.requestedDepartureAt)}</strong></div>
+            <div><ReviewIcon name="departure" /><span>Desired delivery date</span><strong>{formatDeliveryDate(review.requestedDeliveryDate)}</strong></div>
             <div><ReviewIcon name="transport" /><span>Transport</span><strong>{review.transportMode}</strong></div>
             <div><ReviewIcon name="horses" /><span>Horses</span><strong>{review.horseCount}</strong></div>
             <div><ReviewIcon name="frc" /><span>FRC</span><strong>{review.assignedFleetRouteCoordinatorName}</strong></div>

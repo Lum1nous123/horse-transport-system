@@ -211,12 +211,14 @@ Table transport_orders {
   order_code varchar(30) [not null, unique]
   customer_id uuid [not null, ref: > users.id]
 
-  // These fields may be incomplete while DRAFT and are mandatory at Submit.
+  // Request fields may be incomplete while DRAFT; Submit validates required fields.
   origin_address varchar(255)
   origin_country varchar(100)
   destination_address varchar(255)
   destination_country varchar(100)
+  // Legacy only; never infer requested delivery from this value.
   requested_departure_at timestamp
+  requested_delivery_date date [note: 'Customer preference only; required at Submit, nullable for DRAFT and legacy orders']
   transport_mode transport_mode
   special_requirements text
 
@@ -250,16 +252,18 @@ Table transport_orders {
     customer_id
     status
     requested_departure_at
+    requested_delivery_date
     document_completion_deadline_at
   }
 }
 
 // Transactional invariants:
-// - Customer editing is allowed only in DRAFT; origin, destination, departure,
+// - Customer editing is allowed in DRAFT or after LM rejection; origin,
+//   destination, desired delivery date (not legacy departure),
 //   transport mode, selected Horses, and recipient name/phone are checked at
 //   Submit. LM rejection is only from SUBMITTED and requires a reason.
 // - Customer cancellation is only from DRAFT, SUBMITTED, or QUOTATION_SENT.
-//   DELIVERED, REJECTED, and CANCELLED are terminal.
+//   DELIVERED and CANCELLED are terminal; LM-rejected Orders may be resubmitted.
 // - Deposit PAID atomically approves the Order and generates its checklist once.
 //   Remaining Balance PAID unlocks Route Planning.
 // - Deadline cancellation/refund and every audited status transition are atomic.

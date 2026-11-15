@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDeliveryDate } from "@/lib/requested-delivery-date";
+
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -13,16 +15,6 @@ import {
   type RoutePlanStatus,
 } from "@/lib/fleet-route-coordinator/service";
 import { useFleetRouteCoordinatorAccess } from "@/lib/fleet-route-coordinator/use-coordinator-access";
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
 
 function statusLabel(status: RoutePlanStatus) {
   if (status === "NOT_STARTED") return "Not started";
@@ -120,7 +112,7 @@ export default function FleetRouteCoordinatorOrderPage() {
 
           <section className="frc-plan-overview" aria-label="Order planning summary">
             <div><span>Status</span><strong className={`frc-plan-status is-${order.routePlanStatus.toLowerCase()}`}>{statusLabel(order.routePlanStatus)}</strong></div>
-            <div><span>Departure</span><strong>{formatDateTime(order.requestedDepartureAt)}</strong></div>
+            <div><span>Desired delivery date</span><strong>{formatDeliveryDate(order.requestedDeliveryDate)}</strong></div>
             <div><span>Transport</span><strong>{order.transportMode}</strong></div>
             <div><span>Horses</span><strong>{order.horseCount}</strong></div>
           </section>

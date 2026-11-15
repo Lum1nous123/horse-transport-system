@@ -1,5 +1,6 @@
 package com.horsetransport.tracking;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -21,6 +22,7 @@ public record JourneyTrackingResponse(
 		String destinationAddress,
 		String destinationCountry,
 		LocalDateTime requestedDepartureAt,
+		LocalDate requestedDeliveryDate,
 		LocalDateTime deliveredAt,
 		UUID routePlanId,
 		RoutePlanStatus routePlanStatus,

@@ -52,10 +52,34 @@ class TransportOrderControllerTest {
 	}
 
 	@Test
+	void desiredDeliveryDateRoundTripsAsDateOnly() throws Exception {
+		when(service.create(any())).thenAnswer(invocation -> {
+			UpdateOrderRequest request = invocation.getArgument(0);
+			TransportOrder order = new TransportOrder(UUID.randomUUID(), "ORD-date");
+			order.update(request, List.of());
+			return OrderResponse.from(order);
+		});
+		mockMvc.perform(post("/api/v1/orders").contentType(MediaType.APPLICATION_JSON)
+				.content("{\"requestedDeliveryDate\":\"2026-11-25\",\"requestedDepartureAt\":\"2026-11-20T10:00:00\"}"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.requestedDeliveryDate").value("2026-11-25"))
+				.andExpect(jsonPath("$.requestedDepartureAt").isEmpty());
+	}
+
+	@Test
+	void desiredDeliveryDateRejectsTimestampAndInvalidDate() throws Exception {
+		for (String value : List.of("2026-11-25T15:00:00", "2026-02-30")) {
+			mockMvc.perform(post("/api/v1/orders").contentType(MediaType.APPLICATION_JSON)
+					.content("{\"requestedDeliveryDate\":\"" + value + "\"}"))
+					.andExpect(status().isBadRequest());
+		}
+	}
+
+	@Test
 	void exposesSubmittedOrderInbox() throws Exception {
 		OrderInboxResponse item = new OrderInboxResponse(ORDER_ID, "ORD-test", OrderStatus.SUBMITTED,
 				"Hanoi", null, "Da Nang", null, TransportMode.ROAD,
-				LocalDateTime.of(2026, 10, 1, 9, 0), 2, LocalDateTime.now());
+				LocalDateTime.of(2026, 10, 1, 9, 0), null, 2, LocalDateTime.now());
 		when(service.findLogisticsManagerInbox(OrderStatus.SUBMITTED)).thenReturn(List.of(item));
 
 		mockMvc.perform(get("/api/v1/orders/inbox").queryParam("status", "SUBMITTED"))
@@ -70,7 +94,7 @@ class TransportOrderControllerTest {
 		LocalDateTime deadline = LocalDateTime.of(2026, 10, 15, 17, 0);
 		LocalDateTime deadlineSetAt = LocalDateTime.of(2026, 10, 2, 10, 30);
 		DocumentInboxResponse item = new DocumentInboxResponse(ORDER_ID, "ORD-test", OrderStatus.APPROVED,
-				"Hanoi", null, "Da Nang", null, LocalDateTime.of(2026, 10, 20, 9, 0), TransportMode.ROAD, 2,
+				"Hanoi", null, "Da Nang", null, LocalDateTime.of(2026, 10, 20, 9, 0), null, TransportMode.ROAD, 2,
 				deadline, deadlineSetAt, deadlineSetAt.plusHours(1), deadlineSetAt.plusHours(1), LocalDateTime.now());
 		when(service.findTransportSpecialistDocumentInbox()).thenReturn(List.of(item));
 
@@ -148,7 +172,7 @@ class TransportOrderControllerTest {
 	}
 
 	private OrderResponse response(OrderStatus status) {
-		return new OrderResponse(ORDER_ID, "ORD-test", null, null, null, null, null, null,
+		return new OrderResponse(ORDER_ID, "ORD-test", null, null, null, null, null, null, null,
 				null, null, null, null, List.of(), null, null, null, null, status, LocalDateTime.now(), null);
 	}
 }

@@ -31,6 +31,7 @@ vi.mock("@/lib/journey-tracking/service", async (importOriginal) => {
 });
 
 const tracking: JourneyTracking = {
+  requestedDeliveryDate: null,
   orderId: "order-1",
   orderCode: "ORD-1",
   orderStatus: "IN_PROGRESS",

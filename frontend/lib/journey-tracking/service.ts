@@ -183,6 +183,7 @@ function mapTracking(value: unknown): JourneyTracking {
 
   return {
     orderId: text(source.orderId),
+    requestedDeliveryDate: nullableText(source.requestedDeliveryDate),
     orderCode: text(source.orderCode),
     orderStatus: text(source.orderStatus),
     origin: [text(source.originAddress), nullableText(source.originCountry)].filter(Boolean).join(", "),

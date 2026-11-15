@@ -1,5 +1,7 @@
 "use client";
 
+import { compareDeliveryDates, formatDeliveryDate } from "@/lib/requested-delivery-date";
+
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import FleetRouteCoordinatorWorkspaceFrame from "@/components/FleetRouteCoordinatorWorkspaceFrame";
@@ -75,7 +77,9 @@ export default function FleetRouteCoordinatorPage() {
     return orders
       .filter((order) => filter === "ALL" || order.routePlanStatus === filter)
       .filter((order) => !normalizedQuery || [order.orderCode, order.origin, order.destination].some((value) => value.toLowerCase().includes(normalizedQuery)))
-      .sort((left, right) => priority[left.routePlanStatus] - priority[right.routePlanStatus] || new Date(left.requestedDepartureAt).getTime() - new Date(right.requestedDepartureAt).getTime());
+      .sort((left, right) => priority[left.routePlanStatus] - priority[right.routePlanStatus]
+        || compareDeliveryDates(left.requestedDeliveryDate, right.requestedDeliveryDate)
+        || left.id.localeCompare(right.id));
   }, [filter, orders, query]);
 
   if (accessState === "checking") {
@@ -137,17 +141,17 @@ export default function FleetRouteCoordinatorPage() {
             </div>
             {visibleOrders.length === 0 ? <div className="frc-filter-empty"><h3>No matching Orders</h3><p>Try another search or status filter.</p><button className="customer-secondary-button" type="button" onClick={() => { setFilter("ALL"); setQuery(""); }}>Clear filters</button></div> : <div className="frc-table-wrap">
               <table className="frc-planning-table">
-                <thead><tr><th scope="col">Order</th><th scope="col">Route</th><th scope="col">Departure</th><th scope="col">Horses</th><th scope="col">Mode</th><th scope="col">Plan status</th><th scope="col"><span className="sr-only">Action</span></th></tr></thead>
+                <thead><tr><th scope="col">Order</th><th scope="col">Route</th><th scope="col">Desired delivery date</th><th scope="col">Horses</th><th scope="col">Mode</th><th scope="col">Plan status</th><th scope="col"><span className="sr-only">Action</span></th></tr></thead>
                 <tbody>
                   {visibleOrders.map((order) => {
                     const previewSuffix = preview ? `?preview=1&coordinatorId=${encodeURIComponent(previewCoordinatorId)}` : "";
-                    const departure = formatDateTime(order.requestedDepartureAt);
+                    const deliveryDate = formatDeliveryDate(order.requestedDeliveryDate);
                     const updated = order.routePlanUpdatedAt ? formatDateTime(order.routePlanUpdatedAt) : null;
                     return (
                       <tr key={order.id}>
                         <td data-label="Order"><strong>{order.orderCode}</strong></td>
                         <td data-label="Route"><div className="frc-route-cell"><span aria-hidden="true"><i /><i /></span><strong><b>{order.origin}</b><b>{order.destination}</b></strong></div></td>
-                        <td data-label="Departure"><time dateTime={order.requestedDepartureAt}><strong>{departure.date}</strong><small>{departure.time}</small></time></td>
+                        <td data-label="Desired delivery date"><time dateTime={order.requestedDeliveryDate ?? undefined}><strong>{deliveryDate}</strong></time></td>
                         <td data-label="Horses"><strong className="frc-number-cell">{order.horseCount}</strong></td>
                         <td data-label="Mode"><span className="frc-mode-pill">{order.transportMode}</span></td>
                         <td data-label="Plan status"><span className={`frc-plan-status is-${order.routePlanStatus.toLowerCase()}`}>{planStatusLabel(order.routePlanStatus)}</span>{order.returnReason ? <small>{order.returnReason}</small> : updated ? <small>Updated {updated.date} · {updated.time}</small> : null}</td>

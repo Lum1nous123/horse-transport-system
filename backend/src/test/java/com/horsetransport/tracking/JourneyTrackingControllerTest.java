@@ -33,7 +33,7 @@ class JourneyTrackingControllerTest {
 	void exposesOrderTrackingEndpoint() throws Exception {
 		when(service.getTracking(ORDER_ID)).thenReturn(new JourneyTrackingResponse(
 				ORDER_ID, "ORD-TRACKING", OrderStatus.IN_PROGRESS, "Origin", "US",
-				"Destination", "BE", LocalDateTime.of(2026, 10, 23, 8, 0), null,
+				"Destination", "BE", LocalDateTime.of(2026, 10, 23, 8, 0), null, null,
 				UUID.randomUUID(), RoutePlanStatus.APPROVED,
 				LocalDateTime.of(2026, 10, 22, 8, 0),
 				List.of(new JourneyTrackingResponse.Horse(UUID.randomUUID(), UUID.randomUUID(), "Silver Star")),

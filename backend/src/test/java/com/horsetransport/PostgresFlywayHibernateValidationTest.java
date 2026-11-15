@@ -72,6 +72,11 @@ class PostgresFlywayHibernateValidationTest {
 		PostgresMigrationAssertions.assertProofOfDeliverySchema(jdbcTemplate);
 		PostgresMigrationAssertions.assertNotificationSchema(jdbcTemplate);
 		PostgresMigrationAssertions.assertCorrectionDeadlineSchema(jdbcTemplate);
+		assertThat(jdbcTemplate.queryForObject("""
+				select data_type from information_schema.columns
+				where table_schema = 'public' and table_name = 'transport_orders'
+				and column_name = 'requested_delivery_date'
+				""", String.class)).isEqualTo("date");
 		flyway.validate();
 		assertThat(flyway.migrate().migrationsExecuted).isZero();
 
