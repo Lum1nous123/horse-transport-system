@@ -9,7 +9,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -69,21 +68,6 @@ class TransportOrderServiceTest {
 		assertThat(response.horseIds()).isEmpty();
 		assertThat(response.originAddress()).isNull();
 		assertThat(response.requestedDeliveryDate()).isNull();
-	}
-
-	@Test
-	void legacyDepartureDoesNotReplaceDesiredDeliveryDateForSubmission() {
-		TransportOrder order = order();
-		order.update(new UpdateOrderRequest("Hanoi", null, "Da Nang", null,
-				LocalDateTime.of(2026, 10, 1, 9, 0), null, TransportMode.ROAD,
-				null, "Nguyen Van A", "0901234567", null, List.of(HORSE_ID)), List.of(HORSE_ID));
-		when(orderRepository.findOwnedByIdForUpdate(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
-
-		assertThat(order.getRequestedDepartureAt()).isNull();
-		assertThatThrownBy(() -> service.submit(order.getId()))
-				.isInstanceOf(OrderSubmissionValidationException.class)
-				.hasMessageContaining("requestedDeliveryDate");
-		assertThat(order.getStatus()).isEqualTo(OrderStatus.DRAFT);
 	}
 
 	@Test
@@ -167,7 +151,7 @@ class TransportOrderServiceTest {
 
 		assertThatThrownBy(() -> service.submit(order.getId()))
 				.isInstanceOf(OrderSubmissionValidationException.class)
-				.hasMessageContaining("origin, destination, requestedDeliveryDate, transportMode, horseIds, recipientName, recipientPhone");
+                .hasMessageContaining("origin, destination, requestedDeliveryDate, transportMode, horseIds, recipientName, recipientPhone");
 		assertThat(order.getStatus()).isEqualTo(OrderStatus.DRAFT);
 	}
 
@@ -212,26 +196,6 @@ class TransportOrderServiceTest {
 		verify(auditLogRepository).saveAndFlush(captor.capture());
 		assertThat(captor.getValue().getOldStatus()).isEqualTo("REJECTED");
 		assertThat(captor.getValue().getNewStatus()).isEqualTo("SUBMITTED");
-	}
-
-	@Test
-	void rejectedLegacyOrderRequiresDesiredDeliveryDateOnlyWhenResubmitted() {
-		TransportOrder order = validOrder();
-		order.submit();
-		order.reject("Update delivery preferences");
-		ReflectionTestUtils.setField(order, "requestedDeliveryDate", null);
-		ReflectionTestUtils.setField(order, "requestedDepartureAt", LocalDateTime.of(2026, 10, 1, 9, 0));
-		when(orderRepository.findOwnedByIdForUpdate(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
-
-		assertThat(OrderResponse.from(order).requestedDeliveryDate()).isNull();
-		assertThatThrownBy(() -> service.submit(order.getId()))
-				.isInstanceOf(OrderSubmissionValidationException.class)
-				.hasMessageContaining("requestedDeliveryDate");
-		order.update(request(List.of(HORSE_ID)), List.of(HORSE_ID));
-		when(auditLogRepository.saveAndFlush(any(StatusAuditLog.class)))
-				.thenAnswer(invocation -> invocation.getArgument(0));
-		assertThat(service.submit(order.getId()).requestedDeliveryDate()).isEqualTo(LocalDate.of(2026, 10, 3));
-		assertThat(order.getRequestedDepartureAt()).isEqualTo(LocalDateTime.of(2026, 10, 1, 9, 0));
 	}
 
 	@Test
@@ -501,6 +465,63 @@ class TransportOrderServiceTest {
 		assertThat(order.getRejectionReason()).isNull();
 	}
 
+	@Test
+	void newOrderStoresDesiredDateWithoutWritingLegacyDeparture() {
+		when(orderRepository.nextOrderCodeValue()).thenReturn(2L);
+		when(orderRepository.save(any(TransportOrder.class))).thenAnswer(invocation -> invocation.getArgument(0));
+		OrderResponse response = service.create(request(List.of()));
+		assertThat(response.requestedDeliveryDate()).isEqualTo(java.time.LocalDate.of(2026, 10, 1));
+		assertThat(response.requestedDepartureAt()).isNull();
+	}
+
+	@Test
+	void updatingLegacyDraftPreservesDepartureWithoutInferringDeliveryDate() {
+		TransportOrder order = order();
+		LocalDateTime legacy = LocalDateTime.of(2026, 10, 1, 9, 0);
+		ReflectionTestUtils.setField(order, "requestedDepartureAt", legacy);
+		when(orderRepository.findByIdAndCustomerId(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+		when(orderRepository.save(order)).thenReturn(order);
+		OrderResponse response = service.update(order.getId(), emptyRequest());
+		assertThat(response.requestedDepartureAt()).isEqualTo(legacy);
+		assertThat(response.requestedDeliveryDate()).isNull();
+	}
+
+	@Test
+	void legacyRejectedOrderCanResubmitAfterCustomerAddsDesiredDate() {
+		TransportOrder order = validOrder();
+		order.submit();
+		order.reject("Please update this request");
+		LocalDateTime legacy = LocalDateTime.of(2026, 10, 1, 9, 0);
+		ReflectionTestUtils.setField(order, "requestedDepartureAt", legacy);
+		ReflectionTestUtils.setField(order, "requestedDeliveryDate", null);
+		when(orderRepository.findByIdAndCustomerId(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+		when(horseRepository.findAllByIdInAndCustomerId(any(), any())).thenReturn(List.of(mock(Horse.class)));
+		when(orderRepository.save(order)).thenReturn(order);
+		when(orderRepository.findOwnedByIdForUpdate(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+
+		service.update(order.getId(), request(List.of(HORSE_ID)));
+		OrderResponse response = service.submit(order.getId());
+
+		assertThat(response.id()).isEqualTo(order.getId());
+		assertThat(response.status()).isEqualTo(OrderStatus.SUBMITTED);
+		assertThat(response.requestedDeliveryDate()).isEqualTo(java.time.LocalDate.of(2026, 10, 1));
+		assertThat(response.requestedDepartureAt()).isEqualTo(legacy);
+		assertThat(response.rejectionReason()).isNull();
+	}
+
+	@ParameterizedTest
+	@EnumSource(value = OrderStatus.class, names = {"DRAFT", "REJECTED"})
+	void legacyDepartureCannotSubstituteForDesiredDateAtSubmit(OrderStatus status) {
+		TransportOrder order = validOrder();
+		ReflectionTestUtils.setField(order, "status", status);
+		ReflectionTestUtils.setField(order, "requestedDeliveryDate", null);
+		ReflectionTestUtils.setField(order, "requestedDepartureAt", LocalDateTime.of(2026, 10, 1, 9, 0));
+		when(orderRepository.findOwnedByIdForUpdate(order.getId(), CUSTOMER_ID)).thenReturn(Optional.of(order));
+		assertThatThrownBy(() -> service.submit(order.getId()))
+				.isInstanceOf(OrderSubmissionValidationException.class).hasMessageContaining("requestedDeliveryDate");
+		assertThat(order.getStatus()).isEqualTo(status);
+	}
+
 	private TransportOrder validOrder() {
 		TransportOrder order = order();
 		order.update(request(List.of(HORSE_ID)), List.of(HORSE_ID));
@@ -524,7 +545,7 @@ class TransportOrderServiceTest {
 
 	private UpdateOrderRequest request(List<UUID> horseIds) {
 		return new UpdateOrderRequest("Hanoi", null, "Da Nang", null,
-				LocalDateTime.of(2026, 10, 1, 9, 0), LocalDate.of(2026, 10, 3), TransportMode.ROAD,
+				LocalDateTime.of(2026, 10, 1, 9, 0), java.time.LocalDate.of(2026, 10, 1), TransportMode.ROAD,
 				null, "Nguyen Van A", "0901234567", null, horseIds);
 	}
 }

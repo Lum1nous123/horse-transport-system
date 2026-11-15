@@ -48,9 +48,27 @@ describe("Customer dedicated workspaces", () => {
       if (path.startsWith("/api/v1/horses/") && init?.method === "PUT") return Promise.resolve(jsonResponse(horses[0]));
       if (path.startsWith("/api/v1/horses/") && init?.method === "DELETE") return Promise.resolve(new Response(null, { status: 204 }));
       if (path === "/api/v1/horses") return Promise.resolve(jsonResponse(horses));
+      if (path === "/api/v1/orders" && init?.method === "POST") return Promise.resolve(jsonResponse({ id: "new-order", orderCode: "ORD-new", status: "DRAFT" }));
       if (path === "/api/v1/orders") return Promise.resolve(jsonResponse(orders));
       return Promise.resolve(new Response(null, { status: 204 }));
     });
+  });
+
+  it("sends the selected calendar date unchanged without a legacy departure", async () => {
+    const user = userEvent.setup();
+    render(<CustomerWorkspace view="requests" />);
+    await user.click(await screen.findByRole("button", { name: "New transport request" }));
+    const dialog = screen.getByRole("dialog", { name: "Plan a transport" });
+    const input = within(dialog).getByLabelText("Desired delivery date *");
+    expect(input).toHaveAttribute("type", "date");
+    expect(within(dialog).queryByLabelText(/Requested departure/)).not.toBeInTheDocument();
+    fireEvent.change(input, { target: { value: "2026-11-25" } });
+    await user.click(within(dialog).getByRole("button", { name: "Save draft" }));
+    await waitFor(() => expect(mocks.apiFetch).toHaveBeenCalledWith("/api/v1/orders", expect.objectContaining({ method: "POST" })));
+    const call = mocks.apiFetch.mock.calls.find(([path, init]) => path === "/api/v1/orders" && init?.method === "POST");
+    const payload = JSON.parse(call![1].body as string);
+    expect(payload.requestedDeliveryDate).toBe("2026-11-25");
+    expect(payload).not.toHaveProperty("requestedDepartureAt");
   });
 
   it("loads real request data and keeps search and status filtering on the official route", async () => {

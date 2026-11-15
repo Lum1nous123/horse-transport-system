@@ -28,12 +28,15 @@ describe("journey vehicle", () => {
   it("renders AIR welfare and delivery-phase events without a map", () => {
     const leg: JourneyLeg = {
       id: "air", sequenceNo: 2, mode: "AIR", origin: "Chicago", destination: "Brussels",
-      status: "IN_PROGRESS", horses: ["Apollo"], vehicles: [],
+      status: "IN_PROGRESS", horses: ["Apollo"], vehicles: [], escort: { name: "Escort Air", phone: "+1 555 0199" },
       events: [{ id: "depart", label: "Flight leg started", occurredAt: "2026-10-23T12:00:00+07:00" }],
       welfareEvidence: [{ id: "welfare", recordedAt: "2026-10-23T13:00:00+07:00", note: "Horse settled", photoUrl: "/welfare/air.jpg" }],
     };
     render(<Leg leg={leg} />);
     expect(screen.getByText("Flight leg started")).toBeInTheDocument();
+    expect(screen.getByText("Assigned Escort")).toBeInTheDocument();
+    expect(screen.getByText("Escort Air")).toBeInTheDocument();
+    expect(screen.getByText("+1 555 0199")).toBeInTheDocument();
     expect(screen.getByText("Horse settled")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View welfare photo" })).toHaveAttribute("href", "/welfare/air.jpg");
     expect(screen.queryByRole("region", { name: /map/i })).not.toBeInTheDocument();
@@ -42,7 +45,7 @@ describe("journey vehicle", () => {
   it("opens the active leg by default and keeps completed history collapsible", () => {
     const completedLeg: JourneyLeg = {
       id: "road", sequenceNo: 1, mode: "ROAD", origin: "Stable", destination: "Airport",
-      status: "COMPLETED", horses: ["Apollo"], vehicles: [], events: [], welfareEvidence: [],
+      status: "COMPLETED", horses: ["Apollo"], vehicles: [], escort: null, events: [], welfareEvidence: [],
     };
     const { container, rerender } = render(<Leg leg={completedLeg} />);
     const details = container.querySelector("details");

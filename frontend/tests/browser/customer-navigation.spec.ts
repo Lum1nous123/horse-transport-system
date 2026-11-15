@@ -97,10 +97,10 @@ test("Customer opens official request and horse pages using current API data", a
   }
 });
 
-test("Customer sees why a transport request was rejected and starts a separate new request", async ({ page }) => {
+test("Customer sees a rejected request in Active and can edit or start a new request", async ({ page }) => {
   await page.goto("/customer");
 
-  await page.getByRole("button", { name: "History 1", exact: true }).click();
+  await page.getByRole("button", { name: "Active 2", exact: true }).click();
   const rejectedOrder = page.locator(".customer-order-row").filter({ hasText: "ORD-REAL-003" });
   await expect(rejectedOrder.getByText("REJECTED", { exact: true })).toBeVisible();
   await expect(rejectedOrder.getByRole("heading", { name: "Transport request rejected" })).toBeVisible();

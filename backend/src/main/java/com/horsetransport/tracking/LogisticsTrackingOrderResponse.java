@@ -16,8 +16,7 @@ public record LogisticsTrackingOrderResponse(UUID orderId, String orderCode, Ord
 	static LogisticsTrackingOrderResponse from(TransportOrder order) {
 		return new LogisticsTrackingOrderResponse(order.getId(), order.getOrderCode(), order.getStatus(),
 				order.getOriginAddress(), order.getOriginCountry(), order.getDestinationAddress(),
-				order.getDestinationCountry(), order.getTransportMode(), order.getRequestedDepartureAt(),
-				order.getRequestedDeliveryDate(),
+				order.getDestinationCountry(), order.getTransportMode(), order.getRequestedDepartureAt(), order.getRequestedDeliveryDate(),
 				order.getHorses().size(), order.getCreatedAt(), order.getDeliveredAt());
 	}
 }

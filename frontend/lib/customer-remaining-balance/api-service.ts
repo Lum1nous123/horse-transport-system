@@ -95,7 +95,7 @@ async function getResult(orderId: string): Promise<CustomerRemainingBalanceResul
       destination: location(order.destinationAddress, order.destinationCountry),
       horseCount: order.horseIds.length,
       transportMode: order.transportMode,
-      desiredDeliveryDate: order.requestedDeliveryDate,
+      requestedDeliveryDate: order.requestedDeliveryDate ?? null,
     },
     eligibility: {
       status: eligible ? "ELIGIBLE" : "INELIGIBLE",

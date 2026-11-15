@@ -96,7 +96,7 @@ function summary(item: AssignmentInboxItem, assignmentStatus: "NEEDS_ASSIGNMENT"
     orderCode: item.orderCode,
     origin: location(item.originAddress, item.originCountry),
     destination: location(item.destinationAddress, item.destinationCountry),
-    requestedDeliveryDate: item.requestedDeliveryDate,
+    requestedDeliveryDate: item.requestedDeliveryDate ?? null,
     horseCount: item.horseCount,
     transportMode: item.transportMode,
     assignmentStatus,

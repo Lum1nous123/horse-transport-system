@@ -31,8 +31,7 @@ public record OrderResponse(
 	static OrderResponse from(TransportOrder order) {
 		return new OrderResponse(
 				order.getId(), order.getOrderCode(), order.getOriginAddress(), order.getOriginCountry(),
-				order.getDestinationAddress(), order.getDestinationCountry(), order.getRequestedDepartureAt(),
-				order.getRequestedDeliveryDate(),
+				order.getDestinationAddress(), order.getDestinationCountry(), order.getRequestedDepartureAt(), order.getRequestedDeliveryDate(),
 				order.getTransportMode(), order.getSpecialRequirements(), order.getRecipientName(),
 				order.getRecipientPhone(), order.getRecipientEmail(),
 				order.getHorses().stream().map(TransportOrderHorse::getHorseId).toList(),

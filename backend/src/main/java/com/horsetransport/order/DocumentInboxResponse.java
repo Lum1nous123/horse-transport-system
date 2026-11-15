@@ -25,8 +25,7 @@ public record DocumentInboxResponse(
 	static DocumentInboxResponse from(TransportOrder order) {
 		return new DocumentInboxResponse(order.getId(), order.getOrderCode(), order.getStatus(),
 				order.getOriginAddress(), order.getOriginCountry(), order.getDestinationAddress(),
-				order.getDestinationCountry(), order.getRequestedDepartureAt(),
-				order.getRequestedDeliveryDate(), order.getTransportMode(),
+				order.getDestinationCountry(), order.getRequestedDepartureAt(), order.getRequestedDeliveryDate(), order.getTransportMode(),
 				order.getHorses().size(),
 				order.getDocumentCompletionDeadlineAt(), order.getDocumentDeadlineSetAt(),
 				order.getDocumentsFinalConfirmedAt(), order.getDocumentsLockedAt(), order.getCreatedAt());

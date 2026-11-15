@@ -248,8 +248,12 @@ class RoutePlanServiceTest {
 				.contains("AIR_CAPACITY_INSUFFICIENT");
 	}
 
-	@Test
-	void submitsValidAirPlanForLmReview() {
+	@ParameterizedTest
+	@ValueSource(strings = {"2020-01-01", "2030-12-31"})
+	void submitsValidAirPlanRegardlessOfAdvisoryDeliveryDate(String desiredDate) {
+		TransportOrder order = order(ORDER_HORSE_ID, SECOND_ORDER_HORSE_ID);
+		ReflectionTestUtils.setField(order, "requestedDeliveryDate", java.time.LocalDate.parse(desiredDate));
+		when(orderRepository.findAssignedFrcRoutePlanOrder(ORDER_ID, FRC_ID)).thenReturn(Optional.of(order));
 		RoutePlan plan = routePlan();
 		RouteLeg leg = airLeg(plan.getId(), 1, "Stable A", "Destination Stable", 2);
 

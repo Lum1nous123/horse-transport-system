@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDeliveryDate } from "@/lib/requested-delivery-date";
+
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -12,7 +14,6 @@ import {
   type CustomerRemainingBalanceResult,
 } from "@/lib/customer-remaining-balance/service";
 import { useCustomerRemainingBalanceAccess } from "@/lib/customer-remaining-balance/use-customer-remaining-balance-access";
-import { formatRequestedDeliveryDate } from "@/lib/requested-delivery-date";
 
 const supportedScenarios: CustomerRemainingBalancePreviewScenario[] = [
   "eligible",
@@ -225,7 +226,7 @@ export default function CustomerRemainingBalancePage() {
                 <span className="balance-heading-label">Transport payment</span>
                 <h1>Complete your transport payment</h1>
                 <p>{result.order.origin} <span aria-hidden="true">-&gt;</span> {result.order.destination}</p>
-                <small>{result.order.orderCode} · {result.order.horseCount} {result.order.horseCount === 1 ? "horse" : "horses"} · {result.order.transportMode} · Desired delivery date {formatRequestedDeliveryDate(result.order.desiredDeliveryDate)}</small>
+                <small>{result.order.orderCode} · {result.order.horseCount} {result.order.horseCount === 1 ? "horse" : "horses"} · {result.order.transportMode} · Desired delivery {formatDeliveryDate(result.order.requestedDeliveryDate)}</small>
               </div>
               <Link className="customer-secondary-button" href={backHref}>Back to My Orders</Link>
             </header>

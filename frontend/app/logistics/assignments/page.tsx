@@ -1,12 +1,13 @@
 "use client";
 
+import { compareDeliveryDates, formatDeliveryDate } from "@/lib/requested-delivery-date";
+
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AssignmentWorkspaceFrame from "@/components/AssignmentWorkspaceFrame";
 import { LogisticsStatusTabs } from "@/components/LogisticsWorkspaceUI";
 import { getStaffAssignmentService, type AssignmentOrderSummary } from "@/lib/staff-assignment/service";
 import { useLogisticsAccess } from "@/lib/staff-assignment/use-logistics-access";
-import { compareRequestedDeliveryDates, formatRequestedDeliveryDate } from "@/lib/requested-delivery-date";
 
 export default function StaffAssignmentQueuePage() {
   const { state: accessState, preview, message: accessMessage } = useLogisticsAccess();
@@ -39,8 +40,8 @@ export default function StaffAssignmentQueuePage() {
     const needle = query.trim().toLocaleLowerCase();
     return queues[tab].filter((order) => !needle || [order.orderCode, order.origin, order.destination].some((value) => value.toLocaleLowerCase().includes(needle)))
       .toSorted((a, b) => {
-        return compareRequestedDeliveryDates(a.requestedDeliveryDate, b.requestedDeliveryDate,
-          a.id, b.id, sort === "latest");
+        return compareDeliveryDates(a.requestedDeliveryDate, b.requestedDeliveryDate, sort === "latest")
+          || a.id.localeCompare(b.id);
       });
   }, [queues, query, sort, tab]);
 
@@ -73,7 +74,7 @@ export default function StaffAssignmentQueuePage() {
             <tbody>{visible.map((order) => <tr key={order.id}>
               <td data-label="Order"><strong>{order.orderCode}</strong></td>
               <td data-label="Route" className="lm-route-cell"><span>{order.origin}</span><span className="lm-destination"><b aria-hidden="true">→</b> {order.destination}</span></td>
-              <td data-label="Desired delivery date">{formatRequestedDeliveryDate(order.requestedDeliveryDate)}</td>
+              <td data-label="Desired delivery date"><span>{formatDeliveryDate(order.requestedDeliveryDate)}</span></td>
               <td data-label="Horses / Mode"><span>{order.horseCount} {order.horseCount === 1 ? "horse" : "horses"}</span><small>{order.transportMode}</small></td>
               <td data-label="Action"><Link className={tab === "needsAssignment" ? "customer-primary-button compact" : "lm-row-link"} href={`/logistics/assignments/${order.id}${suffix}`} aria-label={`${tab === "needsAssignment" ? "Assign staff" : "View assignment"} for ${order.orderCode}`}>{tab === "needsAssignment" ? "Assign staff" : "View assignment"} <span aria-hidden="true">→</span></Link></td>
             </tr>)}</tbody>

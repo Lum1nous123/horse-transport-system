@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDeliveryDate } from "@/lib/requested-delivery-date";
+
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -11,7 +13,6 @@ import {
   type StaffRole,
 } from "@/lib/staff-assignment/service";
 import { useLogisticsAccess } from "@/lib/staff-assignment/use-logistics-access";
-import { formatRequestedDeliveryDate } from "@/lib/requested-delivery-date";
 import "./assignment-detail.css";
 
 type SummaryIconName = "order" | "route" | "departure" | "horses" | "mode";
@@ -180,7 +181,7 @@ function AssignmentDetail() {
           <section className="assignment-order-summary" aria-labelledby="assignment-order-heading">
             <div><SummaryIcon name="order" /><span>Order</span><strong id="assignment-order-heading">{order.orderCode}</strong></div>
             <div><SummaryIcon name="route" /><span>Route</span><strong>{order.origin} <b aria-hidden="true">→</b> {order.destination}</strong></div>
-            <div><SummaryIcon name="departure" /><span>Desired delivery date</span><strong>{formatRequestedDeliveryDate(order.requestedDeliveryDate)}</strong></div>
+            <div><SummaryIcon name="departure" /><span>Desired delivery date</span><strong>{formatDeliveryDate(order.requestedDeliveryDate)}</strong></div>
             <div><SummaryIcon name="horses" /><span>Horses</span><strong>{order.horseCount}</strong></div>
             <div><SummaryIcon name="mode" /><span>Mode</span><strong>{order.transportMode}</strong></div>
           </section>

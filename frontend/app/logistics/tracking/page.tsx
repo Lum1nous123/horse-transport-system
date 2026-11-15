@@ -1,12 +1,13 @@
 "use client";
 
+import { formatDeliveryDate } from "@/lib/requested-delivery-date";
+
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AssignmentWorkspaceFrame from "@/components/AssignmentWorkspaceFrame";
 import { LogisticsStatusTabs } from "@/components/LogisticsWorkspaceUI";
 import { listLogisticsTrackingOrders, type TrackingOrderSummary } from "@/lib/logistics-tracking/service";
 import { useLogisticsAccess } from "@/lib/staff-assignment/use-logistics-access";
-import { formatRequestedDeliveryDate } from "@/lib/requested-delivery-date";
 
 type JourneyGroup = "active" | "delivered" | "other";
 const belongsTo = (order: TrackingOrderSummary, group: JourneyGroup) => group === "active"
@@ -72,7 +73,7 @@ export default function LogisticsTrackingPage() {
               <tbody>{filtered.map((order) => <tr key={order.orderId}>
                 <td data-label="Order / Status"><strong>{order.orderCode}</strong><span className={`lm-order-status is-${order.status.toLowerCase()}`}>{order.status.replaceAll("_", " ")}</span></td>
                 <td data-label="Route" className="lm-route-cell"><span>{order.originAddress || order.originCountry || "Not provided"}</span><span className="lm-destination"><b aria-hidden="true">→</b> {order.destinationAddress || order.destinationCountry || "Not provided"}</span></td>
-                <td data-label="Desired delivery date">{formatRequestedDeliveryDate(order.requestedDeliveryDate)}</td>
+                <td data-label="Desired delivery date"><span>{formatDeliveryDate(order.requestedDeliveryDate)}</span></td>
                 <td data-label="Horses / Mode"><span>{order.horseCount} {order.horseCount === 1 ? "horse" : "horses"}</span><small>{order.transportMode}</small></td>
                 <td data-label="Action"><Link className="lm-row-link" href={`/logistics/orders/${order.orderId}/tracking`} aria-label={`View tracking for ${order.orderCode}`}>View tracking <span aria-hidden="true">→</span></Link></td>
               </tr>)}</tbody>

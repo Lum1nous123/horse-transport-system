@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDeliveryDate } from "@/lib/requested-delivery-date";
+
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import TransportSpecialistWorkspaceFrame from "@/components/TransportSpecialistWorkspaceFrame";
@@ -9,7 +11,6 @@ import {
   type AssignedSpecialistOrderSummary,
 } from "@/lib/transport-specialist-workspace/service";
 import { useTransportSpecialistAccess } from "@/lib/transport-specialist-workspace/use-specialist-access";
-import { formatRequestedDeliveryDate } from "@/lib/requested-delivery-date";
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -181,7 +182,7 @@ function ActionOrderCard({ order, preview, previewSpecialistId }: { order: Assig
         <div className="ts-attention-route">
           <span>Route</span>
           <strong>{order.origin} <b aria-hidden="true">→</b> {order.destination}</strong>
-          <small>{order.horseCount} {order.horseCount === 1 ? "horse" : "horses"} · {order.transportMode} · Desired delivery date {formatRequestedDeliveryDate(order.requestedDeliveryDate)}</small>
+          <small>{order.horseCount} {order.horseCount === 1 ? "horse" : "horses"} · {order.transportMode} · Desired delivery {formatDeliveryDate(order.requestedDeliveryDate)}</small>
         </div>
         <div className="ts-attention-progress">
           <div><span>Documents approved</span><strong>{order.progress.approved}/{order.progress.total}</strong></div>
@@ -206,7 +207,7 @@ function CompletedOrdersTable({ orders, preview, previewSpecialistId }: { orders
           {orders.map((order) => (
             <tr key={order.id}>
               <td data-label="Order"><strong>{order.orderCode}</strong></td>
-              <td data-label="Route"><strong>{order.origin} <b aria-hidden="true">→</b> {order.destination}</strong><small>{order.horseCount} {order.horseCount === 1 ? "horse" : "horses"} · {order.transportMode} · Desired delivery date {formatRequestedDeliveryDate(order.requestedDeliveryDate)}</small></td>
+              <td data-label="Route"><strong>{order.origin} <b aria-hidden="true">→</b> {order.destination}</strong><small>{order.horseCount} {order.horseCount === 1 ? "horse" : "horses"} · {order.transportMode} · Desired delivery {formatDeliveryDate(order.requestedDeliveryDate)}</small></td>
               <td data-label="Deadline">{order.documentCompletionDeadlineAt ? formatDateTime(order.documentCompletionDeadlineAt) : "Not set"}</td>
               <td data-label="Completed">{order.finalConfirmedAt ? formatDateTime(order.finalConfirmedAt) : "—"}</td>
               <td data-label="Status"><span className="ts-state-badge is-locked">Final confirmed</span></td>

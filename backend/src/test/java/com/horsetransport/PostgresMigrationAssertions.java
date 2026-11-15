@@ -30,7 +30,8 @@ final class PostgresMigrationAssertions {
 				new HistoryRow("5", "V5__add_transport_order_code_sequence.sql", 125409323, true),
 				new HistoryRow("6", "V6__add_order_cancelled_notification_type.sql", -2077767481, true),
 				new HistoryRow("7", "V7__add_document_correction_deadline.sql", -808977492, true),
-				new HistoryRow("8", "V8__track_document_correction_windows.sql", 225419598, true));
+				new HistoryRow("8", "V8__track_document_correction_windows.sql", 225419598, true),
+				new HistoryRow("9", "V9__add_requested_delivery_date.sql", -322458732, true));
 	}
 
 	static void assertRefundSchema(JdbcTemplate jdbcTemplate) {

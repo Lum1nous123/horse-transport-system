@@ -49,6 +49,7 @@ public class TransportOrder {
 	@Column(name = "destination_country", length = 100)
 	private String destinationCountry;
 
+	// Legacy departure data is retained for existing orders, but is no longer edited.
 	@Column(name = "requested_departure_at")
 	private LocalDateTime requestedDepartureAt;
 

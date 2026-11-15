@@ -10,9 +10,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }) }));
 vi.mock("@/lib/staff-assignment/use-logistics-access", () => ({ useLogisticsAccess: () => mocks.access }));
 vi.mock("@/lib/staff-assignment/service", () => ({ getStaffAssignmentService: () => mocks }));
-const order = (id: string, desiredDeliveryDate: string, destination: string): AssignmentOrderSummary => ({
+const order = (id: string, departure: string, destination: string): AssignmentOrderSummary => ({
   id, orderCode: "ORD-" + id, origin: "Long origin address", destination,
-  requestedDeliveryDate: desiredDeliveryDate, transportMode: "COMBINED", horseCount: 5, assignmentStatus: "NEEDS_ASSIGNMENT",
+  requestedDeliveryDate: departure, transportMode: "COMBINED", horseCount: 5, assignmentStatus: "NEEDS_ASSIGNMENT",
 });
 
 describe("LM assignment management table", () => {
@@ -38,7 +38,7 @@ describe("LM assignment management table", () => {
     expect(within(table).queryByText("Needs assignment")).not.toBeInTheDocument();
   });
 
-  it("searches by route, sorts desired delivery date and switches to saved-pair actions without another API call", async () => {
+  it("searches by route, sorts desired delivery and switches to saved-pair actions without another API call", async () => {
     render(<Page />);
     await screen.findByRole("table");
     const user = userEvent.setup();

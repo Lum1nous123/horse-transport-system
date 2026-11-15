@@ -28,7 +28,7 @@ function createResult(
       destination: "Amsterdam, Netherlands",
       horseCount: 1,
       transportMode: "ROAD",
-      desiredDeliveryDate: "2026-10-22",
+      requestedDeliveryDate: "2026-10-22",
     },
     eligibility: {
       status: eligible ? "ELIGIBLE" : "INELIGIBLE",

@@ -1,8 +1,6 @@
 package com.horsetransport.order;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -10,7 +8,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -18,7 +15,6 @@ import java.util.UUID;
 import com.horsetransport.common.api.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -56,20 +52,27 @@ class TransportOrderControllerTest {
 	}
 
 	@Test
-	void acceptsAndReturnsDesiredDeliveryDateWithoutTimeConversion() throws Exception {
-		TransportOrder order = new TransportOrder(UUID.randomUUID(), "ORD-date");
-		order.update(new UpdateOrderRequest(null, null, null, null, null,
-				LocalDate.of(2026, 11, 25), null, null, null, null, null, List.of()), List.of());
-		when(service.update(any(), any())).thenReturn(OrderResponse.from(order));
+	void desiredDeliveryDateRoundTripsAsDateOnly() throws Exception {
+		when(service.create(any())).thenAnswer(invocation -> {
+			UpdateOrderRequest request = invocation.getArgument(0);
+			TransportOrder order = new TransportOrder(UUID.randomUUID(), "ORD-date");
+			order.update(request, List.of());
+			return OrderResponse.from(order);
+		});
+		mockMvc.perform(post("/api/v1/orders").contentType(MediaType.APPLICATION_JSON)
+				.content("{\"requestedDeliveryDate\":\"2026-11-25\",\"requestedDepartureAt\":\"2026-11-20T10:00:00\"}"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.requestedDeliveryDate").value("2026-11-25"))
+				.andExpect(jsonPath("$.requestedDepartureAt").isEmpty());
+	}
 
-		mockMvc.perform(put("/api/v1/orders/{id}", ORDER_ID)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"requestedDeliveryDate\":\"2026-11-25\"}"))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.requestedDeliveryDate").value("2026-11-25"));
-		ArgumentCaptor<UpdateOrderRequest> request = ArgumentCaptor.forClass(UpdateOrderRequest.class);
-		verify(service).update(any(), request.capture());
-		assertThat(request.getValue().requestedDeliveryDate()).isEqualTo(LocalDate.of(2026, 11, 25));
+	@Test
+	void desiredDeliveryDateRejectsTimestampAndInvalidDate() throws Exception {
+		for (String value : List.of("2026-11-25T15:00:00", "2026-02-30")) {
+			mockMvc.perform(post("/api/v1/orders").contentType(MediaType.APPLICATION_JSON)
+					.content("{\"requestedDeliveryDate\":\"" + value + "\"}"))
+					.andExpect(status().isBadRequest());
+		}
 	}
 
 	@Test

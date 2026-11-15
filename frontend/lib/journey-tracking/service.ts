@@ -175,6 +175,7 @@ function mapTracking(value: unknown): JourneyTracking {
       status,
       horses: mode === "ROAD" ? [...new Set(vehicles.flatMap((vehicle) => vehicle.horses))] : allHorseNames,
       vehicles,
+      escort: mode === "AIR" && air ? contact(air.escort) : null,
       events,
       welfareEvidence,
     };
@@ -182,6 +183,7 @@ function mapTracking(value: unknown): JourneyTracking {
 
   return {
     orderId: text(source.orderId),
+    requestedDeliveryDate: nullableText(source.requestedDeliveryDate),
     orderCode: text(source.orderCode),
     orderStatus: text(source.orderStatus),
     origin: [text(source.originAddress), nullableText(source.originCountry)].filter(Boolean).join(", "),

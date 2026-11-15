@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDeliveryDate } from "@/lib/requested-delivery-date";
+
 import Link from "next/link";
 import Image from "next/image";
 import BrandMark from "@/components/BrandMark";
@@ -16,7 +18,6 @@ import { hideCustomerTermsOnLogin, isCustomerTermsLoginHidden } from "@/lib/cust
 import DocumentWorkspace from "@/app/customer/DocumentWorkspace";
 import styles from "@/components/customer-workspace/customer-workspace.module.css";
 import CountryCombobox from "@/components/CountryCombobox";
-import { formatRequestedDeliveryDate } from "@/lib/requested-delivery-date";
 
 export type CustomerWorkspaceView = "dashboard" | "requests" | "horses";
 
@@ -425,7 +426,7 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
     setOrderFields({
       originAddress: order.originAddress ?? "", originCountry: order.originCountry ?? "",
       destinationAddress: order.destinationAddress ?? "", destinationCountry: order.destinationCountry ?? "",
-      requestedDeliveryDate: order.requestedDeliveryDate ?? "",
+      requestedDeliveryDate: order.requestedDeliveryDate ? order.requestedDeliveryDate : "",
       transportMode: order.transportMode ?? null, specialRequirements: order.specialRequirements ?? "",
       recipientName: order.recipientName ?? "", recipientPhone: order.recipientPhone ?? "",
       recipientEmail: order.recipientEmail ?? "", horseIds: [...order.horseIds],
@@ -677,7 +678,7 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
             {orders.length === 0 ? <div className="customer-empty customer-dashboard-empty"><Image className="customer-empty-art" src="/images/customer-transport-illustration.svg" width={900} height={300} alt="" unoptimized /><div><h3>Start with a transport request</h3><p>Your saved and submitted requests will appear here.</p></div><button className="customer-primary-button" type="button" onClick={startNewOrder}><CustomerIcon name="plus" />Create request</button></div> : visibleOrders.length === 0 ? <div className="customer-empty customer-filter-empty"><span className="customer-empty-icon"><CustomerIcon name="search" /></span><div><h3>No matching requests</h3><p>Try a different search term or status.</p></div><button className="customer-secondary-button compact" type="button" onClick={() => { setOrderQuery(""); setOrderStatus(""); if (!groupedOrders.length) setOrderGroup("all"); }}>Clear filters</button></div> : <div className="customer-order-list">
               {visibleOrders.map((order) => <article className={`customer-order-row customer-dashboard-order${order.status === "REJECTED" ? " customer-order-rejected" : ""}`} key={order.id}>
                 <div className="order-route-icon" aria-hidden="true"><CustomerIcon name="route" /></div>
-                <div className="customer-order-main"><div className="customer-order-title"><h3>{order.orderCode}</h3><span className={`order-status status-${order.status.toLowerCase()}`}>{order.status.replaceAll("_", " ")}</span></div><p>{[order.originAddress || order.originCountry || "Origin pending", order.destinationAddress || order.destinationCountry || "Destination pending"].join("  →  ")}</p><div className="customer-order-meta"><span>{order.horseIds.length} {order.horseIds.length === 1 ? "horse" : "horses"}</span>{order.transportMode && <span>{order.transportMode}</span>}<span><CustomerIcon name="calendar" />{formatRequestedDeliveryDate(order.requestedDeliveryDate)}</span></div></div>
+                <div className="customer-order-main"><div className="customer-order-title"><h3>{order.orderCode}</h3><span className={`order-status status-${order.status.toLowerCase()}`}>{order.status.replaceAll("_", " ")}</span></div><p>{[order.originAddress || order.originCountry || "Origin pending", order.destinationAddress || order.destinationCountry || "Destination pending"].join("  →  ")}</p><div className="customer-order-meta"><span>{order.horseIds.length} {order.horseIds.length === 1 ? "horse" : "horses"}</span>{order.transportMode && <span>{order.transportMode}</span>}<span><CustomerIcon name="calendar" />{order.requestedDeliveryDate ? formatDeliveryDate(order.requestedDeliveryDate) : "Not provided"}</span></div></div>
                 <CustomerOrderActions orderCode={order.orderCode} actions={actionsFor(order)} />
                 {order.status === "REJECTED" && <RejectedOrderNotice reason={order.rejectionReason} />}
               </article>)}
@@ -713,7 +714,7 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
               <div className={styles.orderMain}>
                 <div className={styles.orderTitle}><h3>{order.orderCode}</h3><span className={`order-status status-${order.status.toLowerCase()}`}>{order.status.replaceAll("_", " ")}</span></div>
                 <p>{order.originAddress || order.originCountry || "Origin pending"} <b aria-hidden="true">→</b> {order.destinationAddress || order.destinationCountry || "Destination pending"}</p>
-                <div className={styles.orderMeta}><span>{order.horseIds.length} {order.horseIds.length === 1 ? "horse" : "horses"}</span>{order.transportMode && <span>{order.transportMode}</span>}<span><CustomerIcon name="calendar" />{formatRequestedDeliveryDate(order.requestedDeliveryDate)}</span></div>
+                <div className={styles.orderMeta}><span>{order.horseIds.length} {order.horseIds.length === 1 ? "horse" : "horses"}</span>{order.transportMode && <span>{order.transportMode}</span>}<span><CustomerIcon name="calendar" />{order.requestedDeliveryDate ? formatDeliveryDate(order.requestedDeliveryDate) : "Not provided"}</span></div>
               </div>
               <div className={styles.orderActions}><CustomerOrderActions orderCode={order.orderCode} actions={actionsFor(order)} /></div>
               {order.status === "REJECTED" && <RejectedOrderNotice reason={order.rejectionReason} />}

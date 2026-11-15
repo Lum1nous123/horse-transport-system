@@ -21,8 +21,7 @@ public record OrderInboxResponse(
 	static OrderInboxResponse from(TransportOrder order) {
 		return new OrderInboxResponse(order.getId(), order.getOrderCode(), order.getStatus(),
 				order.getOriginAddress(), order.getOriginCountry(), order.getDestinationAddress(),
-				order.getDestinationCountry(), order.getTransportMode(), order.getRequestedDepartureAt(),
-				order.getRequestedDeliveryDate(),
+				order.getDestinationCountry(), order.getTransportMode(), order.getRequestedDepartureAt(), order.getRequestedDeliveryDate(),
 				order.getHorses().size(), order.getCreatedAt());
 	}
 }

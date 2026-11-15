@@ -1,12 +1,13 @@
 "use client";
 
+import { formatDeliveryDate } from "@/lib/requested-delivery-date";
+
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AssignmentWorkspaceFrame from "@/components/AssignmentWorkspaceFrame";
 import { LogisticsDateTime } from "@/components/LogisticsWorkspaceUI";
 import { getLogisticsRouteReviewService, type RouteReviewSummary } from "@/lib/logistics-route-review/service";
 import { useLogisticsAccess } from "@/lib/staff-assignment/use-logistics-access";
-import { formatRequestedDeliveryDate } from "@/lib/requested-delivery-date";
 
 export default function RouteReviewQueuePage() {
   const { state: accessState, preview, message: accessMessage } = useLogisticsAccess();
@@ -66,7 +67,7 @@ function ReviewTable({ orders, preview }: { orders: RouteReviewSummary[]; previe
     <tbody>{orders.map((order) => <tr key={order.orderId}>
       <td data-label="Order"><strong>{order.orderCode}</strong></td>
       <td data-label="Route" className="lm-route-cell"><span>{order.origin}</span><span className="lm-destination"><b aria-hidden="true">→</b> {order.destination}</span></td>
-      <td data-label="Desired delivery date">{formatRequestedDeliveryDate(order.requestedDeliveryDate)}</td>
+      <td data-label="Desired delivery date"><span>{formatDeliveryDate(order.requestedDeliveryDate)}</span></td>
       <td data-label="FRC">{order.assignedFleetRouteCoordinatorName}</td>
       <td data-label="Submitted"><LogisticsDateTime value={order.submittedAt} /></td>
       <td data-label="Action"><Link className="customer-primary-button compact" href={`/logistics/route-reviews/${order.orderId}${preview ? "?preview=1" : ""}`} aria-label={`Review ${order.orderCode}`}>Review <span aria-hidden="true">→</span></Link></td>
