@@ -127,7 +127,7 @@ class RoutePlanServiceTest {
 		assertThat(response.valid()).isFalse();
 		assertThat(response.issues())
 				.extracting(RoutePlanValidationIssueResponse::code)
-				.contains("BROKEN_CONTINUITY", "DESTINATION_BOUNDARY_MISMATCH");
+				.contains("BROKEN_CONTINUITY", "DESTINATION_BOUNDARY_MISMATCH", "BROKEN_TIME_ORDER");
 	}
 
 	@Test
@@ -143,6 +143,9 @@ class RoutePlanServiceTest {
 
 	@Test
 	void submitsValidPlanForLmReview() {
+		TransportOrder order = order(ORDER_HORSE_ID, SECOND_ORDER_HORSE_ID);
+		ReflectionTestUtils.setField(order, "requestedDeliveryDate", LocalDate.of(2026, 10, 12));
+		when(orderRepository.findAssignedFrcRoutePlanOrder(ORDER_ID, FRC_ID)).thenReturn(Optional.of(order));
 		RoutePlan plan = routePlan();
 		RouteLeg leg = roadLeg(plan.getId(), 1, "Stable A", "Destination Stable");
 		RoadLegVehicle roadVehicle = new RoadLegVehicle(leg.getId(), VEHICLE_ID);
@@ -173,25 +176,20 @@ class RoutePlanServiceTest {
 
 	@ParameterizedTest
 	@ValueSource(strings = {"2026-10-11", "2026-10-13"})
-	void desiredDeliveryDateDoesNotBlockValidRoutePlan(String desiredDate) {
+	void validationRejectsFinalArrivalDateThatDiffersFromDesiredDeliveryDate(String desiredDate) {
 		TransportOrder order = order(ORDER_HORSE_ID, SECOND_ORDER_HORSE_ID);
 		ReflectionTestUtils.setField(order, "requestedDeliveryDate", LocalDate.parse(desiredDate));
 		when(orderRepository.findAssignedFrcRoutePlanOrder(ORDER_ID, FRC_ID)).thenReturn(Optional.of(order));
 		RoutePlan plan = routePlan();
 		RouteLeg leg = roadLeg(plan.getId(), 1, "Stable A", "Destination Stable");
-		RoadLegVehicle vehicle = new RoadLegVehicle(leg.getId(), VEHICLE_ID);
 		when(routePlanRepository.findByTransportOrderId(ORDER_ID)).thenReturn(Optional.of(plan));
 		when(routeLegRepository.findAllByRoutePlanIdOrderBySequenceNoAsc(plan.getId())).thenReturn(List.of(leg));
-		when(roadLegVehicleRepository.findAllByRouteLegId(leg.getId())).thenReturn(List.of(vehicle));
-		when(vehicleRepository.findAllById(List.of(VEHICLE_ID)))
-				.thenReturn(List.of(vehicle(VEHICLE_ID, 2, VehicleStatus.AVAILABLE)));
-		when(roadLegVehicleHorseRepository.findAllByRouteLegId(leg.getId()))
-				.thenReturn(List.of(new RoadLegVehicleHorse(leg.getId(), vehicle.getId(), ORDER_HORSE_ID),
-						new RoadLegVehicleHorse(leg.getId(), vehicle.getId(), SECOND_ORDER_HORSE_ID)));
-		when(routePlanReviewRepository.maxSubmissionNo(plan.getId())).thenReturn(0);
-		when(routePlanRepository.save(plan)).thenReturn(plan);
 
-		assertThat(service.submitPlan(ORDER_ID).status()).isEqualTo(RoutePlanStatus.PENDING_LM_REVIEW);
+		RoutePlanValidationResponse response = service.validatePlan(ORDER_ID);
+
+		assertThat(response.valid()).isFalse();
+		assertThat(response.issues()).extracting(RoutePlanValidationIssueResponse::code)
+				.contains("FINAL_ARRIVAL_DATE_MISMATCH");
 	}
 
 	@Test
@@ -250,7 +248,7 @@ class RoutePlanServiceTest {
 
 	@ParameterizedTest
 	@ValueSource(strings = {"2020-01-01", "2030-12-31"})
-	void submitsValidAirPlanRegardlessOfAdvisoryDeliveryDate(String desiredDate) {
+	void submissionRejectsAirPlanWhenFinalArrivalDateDiffersFromDesiredDate(String desiredDate) {
 		TransportOrder order = order(ORDER_HORSE_ID, SECOND_ORDER_HORSE_ID);
 		ReflectionTestUtils.setField(order, "requestedDeliveryDate", java.time.LocalDate.parse(desiredDate));
 		when(orderRepository.findAssignedFrcRoutePlanOrder(ORDER_ID, FRC_ID)).thenReturn(Optional.of(order));
@@ -263,9 +261,9 @@ class RoutePlanServiceTest {
 		when(routePlanReviewRepository.maxSubmissionNo(plan.getId())).thenReturn(0);
 		when(routePlanRepository.save(plan)).thenReturn(plan);
 
-		RoutePlanResponse response = service.submitPlan(ORDER_ID);
-
-		assertThat(response.status()).isEqualTo(RoutePlanStatus.PENDING_LM_REVIEW);
+		assertThatThrownBy(() -> service.submitPlan(ORDER_ID))
+				.isInstanceOf(RoutePlanValidationException.class)
+				.hasMessageContaining("Final route leg planned arrival date");
 	}
 
 	@Test

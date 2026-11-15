@@ -1,27 +1,17 @@
 "use client";
 
-import { formatDeliveryDate } from "@/lib/requested-delivery-date";
-
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import FleetRouteCoordinatorWorkspaceFrame from "@/components/FleetRouteCoordinatorWorkspaceFrame";
-import RoutePlanEditor from "@/components/RoutePlanEditor";
-import { FleetTransportIllustration } from "@/components/FleetRouteArtwork";
+import RoutePlanTimelineEditor from "@/components/RoutePlanTimelineEditor";
+import "../../route-plan-workspace.css";
 import {
   CoordinatorWorkspaceError,
   getFleetRouteCoordinatorService,
   type AssignedCoordinatorOrderDetail,
-  type RoutePlanStatus,
 } from "@/lib/fleet-route-coordinator/service";
 import { useFleetRouteCoordinatorAccess } from "@/lib/fleet-route-coordinator/use-coordinator-access";
-
-function statusLabel(status: RoutePlanStatus) {
-  if (status === "NOT_STARTED") return "Not started";
-  if (status === "PENDING_LM_REVIEW") return "Awaiting LM review";
-  if (status === "RETURNED") return "Returned by LM";
-  return status.toLowerCase().replaceAll("_", " ").replace(/^./, (character) => character.toUpperCase());
-}
 
 export default function FleetRouteCoordinatorOrderPage() {
   const params = useParams<{ orderId: string }>();
@@ -35,28 +25,22 @@ export default function FleetRouteCoordinatorOrderPage() {
   const service = useMemo(() => getFleetRouteCoordinatorService(preview), [preview]);
   const [order, setOrder] = useState<AssignedCoordinatorOrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [errorCode, setErrorCode] = useState("");
-  const [feedback, setFeedback] = useState("");
 
-  const loadOrder = useCallback(async (refresh = false) => {
-    if (refresh) setRefreshing(true);
-    else setLoading(true);
+  const loadOrder = useCallback(async () => {
+    setLoading(true);
     setError("");
     setErrorCode("");
-    setFeedback("");
     try {
       const detail = await service.getAssignedPlanningContext(params.orderId);
       setOrder(detail);
-      if (refresh) setFeedback("Planning context refreshed from the saved Order state.");
     } catch (caught) {
-      if (!refresh) setOrder(null);
+      setOrder(null);
       setError(caught instanceof Error ? caught.message : "We couldn't load this planning context.");
       setErrorCode(caught instanceof CoordinatorWorkspaceError ? caught.code : "REQUEST_FAILED");
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, [params.orderId, service]);
 
@@ -101,25 +85,8 @@ export default function FleetRouteCoordinatorOrderPage() {
         </section>
       ) : (
         <>
-          <header className="frc-detail-heading">
-            <div className="frc-hero-copy"><h1>{order.origin} <b aria-hidden="true">→</b> {order.destination}</h1><p>Construct and validate the ordered journey for this assigned Order.</p><span className="frc-hero-accent" aria-hidden="true" /></div>
-            <FleetTransportIllustration />
-            <div className="frc-detail-actions"><button className="customer-secondary-button" type="button" disabled={refreshing} onClick={() => void loadOrder(true)}>{refreshing ? "Refreshing..." : "Refresh"}</button></div>
-          </header>
-
-          {feedback && <p className="customer-feedback" role="status">{feedback}</p>}
-          {error && <div className="customer-alert" role="alert"><span>{error}</span><button type="button" onClick={() => void loadOrder(true)}>Try again</button></div>}
-
-          <section className="frc-plan-overview" aria-label="Order planning summary">
-            <div><span>Status</span><strong className={`frc-plan-status is-${order.routePlanStatus.toLowerCase()}`}>{statusLabel(order.routePlanStatus)}</strong></div>
-            <div><span>Desired delivery date</span><strong>{formatDeliveryDate(order.requestedDeliveryDate)}</strong></div>
-            <div><span>Transport</span><strong>{order.transportMode}</strong></div>
-            <div><span>Horses</span><strong>{order.horseCount}</strong></div>
-          </section>
-
-          {order.routePlanStatus === "RETURNED" && order.returnReason && <section className="frc-return-reason" aria-labelledby="frc-return-title"><span aria-hidden="true">↩</span><div><h2 id="frc-return-title">Returned by Logistics Manager</h2><p>{order.returnReason}</p></div></section>}
-
-          <RoutePlanEditor orderId={order.id} orderOrigin={order.originAddress} orderDestination={order.destinationAddress} service={service} />
+          {error && <div className="customer-alert" role="alert"><span>{error}</span><button type="button" onClick={() => void loadOrder()}>Try again</button></div>}
+          <RoutePlanTimelineEditor orderId={order.id} orderCode={order.orderCode} orderOrigin={order.originAddress} orderDestination={order.destinationAddress} requestedDeliveryDate={order.requestedDeliveryDate} returnedReason={order.returnReason} horseCount={order.horseCount} transportMode={order.transportMode} queueHref={queueHref} service={service} />
         </>
       )}
     </FleetRouteCoordinatorWorkspaceFrame>

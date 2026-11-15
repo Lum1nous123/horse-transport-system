@@ -218,7 +218,7 @@ Table transport_orders {
   destination_country varchar(100)
   // Legacy only; never infer requested delivery from this value.
   requested_departure_at timestamp
-  requested_delivery_date date [note: 'Customer preference only; required at Submit, nullable for DRAFT and legacy orders']
+  requested_delivery_date date [note: 'Required at Submit; when present, must match final RouteLeg planned arrival date; nullable for DRAFT and legacy orders']
   transport_mode transport_mode
   special_requirements text
 
