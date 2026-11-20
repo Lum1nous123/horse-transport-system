@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
-  CUSTOMER_TERMS_INTRO,
   CUSTOMER_TERMS_LOGIN_HIDDEN_KEY,
+  CUSTOMER_TERMS_SUMMARY,
   CUSTOMER_TERMS_SECTIONS,
   hideCustomerTermsOnLogin,
   isCustomerTermsLoginHidden,
@@ -19,17 +19,16 @@ describe("Customer Terms login preference", () => {
     expect(isCustomerTermsLoginHidden()).toBe(true);
   });
 
-  it("contains the complete approved 30-section Customer policy", () => {
-    expect(CUSTOMER_TERMS_INTRO).toHaveLength(2);
-    expect(CUSTOMER_TERMS_SECTIONS).toHaveLength(30);
+  it("contains the versioned Customer policy and its complete section list", () => {
+    expect(CUSTOMER_TERMS_SUMMARY.length).toBeGreaterThan(0);
+    expect(CUSTOMER_TERMS_SECTIONS).toHaveLength(10);
     expect(CUSTOMER_TERMS_SECTIONS.map((section) => section.title)).toEqual(
       expect.arrayContaining([
-        "1. Scope of Transport Services",
-        "8. Deposit",
-        "12. Second and Final Document Correction",
-        "20. Tracking",
-        "28. Transport Terms and Important Notices",
-        "30. Contact Information",
+        "1. Service scope",
+        "3. Quotation and payment",
+        "4. Documents and deadlines",
+        "7. Emergency response",
+        "10. Raising a concern",
       ]),
     );
     expect(CUSTOMER_TERMS_SECTIONS.map((section) => section.title)).toEqual(

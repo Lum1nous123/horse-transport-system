@@ -78,12 +78,12 @@ describe("Customer Terms integration", () => {
     const user = userEvent.setup();
     render(<CustomerPage />);
 
-    expect(await screen.findByRole("dialog", { name: "Transport Terms & Important Notices" })).toBeVisible();
+    expect(await screen.findByRole("dialog", { name: "Horse Transport Service and Incident Policy" })).toBeVisible();
     await user.click(screen.getByRole("checkbox", { name: "Don't show again" }));
     await user.click(screen.getByRole("button", { name: "Got it" }));
 
     expect(window.localStorage.getItem(CUSTOMER_TERMS_LOGIN_HIDDEN_KEY)).toBe("true");
-    expect(screen.queryByRole("dialog", { name: "Transport Terms & Important Notices" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Horse Transport Service and Incident Policy" })).not.toBeInTheDocument();
   });
 
   it("does not show the automatic notice when the preference is already stored", async () => {
@@ -92,7 +92,7 @@ describe("Customer Terms integration", () => {
 
     await screen.findByText("ORD-1");
 
-    expect(screen.queryByRole("dialog", { name: "Transport Terms & Important Notices" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Horse Transport Service and Incident Policy" })).not.toBeInTheDocument();
   });
 
   it("shows the notice again on a later Customer entry when no preference was saved", async () => {
@@ -104,7 +104,7 @@ describe("Customer Terms integration", () => {
     firstEntry.unmount();
 
     render(<CustomerPage />);
-    expect(await screen.findByRole("dialog", { name: "Transport Terms & Important Notices" })).toBeVisible();
+    expect(await screen.findByRole("dialog", { name: "Horse Transport Service and Incident Policy" })).toBeVisible();
   });
 
   it("redirects a non-Customer without showing the Customer notice", async () => {
@@ -112,7 +112,7 @@ describe("Customer Terms integration", () => {
     render(<CustomerPage />);
 
     await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/logistics"));
-    expect(screen.queryByRole("dialog", { name: "Transport Terms & Important Notices" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Horse Transport Service and Incident Policy" })).not.toBeInTheDocument();
   });
 
   it("intercepts every Pay Deposit attempt and starts checkout only after fresh agreement", async () => {
@@ -136,7 +136,7 @@ describe("Customer Terms integration", () => {
     const reopenedContinue = screen.getByRole("button", { name: "Agree & Continue to Payment" });
     expect(reopenedContinue).toBeDisabled();
     await user.click(screen.getByRole("checkbox", {
-      name: "I have read and agree to the Transport Terms & Important Notices.",
+      name: /^I have read the Horse Transport Service and Incident Policy/,
     }));
     await user.click(reopenedContinue);
 

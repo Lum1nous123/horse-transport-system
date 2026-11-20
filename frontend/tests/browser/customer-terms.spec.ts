@@ -77,7 +77,7 @@ test("Customer login preference stays separate from mandatory Deposit acceptance
 
   await signIn(page);
   await expect(page).toHaveURL(/\/customer$/);
-  const termsDialog = page.getByRole("dialog", { name: "Transport Terms & Important Notices" });
+  const termsDialog = page.getByRole("dialog", { name: "Horse Transport Service and Incident Policy" });
   await expect(termsDialog).toBeVisible();
 
   await page.getByRole("button", { name: "Got it" }).click();
@@ -105,7 +105,7 @@ test("Customer login preference stays separate from mandatory Deposit acceptance
   await payDeposit.click();
   await expect(continueButton).toBeDisabled();
   await page.getByRole("checkbox", {
-    name: "I have read and agree to the Transport Terms & Important Notices.",
+    name: /^I have read the Horse Transport Service and Incident Policy/,
   }).focus();
   await page.keyboard.press("Space");
   await continueButton.click();
@@ -120,5 +120,5 @@ test("non-Customer login never shows Customer Terms", async ({ page }) => {
   await signIn(page, "manager@example.com");
 
   await expect(page).toHaveURL(/\/logistics$/);
-  await expect(page.getByRole("dialog", { name: "Transport Terms & Important Notices" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Horse Transport Service and Incident Policy" })).toHaveCount(0);
 });
