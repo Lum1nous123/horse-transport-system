@@ -8465,9 +8465,13 @@ button.ts-workflow-step-header:focus-visible {
 .customer-dashboard-page.customer-request-workspace .customer-request-groups button span { background: #f4e9df; color: #704b38; }
 .customer-dashboard-grid { align-items: stretch; gap: 18px; }
 .customer-dashboard-panel { display: flex; height: max(420px, calc(100vh - 240px)); min-height: 420px; flex-direction: column; border-color: #e6ddd7; border-radius: 11px; box-shadow: 0 5px 16px rgb(39 25 18 / 7%); }
+.customer-horses-panel.customer-horse-form-open { height: auto; min-height: 0; }
 .customer-dashboard-panel-heading { border-bottom-color: #e9e1dc; }
 .customer-panel-icon { color: #704b38; }
 .customer-panel-icon .customer-dashboard-icon { width: 25px; height: 25px; stroke-width: 1.65; }
+.customer-dashboard-page .customer-horses-panel .horse-form .customer-primary-button { border-color: #a84921; background: #b45326; box-shadow: none; }
+.customer-dashboard-page .customer-horses-panel .horse-form .customer-primary-button:hover:not(:disabled) { border-color: #7f391c; background: #95421f; }
+.customer-dashboard-page .customer-horses-panel .horse-form .customer-primary-button:disabled { background: #dfb39b; }
 .customer-dashboard-panel-heading h2 { color: #30221b; font-size: 1.3rem; font-weight: 700; }
 .customer-dashboard-panel-heading p { color: #74665d; }
 .customer-dashboard-panel-heading .customer-count { background: #f4ede7; color: #704b38; }

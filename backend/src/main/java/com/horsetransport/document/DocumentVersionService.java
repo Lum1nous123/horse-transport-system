@@ -5,6 +5,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
@@ -32,8 +33,7 @@ public class DocumentVersionService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(DocumentVersionService.class);
 	private static final long MAX_FILE_SIZE = 10L * 1024 * 1024;
-	private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
-			"application/pdf", "image/jpeg", "image/png");
+	private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of("image/jpeg", "image/png");
 
 	private final HorseDocumentRepository documentRepository;
 	private final HorseDocumentVersionRepository versionRepository;
@@ -162,6 +162,9 @@ public class DocumentVersionService {
 		HorseDocument document = findOwnedForUpdate(documentId, actorUserId);
 		ensureActiveDocumentPhase(document);
 		HorseDocumentVersion version = findVersion(documentId, versionId);
+		if (!isAllowedImageUrl(version.getFileUrl())) {
+			throw new DocumentFileValidationException("Only JPEG and PNG image documents can be submitted");
+		}
 		OrderHorseDocumentStatus previousHorseStatus = document.getTransportOrderHorse().getDocumentStatus();
 		version.submit(LocalDateTime.now(clock));
 		try {
@@ -258,7 +261,7 @@ public class DocumentVersionService {
 		}
 		String contentType = file.getContentType();
 		if (!ALLOWED_CONTENT_TYPES.contains(contentType)) {
-			throw new DocumentFileValidationException("Only PDF, JPEG, and PNG documents are allowed");
+			throw new DocumentFileValidationException("Only JPEG and PNG image documents are allowed");
 		}
 		try {
 			byte[] content = file.getBytes();
@@ -274,7 +277,6 @@ public class DocumentVersionService {
 
 	private boolean matchesContentType(byte[] content, String contentType) {
 		return switch (contentType) {
-			case "application/pdf" -> startsWith(content, new int[] {0x25, 0x50, 0x44, 0x46, 0x2D});
 			case "image/jpeg" -> startsWith(content, new int[] {0xFF, 0xD8, 0xFF});
 			case "image/png" -> startsWith(content,
 					new int[] {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A});
@@ -288,6 +290,11 @@ public class DocumentVersionService {
 			if ((content[index] & 0xFF) != signature[index]) return false;
 		}
 		return true;
+	}
+
+	private boolean isAllowedImageUrl(String fileUrl) {
+		String normalized = fileUrl == null ? "" : fileUrl.toLowerCase(Locale.ROOT).split("\\?", 2)[0];
+		return normalized.endsWith(".jpg") || normalized.endsWith(".jpeg") || normalized.endsWith(".png");
 	}
 
 	private String publicId(HorseDocument document, int versionNo) {
