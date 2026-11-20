@@ -34,7 +34,8 @@ The frontend must call the Spring Boot REST API. It must not call Supabase direc
 Order create and update requests accept `requestedDeliveryDate` as a date-only
 `YYYY-MM-DD` string (for example, `"2026-11-25"`) or `null`. A DRAFT may omit it. Submit and resubmit require
 it; a legacy `requestedDepartureAt` value does not satisfy that requirement.
-No past-date restriction is applied. If present, the date constrains the final
+When present, the date must be strictly after the current date; today and past
+dates are rejected. If present, the date constrains the final
 RouteLeg's planned arrival calendar date; FRC adjusts the final arrival time.
 This planned date does not promise actual delivery on that date.
 
@@ -47,3 +48,10 @@ values. For an Order with a requested delivery date, validation requires the
 final RouteLeg planned arrival date to match it, and each later leg must depart
 strictly after the previous leg arrives. Actual execution schedules and actual
 delivery time retain their existing meanings.
+
+## Customer Document Images
+
+Customer document version create and replace requests accept JPEG (`image/jpeg`)
+and PNG (`image/png`) image files only, with a maximum size of 10 MB. The backend
+checks that the file signature matches its MIME type. Submitting a previously
+saved draft also requires an image URL with a `.jpg`, `.jpeg`, or `.png` suffix.

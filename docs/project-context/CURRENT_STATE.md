@@ -166,6 +166,23 @@ These follow-ups do not change approved requirements and must not be used to inf
 
 ## Current Work
 
+### Customer input validation and presentation updates — implemented locally (2026-11-20)
+
+- Horse profiles show an ISO-style 15-digit microchip example and a passport
+  number example/hint; the passport value itself remains free-form. The sex
+  selector no longer offers `Other` and retains an optional blank selection.
+- Desired delivery dates must be strictly after today in the Customer date picker
+  and API; submission rejects legacy drafts with missing or non-future dates.
+  The owner-approved date-rule amendment is recorded in
+  `docs/requirements/REQUESTED_DELIVERY_DATE_CHANGE.md`.
+- Customer document upload and server validation accept JPEG/PNG images only;
+  submitting a previously saved non-image draft is also rejected.
+- The payment confirmation screen now uses the Customer warm chestnut, cream,
+  and burnt-orange palette instead of the legacy blue theme.
+- When the horse form is open on a wide dashboard, its panel grows to the form
+  height so the save actions remain reachable by normal page scrolling.
+- Implementation is local and unverified; tests were not run.
+
 ### Desired delivery date — implemented locally (2026-11-14)
 
 - The owner approved replacing Customer requested departure with a date-only,
@@ -298,6 +315,11 @@ These follow-ups do not change approved requirements and must not be used to inf
 - Browser preview confirmed the dashboard layout, document modal, landing page
   colors and new logo, and login/register photo and glass-panel compositions.
   Automated tests were not run for this visual change.
+- Customer Journey tracking now uses the same warm white, cream, burnt-orange,
+  and chestnut palette, including the route overview, leg details, and status
+  surfaces. Order updates are accessed through a compact bell button; its
+  notification panel opens on click and closes on outside click or Escape.
+  Notification content, tracking data, APIs, and role access remain unchanged.
 
 ### Logistics Manager workspace visual refresh — merged in PR #146 (2026-11-11)
 
@@ -349,6 +371,16 @@ These follow-ups do not change approved requirements and must not be used to inf
 ### Frontend backend environment (2026-11-11)
 
 - The team confirmed the backend is hosted on Render at `https://horse-transport-system.onrender.com`. Frontend development should use the configured API base URL for that service; do not assume a local backend.
+
+### Local frontend uses the Render backend — confirmed (2026-11-11)
+
+- The user confirmed the team now runs the backend on Render. Local frontend
+  development must use `NEXT_PUBLIC_API_BASE_URL` from the ignored
+  `frontend/.env.local`, currently set to
+  `https://horse-transport-system.onrender.com`.
+- Do not default to starting a local backend. Restart the local Next.js server
+  only when needed to load changed environment configuration, and preserve the
+  Render API setting.
 
 ### LM workspace integration with latest main (2026-11-09)
 

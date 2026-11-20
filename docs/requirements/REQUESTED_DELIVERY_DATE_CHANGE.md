@@ -41,12 +41,22 @@ arrival date follows the superseding FRC planning amendment above. Actual delive
 may still occur on another date; that difference does not cancel the Order or
 create a late-delivery warning.
 
+## Customer date-entry amendment (approved 2026-11-20)
+
+The project owner later approved requiring the Customer's desired delivery date
+to be strictly in the future. The Customer date picker and API reject today and
+past dates when creating or editing an Order; submission also rejects legacy
+drafts with a missing or non-future date. This changes the prior acceptance
+criterion below that said no future-date restriction applies. It does not change
+the meaning of the preference or the FRC planned-arrival constraint.
+
 ## Acceptance criteria
 
 - Incomplete DRAFTs may omit the date. Customer Submit and resubmission of an
   LM-rejected Order require the date, instead of a requested departure timestamp.
 - The API accepts and returns `requestedDeliveryDate` as `YYYY-MM-DD`; timestamps
-  and invalid calendar dates are rejected. No new future-date restriction applies.
+  and invalid calendar dates are rejected. A provided date must be strictly in
+  the future.
 - Existing Orders retain their legacy requested departure values. Delivery dates
   are not inferred from departure, route schedules, or handover dates. Existing
   submitted/active Orders can continue their lifecycle with no desired date.

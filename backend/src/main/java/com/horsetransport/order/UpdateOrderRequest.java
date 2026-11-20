@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Size;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.OptBoolean;
@@ -15,6 +16,7 @@ public record UpdateOrderRequest(
 		@Size(max = 255, message = "destinationAddress must not exceed 255 characters") String destinationAddress,
 		@Size(max = 100, message = "destinationCountry must not exceed 100 characters") String destinationCountry,
 		LocalDateTime requestedDepartureAt,
+		@Future(message = "requestedDeliveryDate must be in the future")
 		@JsonFormat(pattern = "uuuu-MM-dd", lenient = OptBoolean.FALSE) LocalDate requestedDeliveryDate,
 		TransportMode transportMode,
 		String specialRequirements,

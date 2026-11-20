@@ -1,5 +1,6 @@
 package com.horsetransport.order;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -212,6 +213,8 @@ public class TransportOrderService {
 			missing.add("destination");
 		if (order.getRequestedDeliveryDate() == null)
 			missing.add("requestedDeliveryDate");
+		else if (!order.getRequestedDeliveryDate().isAfter(LocalDate.now()))
+			missing.add("requestedDeliveryDate (must be in the future)");
 		if (order.getTransportMode() == null)
 			missing.add("transportMode");
 		if (order.getHorses().isEmpty())
