@@ -3944,6 +3944,14 @@ button.ts-workflow-step-header:focus-visible {
 .customer-terms-content::-webkit-scrollbar-track { background: transparent; }
 .customer-terms-content::-webkit-scrollbar-thumb { border: 2px solid #f7f9fc; border-radius: 10px; background: #aebbc7; }
 .customer-terms-intro { padding: 18px 0 4px; }
+.customer-terms-summary { margin: 14px 0 18px; border: 1px solid #cbdce7; border-radius: 12px; padding: 18px 20px; background: #fff; }
+.customer-terms-summary h3 { margin: 0; color: #102a43; font-size: 1.12rem; }
+.customer-terms-summary ul { margin: 10px 0 0; padding-left: 22px; color: #3f5364; font-size: .93rem; line-height: 1.55; }
+.customer-terms-summary li + li { margin-top: 6px; }
+.customer-terms-full { margin: 0 0 18px; border: 1px solid #dce6ed; border-radius: 10px; background: #fff; }
+.customer-terms-full > summary { padding: 13px 16px; color: #14527b; font-weight: 650; cursor: pointer; }
+.customer-terms-full[open] > summary { border-bottom: 1px solid #dce6ed; }
+.customer-terms-full .customer-terms-sections { padding: 0 18px; }
 .customer-terms-intro p:first-child { margin-top: 0; color: #102a43; font-weight: 650; }
 .customer-terms-sections { margin: 0; padding: 0; }
 .customer-terms-sections section { padding: 18px 0 19px; }
@@ -3953,8 +3961,8 @@ button.ts-workflow-step-header:focus-visible {
 .customer-terms-content ul { max-width: 75ch; margin: 9px 0 0; padding-left: 22px; color: #3f5364; font-size: .95rem; line-height: 1.58; }
 .customer-terms-content li + li { margin-top: 4px; }
 .customer-terms-footer { display: flex; min-height: 100px; align-items: center; justify-content: space-between; gap: 24px; border-top: 1px solid #dbe5ec; padding: 22px 40px; background: #fff; }
-.customer-terms-footer.deposit-mode { display: grid; grid-template-columns: minmax(0,1fr); gap: 15px; }
-.customer-terms-footer.deposit-mode .customer-terms-actions { width: max-content; max-width: 100%; justify-self: end; }
+.customer-terms-footer.acknowledgement-mode { display: grid; grid-template-columns: minmax(0,1fr); gap: 15px; }
+.customer-terms-footer.acknowledgement-mode .customer-terms-actions { width: max-content; max-width: 100%; justify-self: end; }
 .customer-terms-check { display: flex; min-width: 0; align-items: center; gap: 12px; color: #172b3a; font-size: .96rem; font-weight: 600; line-height: 1.45; cursor: pointer; }
 .customer-terms-check input { width: 21px; height: 21px; flex: 0 0 auto; margin: 0; accent-color: var(--color-primary); }
 .customer-terms-actions { display: flex; flex: 0 0 auto; justify-content: flex-end; gap: 10px; }
@@ -4282,10 +4290,10 @@ button.ts-workflow-step-header:focus-visible {
   .customer-terms-content h3 { font-size: 1rem; }
   .customer-terms-content p { font-size: .86rem; }
   .customer-terms-footer { min-height: 82px; gap: 14px; padding: 15px 18px calc(16px + env(safe-area-inset-bottom)); }
-  .customer-terms-footer.deposit-mode { gap: 13px; }
+  .customer-terms-footer.acknowledgement-mode { gap: 13px; }
   .customer-terms-check { font-size: .84rem; }
   .customer-terms-footer.login-mode .customer-primary-button { min-width: 108px; }
-  .deposit-mode .customer-terms-actions { width: 100%; align-items: stretch; justify-self: stretch; flex-direction: column-reverse; }
+  .acknowledgement-mode .customer-terms-actions { width: 100%; align-items: stretch; justify-self: stretch; flex-direction: column-reverse; }
   .customer-terms-actions button { width: 100%; justify-content: center; }
   .order-form { padding: 18px; }
   .customer-warning { width: calc(100% - 28px); margin-bottom: 14px; padding: 22px; }

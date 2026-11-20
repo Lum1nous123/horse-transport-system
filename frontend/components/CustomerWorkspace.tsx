@@ -258,6 +258,7 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
   const [depositBusy, setDepositBusy] = useState(false);
   const [depositError, setDepositError] = useState("");
   const [loginTermsOpen, setLoginTermsOpen] = useState(false);
+  const [orderTermsOpen, setOrderTermsOpen] = useState(false);
   const [depositTermsOpen, setDepositTermsOpen] = useState(false);
   const [cancelOrder, setCancelOrder] = useState<Order | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
@@ -508,7 +509,7 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
   function requestSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!validateForSubmit()) return;
-    setSubmitWarning(true);
+    setOrderTermsOpen(true);
   }
 
   function confirmSubmit() {
@@ -779,6 +780,14 @@ export default function CustomerWorkspace({ view = "dashboard" }: { view?: Custo
             {preview && <div className="deposit-checkout-panel preview-payment"><strong>Deposit checkout preview</strong><p>Preview mode does not contact the payment service or open a checkout session.</p></div>}
           </div></section></div>}
         {loginTermsOpen && <CustomerTermsModal mode="LOGIN_NOTICE" onClose={closeLoginTerms} />}
+        {orderTermsOpen && <CustomerTermsModal
+          mode="ORDER_SUBMISSION"
+          onClose={() => setOrderTermsOpen(false)}
+          onAgree={() => {
+            setOrderTermsOpen(false);
+            setSubmitWarning(true);
+          }}
+        />}
         {depositTermsOpen && <CustomerTermsModal
           mode="DEPOSIT_CONFIRMATION"
           onClose={() => setDepositTermsOpen(false)}
